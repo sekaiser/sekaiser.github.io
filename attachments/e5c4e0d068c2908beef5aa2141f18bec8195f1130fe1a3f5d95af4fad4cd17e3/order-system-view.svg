@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="178mm" height="111.25mm" viewBox="0 0 1120 700" role="img" aria-labelledby="title description">
+  <title id="title">Express order: from request to query result</title>
+  <desc id="description">Illustrative logical system view. The application submits an express-order request to the order API, which validates it and publishes an acceptance event to an event stream. A consumer processes the event and updates the query model in its store. The application queries a query service, which reads that model and returns the accepted order for display. Solid arrows show the write and event path; dashed, double-ended connections show query and response exchanges. The acceptance test follows the same unique order reference across request, event and query result, checking that the event retains express delivery and the query shows accepted with express delivery before the deadline measured from submission. Authentication and customer services join the test setup when required by the request. Boxes denote logical components, not fixed team ownership or deployment boundaries.</desc>
+  <!-- Editable technical diagram; not a deployment topology or API protocol specification.
+       PDF: rsvg-convert -f pdf -o order-system-view.pdf order-system-view.svg
+       PNG: rsvg-convert -w 2400 -o order-system-view.png order-system-view.svg -->
+  <defs>
+    <marker id="write-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M1 1 L9 5 L1 9 Z" fill="#3d5948"/>
+    </marker>
+    <marker id="read-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M1 1 L9 5 L1 9" fill="none" stroke="#546474" stroke-width="1.5"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: Helvetica, Arial, sans-serif; fill: #26362f; }
+    .title { font-size: 30px; font-weight: 700; }
+    .heading { font-size: 23px; font-weight: 700; }
+    .body { font-size: 20px; }
+    .small { font-size: 18px; fill: #4c5b53; }
+    .label { font-size: 20px; font-weight: 700; }
+    .component { fill: #fcfaf5; stroke: #647965; stroke-width: 1.5; }
+    .write { fill: none; stroke: #3d5948; stroke-width: 2; marker-end: url(#write-arrow); }
+    .read { fill: none; stroke: #546474; stroke-width: 2; stroke-dasharray: 7 5; marker-start: url(#read-arrow); marker-end: url(#read-arrow); }
+  </style>
+  <rect width="1120" height="700" fill="#fcfaf5"/>
+  <text x="32" y="47" class="title">Express order: from request to query result</text>
+  <text x="32" y="80" class="body">One user operation crosses independently owned components.</text>
+
+  <!-- Write path. Component descriptions carry behavior without invented protocol details. -->
+  <rect x="32" y="148" width="180" height="114" class="component"/>
+  <text x="122" y="185" text-anchor="middle" class="heading">Application</text>
+  <text x="122" y="217" text-anchor="middle" class="body">Submit order</text>
+  <text x="122" y="244" text-anchor="middle" class="body">Display result</text>
+
+  <rect x="296" y="148" width="202" height="114" class="component"/>
+  <text x="397" y="185" text-anchor="middle" class="heading">Order API</text>
+  <text x="397" y="217" text-anchor="middle" class="body">Validate request</text>
+  <text x="397" y="244" text-anchor="middle" class="body">Publish acceptance</text>
+
+  <rect x="582" y="148" width="202" height="114" fill="#e5ebe2" stroke="#647965" stroke-width="1.5"/>
+  <text x="683" y="185" text-anchor="middle" class="heading">Event stream</text>
+  <text x="683" y="217" text-anchor="middle" class="body">Acceptance event</text>
+  <text x="683" y="244" text-anchor="middle" class="body">retains express</text>
+
+  <rect x="868" y="148" width="220" height="114" class="component"/>
+  <text x="978" y="185" text-anchor="middle" class="heading">Consumer</text>
+  <text x="978" y="217" text-anchor="middle" class="body">Process event</text>
+  <text x="978" y="244" text-anchor="middle" class="body">Update query model</text>
+
+  <path d="M212 204 H296" class="write"/>
+  <path d="M498 204 H582" class="write"/>
+  <path d="M784 204 H868" class="write"/>
+  <text x="254" y="133" text-anchor="middle" class="small">Request</text>
+  <text x="540" y="133" text-anchor="middle" class="small">Publish</text>
+  <text x="826" y="133" text-anchor="middle" class="small">Deliver</text>
+
+  <!-- Read path: bidirectional dashed links explicitly denote query and response. -->
+  <rect x="296" y="378" width="202" height="104" class="component"/>
+  <text x="397" y="416" text-anchor="middle" class="heading">Query service</text>
+  <text x="397" y="450" text-anchor="middle" class="body">Return order state</text>
+
+  <rect x="868" y="378" width="220" height="104" fill="#e5ebe2" stroke="#647965" stroke-width="1.5"/>
+  <text x="978" y="416" text-anchor="middle" class="heading">Query store</text>
+  <text x="978" y="450" text-anchor="middle" class="body">Accepted order model</text>
+
+  <path d="M978 262 V378" class="write"/>
+  <text x="954" y="326" text-anchor="end" class="body">Write model</text>
+  <path d="M122 262 V430 H296" class="read"/>
+  <text x="145" y="330" class="body"><tspan x="145">Query and</tspan><tspan x="145" dy="27">display order</tspan></text>
+  <path d="M498 430 H868" class="read"/>
+  <text x="683" y="409" text-anchor="middle" class="body">Read order model</text>
+
+  <!-- Test scope is a separate annotation, not an invented runtime component. -->
+  <rect x="32" y="518" width="1056" height="112" fill="#f4e7dc"/>
+  <path d="M32 518 H1088" stroke="#a96243" stroke-width="2"/>
+  <text x="50" y="552" class="label">Acceptance check: follow the same unique order reference</text>
+  <text x="50" y="583" class="body">Request: express → event: express → query: accepted + express.</text>
+  <text x="50" y="613" class="body">The query must show the result before the agreed deadline, measured from submission.</text>
+
+  <text x="32" y="662" class="small">Add authentication or customer services to the setup when the request depends on them.</text>
+  <text x="32" y="688" class="small">Logical components, not fixed team or deployment boundaries. Dashed links: query / response.</text>
+</svg>

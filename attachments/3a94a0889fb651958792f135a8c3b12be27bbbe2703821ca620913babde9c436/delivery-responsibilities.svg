@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="178mm" height="147.74mm" viewBox="0 0 1000 830" role="img" aria-labelledby="title description">
+  <title id="title">Responsibilities across team boundaries</title>
+  <desc id="description">A responsibility map for the delivery arrangement described in the article, not a reporting hierarchy. Service teams own build inputs, behavioral checks and acceptance criteria, contributing checks and supported combinations. Workflow maintainers own reusable delivery jobs and artifact integrity, contributing the selected image and its run record. Testbench maintainers own the scenario catalog, bindings and repeatable setups, contributing scoped cross-service results and diagnostics. Platform and target operators own scoped access, deployment write controls and observation, contributing target conditions and rollout or recovery control. A release coordinator obtains cross-team compatibility and support agreements and compares the proposed rollout with its coverage. A named approval authority resolves disagreements and accepts documented exceptions and risk. Release review brings together behavioral evidence, artifact identity, target conditions and cross-team agreements. Passing checks alone do not grant deployment authority. Roles may be held by the same people; target-side controls are not supplied by spex or reusable workflows alone.</desc>
+  <!-- Editable technical diagram. Color reinforces groups; labels and rules carry meaning.
+       PDF: rsvg-convert -f pdf -o delivery-responsibilities.pdf delivery-responsibilities.svg
+       PNG: rsvg-convert -w 2400 -o delivery-responsibilities.png delivery-responsibilities.svg -->
+  <style>
+    text { font-family: Helvetica, Arial, sans-serif; fill: #26362f; }
+    .heading { font-size: 29px; font-weight: 700; }
+    .body { font-size: 18px; }
+    .role { font-size: 20px; font-weight: 700; }
+    .label { font-size: 17px; font-weight: 700; }
+    .note { font-size: 17px; }
+    .muted { fill: #4c5b53; }
+    .rule { stroke: #b8bfb4; stroke-width: 1; }
+  </style>
+  <rect width="1000" height="830" fill="#fcfaf5"/>
+  <text x="32" y="47" class="heading">Responsibilities across team boundaries</text>
+  <text x="32" y="79" class="body muted">Roles in the proposed delivery arrangement; the same people may hold several roles.</text>
+
+  <rect x="24" y="104" width="952" height="44" fill="#e5ebe2"/>
+  <text x="40" y="132" class="label">Role</text>
+  <text x="287" y="132" class="label">Responsible for</text>
+  <text x="660" y="132" class="label">Contribution to release review</text>
+
+  <!-- Aligned bands show responsibilities, not sequential execution or reporting lines. -->
+  <g class="body">
+    <text x="40" y="181" class="role">Service teams</text>
+    <text x="287" y="179"><tspan x="287">Build inputs, behavioral checks</tspan><tspan x="287" dy="25">and acceptance criteria</tspan></text>
+    <text x="660" y="179"><tspan x="660">Checks and supported</tspan><tspan x="660" dy="25">service combinations</tspan></text>
+    <path d="M40 228 H960" class="rule"/>
+
+    <text x="40" y="263" class="role"><tspan x="40">Workflow</tspan><tspan x="40" dy="25">maintainers</tspan></text>
+    <text x="287" y="263"><tspan x="287">Reusable delivery jobs, handoff</tspan><tspan x="287" dy="25">integrity and no-rebuild promotion</tspan></text>
+    <text x="660" y="263"><tspan x="660">Selected image, identity</tspan><tspan x="660" dy="25">and linked run record</tspan></text>
+    <path d="M40 312 H960" class="rule"/>
+
+    <text x="40" y="347" class="role"><tspan x="40">Testbench</tspan><tspan x="40" dy="25">maintainers</tspan></text>
+    <text x="287" y="347"><tspan x="287">Scenario catalog, bindings</tspan><tspan x="287" dy="25">and repeatable setups</tspan></text>
+    <text x="660" y="347"><tspan x="660">Scoped cross-service results</tspan><tspan x="660" dy="25">and diagnostics</tspan></text>
+    <path d="M40 396 H960" class="rule"/>
+
+    <text x="40" y="431" class="role"><tspan x="40">Platform and</tspan><tspan x="40" dy="25">target operators</tspan></text>
+    <text x="287" y="431"><tspan x="287">Scoped access, deployment write</tspan><tspan x="287" dy="25">controls and target observation</tspan></text>
+    <text x="660" y="431"><tspan x="660">Target conditions; control</tspan><tspan x="660" dy="25">of rollout stops and recovery</tspan></text>
+  </g>
+
+  <!-- Distinct decision band keeps approval separate from evidence production. -->
+  <rect x="24" y="480" width="952" height="168" fill="#f4e7dc"/>
+  <path d="M24 480 H976" stroke="#a96243" stroke-width="2"/>
+  <text x="40" y="515" class="role"><tspan x="40">Release</tspan><tspan x="40" dy="25">coordinator</tspan></text>
+  <text x="287" y="515" class="body"><tspan x="287">Obtain cross-team compatibility</tspan><tspan x="287" dy="25">and support agreements</tspan></text>
+  <text x="660" y="515" class="body"><tspan x="660">Compare proposed rollout</tspan><tspan x="660" dy="25">with agreed scope and coverage</tspan></text>
+  <path d="M40 564 H960" class="rule"/>
+  <text x="40" y="599" class="role"><tspan x="40">Named approval</tspan><tspan x="40" dy="25">authority</tspan></text>
+  <text x="287" y="599" class="body"><tspan x="287">Resolve disagreements;</tspan><tspan x="287" dy="25">accept explicit exceptions and risk</tspan></text>
+  <text x="660" y="599" class="body"><tspan x="660">Accountable decision with</tspan><tspan x="660" dy="25">recorded scope and risk</tspan></text>
+
+  <text x="40" y="688" class="label">Release review brings these contributions together</text>
+  <text x="40" y="718" class="body"><tspan x="40">Behavioral evidence + artifact identity + target conditions + cross-team agreements.</tspan></text>
+  <text x="40" y="749" class="body">Passing checks alone do not grant deployment authority.</text>
+  <path d="M40 772 H960" class="rule"/>
+  <text x="40" y="804" class="note muted">Target-side controls require platform enforcement, beyond spex or reusable workflows alone.</text>
+</svg>

@@ -241,18 +241,18 @@
     </aside>
     <div class="document-body study-prose"><div class="frontmatter">
 <div class="abstract">
-<p>Containerized applications can span several teams, repositories, and
-infrastructure accounts. Service tests alone do not coordinate delivery across
-those boundaries. This article presents a design that shares container-delivery
-mechanics, retains service-owned tools and checks, and bases deployment decisions
-on the tested service combination. Reusable GitHub Actions workflows build or
-reuse images, pass them between jobs, and promote them without rebuilding.
-A scenario-based testbench assembles selected services for recurring
-cross-service checks. An illustrative order change connects acceptance criteria,
-recorded test inputs, and rollout decisions. The design separates image reuse
-from fresh verification without assuming identical runtime behavior across
-environments. The discussion compares alternatives
-and makes the maintenance, access, and coordination costs explicit.</p>
+<p>Containerized applications can span teams with separate repositories and
+infrastructure accounts. Passing service tests still leaves the work of
+coordinating delivery across those boundaries. Shared jobs handle recurring
+image-delivery work while teams keep their own build tools and checks. Reusable
+GitHub Actions workflows build or reuse an image, pass it between jobs, and promote it
+without rebuilding. A scenario-based testbench assembles selected services for
+recurring cross-service checks. Deployment decisions then depend on the service
+combination those checks covered. An illustrative order change links acceptance
+criteria to recorded test inputs and rollout decisions. The decision to reuse an
+image stays separate from fresh verification; runtime behavior can differ across
+environments. The alternatives carry different costs in maintenance, access,
+and coordination.</p>
 </div>
 <div class="ox-hugo-toc toc has-section-numbers">
 <div class="heading">Table of Contents</div>
@@ -282,7 +282,7 @@ and makes the maintenance, access, and coordination costs explicit.</p>
 <!--endtoc-->
 </div>
 <h2><a href="#one-change-several-teams" aria-hidden="true" class="anchor" id="one-change-several-teams"></a><span class="section-num">1</span> One change, several teams</h2>
-<p>Consider adding a delivery option to an order-processing application. The order
+<p>Suppose we add a delivery option to an order-processing application. The order
 API validates the request and publishes an acceptance event to an event stream.
 A consumer updates a query model, and the application displays the accepted
 order. Several teams may own those components, even though the user sees one
@@ -294,61 +294,64 @@ A service can pass its own tests while a downstream consumer drops the new
 field. Testing one boundary cannot establish the behavior of the whole chain.</p>
 <p>The teams may also have different repositories, build tools, and release
 conventions. Some dependencies sit behind private networks or in separate
-infrastructure accounts. A useful pipeline has to work within those constraints,
-not assume that every team can replace its tooling or deploy everything together.</p>
-<p>The same delivery work also recurs across applications: building an image,
-making it available to test jobs, publishing it to a registry, and deploying it
-with the right configuration. Copying those steps into each repository leaves
-each team maintaining its own version. The design shares that machinery and
-keeps behavioral checks with the service teams. Workflow maintainers own artifact
-handling; service teams own what their checks establish; platform owners control
-target access and deployment writes. A release decision depends on their combined
-work, not just a successful build.</p>
-<p>The design described here uses GitHub Actions, Helm, and Kubernetes for the
-services it builds and deploys. Older systems can remain dependencies, with
-their own deployment procedures. The order change is an illustrative example,
-not a report of a company deployment. It gives us one thread to follow: what
-should change, which part of the platform we need to run, and what the pipeline
-must check before the new delivery option reaches customers.</p>
+infrastructure accounts. The pipeline has to accommodate those constraints;
+teams cannot all be expected to replace their tooling or deploy together.</p>
+<p>Across applications, the delivery work repeats: build an image, make it available
+to test jobs, publish it to a registry, and deploy it with the right configuration.
+Copying those steps into each repository leaves every team maintaining its own
+version. Shared jobs handle that machinery. Service teams remain responsible for
+their behavioral checks and what those checks establish. Workflow maintainers
+own artifact handling, while platform owners control target access and deployment
+writes. A successful build covers only part of the release decision.</p>
+<p>The responsibility map separates the contributions used in release review from
+the authority to accept exceptions. These are roles, not separate departments;
+the same people may hold several of them.</p>
+<p><a id="figure--fig-delivery-responsibilities"></a></p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/3a94a0889fb651958792f135a8c3b12be27bbbe2703821ca620913babde9c436/delivery-responsibilities.svg?v=3a94a0889fb65195" alt="Responsibility map separating service checks, shared workflow and testbench maintenance, target controls, release coordination, and named exception approval. Roles may overlap; passing checks alone do not grant deployment authority."><figcaption><span class="figure-number">Figure 1: </span>Responsibilities in the proposed delivery arrangement. Teams contribute behavioral checks, maintainers provide repeatable execution, operators control targets, and release roles coordinate agreements and accountable decisions.</figcaption></figure>
+<p>This pipeline uses GitHub Actions, Helm, and Kubernetes to build and deploy
+services. Older systems can remain dependencies and keep their own deployment
+procedures. The order change is an illustrative example, not a report of a
+company deployment. We can follow it from the behavior we want to change through
+the services needed to test it, then decide what must pass before customers get
+the new option.</p>
 <h2><a href="#what-the-test-pyramid-leaves-to-the-pipeline" aria-hidden="true" class="anchor" id="what-the-test-pyramid-leaves-to-the-pipeline"></a><span class="section-num">2</span> What the test pyramid leaves to the pipeline</h2>
 <p>The test pyramid remains the starting point: many fast, narrow checks and fewer
 expensive checks of larger behavior [1]. Unit tests check request validation;
 integration tests exercise a broker or database; contract tests check what
 producers and consumers expect at a boundary. A missing delivery field may be
 caught there. A system scenario checks the remaining path from accepted request
-to query. This design does not replace those layers or run the whole application
-for every change.</p>
+to query. These layers remain in place; the whole application need not run for
+every change.</p>
 <p>A product-wide pyramid can include that scenario. What the pyramid does not
 specify is how separate repositories build the service images, select compatible
 versions, reach private dependencies, and retain a result that another team's
 deployment job can interpret. A balanced test suite still needs that machinery.
 If the consumer changes after the API's tests pass, the earlier result describes
 the tested combination, not necessarily the combination about to be deployed.</p>
-<p>Agile practices address a different part of the problem. Teams agree acceptance
-criteria and integrate frequently. Scrum requires teams working on one product
-to share a Definition of Done [2]. The pipeline makes the agreed checks repeatable
-across repositories and infrastructure accounts; it does not replace those
-agreements.</p>
+<p>Teams also need to agree on acceptance criteria and integrate frequently. Scrum
+requires teams working on one product to share a Definition of Done [2].
+The pipeline runs the agreed checks repeatedly across repositories and
+infrastructure accounts. The agreements themselves remain the teams' work.</p>
 <h2><a href="#alternatives-and-their-limits" aria-hidden="true" class="anchor" id="alternatives-and-their-limits"></a><span class="section-num">3</span> Alternatives and their limits</h2>
-<p>Several approaches can reduce the work of cross-service verification. The
-choice is not between using them and having a shared pipeline:</p>
+<p>Several approaches can reduce the work of cross-service verification alongside
+a shared pipeline:</p>
 <ul>
-<li><strong>A mock image for every service image.</strong> Mocks make dependencies cheap to run
-and help reproduce faults. Keeping their versions, state transitions, and
+<li>A mock image for every service image makes dependencies cheap to run
+and helps reproduce faults. Keeping their versions, state transitions, and
 event behavior faithful means maintaining another implementation. A passing
 test exercises that substitute, not the real image. Use mocks selectively
 rather than maintain a parallel catalogue of service replicas.</li>
-<li><strong>Verification from published API specifications.</strong> OpenAPI and AsyncAPI
-support checks of HTTP operations and messages [3, 4]; consumer contracts add
-expectations at individual boundaries [1]. Run these checks early. They do
-not by themselves establish that the API, broker, consumer, and query store
-preserve an express order before the deadline.</li>
-<li><strong>Service-owned pipelines and a few hand-written journey tests.</strong> This is the
+<li>Published OpenAPI and AsyncAPI specifications support checks of HTTP operations
+and messages [3, 4]; consumer contracts add expectations at individual
+boundaries [1]. Run these checks early. They do not by themselves establish
+that the API, broker, consumer, and query store preserve an express order before
+the deadline.</li>
+<li>Service-owned pipelines and a few hand-written journey tests are the
 simpler baseline when cross-service changes are rare. As applications multiply,
 pipelines duplicate artifact handling and journey tests reconstruct the same
 setup. Share the repeated jobs first; add a maintained testbench when recurring
 journeys justify its cost.</li>
-<li><strong>A complete platform environment for every build.</strong> This can expose interactions
+<li>A complete platform environment for every build can expose interactions
 a smaller setup omits, but includes unrelated services, data, credentials, and
 configuration. Sharing one such environment trades setup work for contention
 and changing versions. Keep broad regression, but use a smaller setup for
@@ -360,12 +363,12 @@ chooses a Dockerfile, optionally selects a service from a multi-service
 repository, and supplies build-relevant paths, test commands, chart values,
 and target settings. Shared workflows coordinate the jobs; smaller composite
 actions handle image transfer, registry operations, and deployment setup.</p>
-<p>The common interface is an image and a set of commands, not one prescribed
-build tool. Compilation and packaging stay in the application's Dockerfile;
+<p>The shared jobs accept an image and a set of commands, so they need not prescribe
+a build tool. Compilation and packaging stay in the application's Dockerfile;
 test commands stay with the service. A single-image application and a repository
-with several buildable services can therefore use the same delivery jobs.
-Maintainers distribute changes through versioned workflow references rather
-than copy them into every application's pipeline.</p>
+with several buildable services can use the same delivery jobs. Maintainers
+distribute changes through versioned workflow references, avoiding a separate
+copy in every application's pipeline.</p>
 <p>Services keep cheap checks in their normal build and test entry points.
 Checks that require a running image consume the candidate selected by the
 workflow; they do not build another one for testing.</p>
@@ -375,17 +378,17 @@ If a broker or another prerequisite is unavailable, the job fails with that caus
 instead of silently reporting that the integration tests passed.</p>
 <p>The workflow handles four repeated operations:</p>
 <ul>
-<li><strong>Build or reuse an image.</strong> It looks for an image for the requested commit,
-then for an ancestor whose declared build paths have not changed. Otherwise,
-it builds with a registry-backed layer cache. The run records the requested
-source commit, any reused image's origin, and the image digest.</li>
-<li><strong>Pass that image between jobs.</strong> An exported image archive and checksum let
+<li>Build or reuse an image. The workflow looks for an image for the requested
+commit, then for an ancestor whose declared build paths have not changed.
+Otherwise, it builds with a registry-backed layer cache. The run records the
+requested source commit, any reused image's origin, and the image digest.</li>
+<li>Pass that image between jobs. An exported image archive and checksum let
 test and publication jobs load the same image on different runners. They
 verify the archive rather than compile the application again.</li>
-<li><strong>Publish after the selected checks pass.</strong> Integration and end-to-end commands
+<li>Publish after the selected checks pass. Integration and end-to-end commands
 remain service-owned. Every enabled check must succeed before publication;
 reusing an image does not exempt it from those checks.</li>
-<li><strong>Promote without rebuilding.</strong> Release jobs resolve the chosen source revision
+<li>Promote without rebuilding. Release jobs resolve the chosen source revision
 to an existing image, copy it to the destination registry, and check the
 destination digest. Helm deployment supplies the target's values and access.
 The artifact stays the same; its runtime configuration may differ.</li>
@@ -396,26 +399,24 @@ shared code and generated inputs. Unchanged Git paths do not establish that
 mutable base images or external dependencies are still current; those need
 an explicit refresh policy. Required verification remains separate from the
 decision to rebuild.</p>
-<p>One earlier workflow failure shows why the inputs need clear meanings. A pull
-request failed before building because a release-branch naming rule was applied
-to its feature branch. We changed the check to validate the pull request's
-target branch while keeping the source commit as the build identity. The release
-policy stayed intact, and developers could use ordinary feature names. The
-branch that determines whether a build is allowed is not the commit that
-determines what it contains.</p>
-<p>Figure <a href="#figure--fig-development-flow">1</a> follows the image through shared delivery jobs and
-no-rebuild promotion. Cross-service and target checks are enabled where the
-changed behavior requires them; image identity alone does not establish coverage
-of the proposed service combination and settings. The slim <em>Run record</em> rail
-supports that comparison, detailed in the run-record and release-decision tables
-below.</p>
+<p>A pull request once failed before building because a release-branch naming rule
+was applied to its feature branch. We changed the check to validate the pull
+request's target branch while keeping the source commit as the build identity.
+The release policy stayed intact, and developers could use ordinary feature
+names. The target branch controlled whether the build was allowed; the source
+commit determined what went into it.</p>
+<p>Figure <a href="#figure--fig-development-flow">2</a> follows the image through the shared jobs and
+promotion without rebuilding. Cross-service and target checks run where the
+changed behavior requires them. Matching image identities alone cannot establish
+coverage of the proposed service combination and settings. The <em>Run record</em> keeps
+the inputs and results needed for that comparison.</p>
 <p><a id="figure--fig-development-flow"></a></p>
-<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/7c2315733b5ccb235cf75239d49610a108edf6b680bc54493b84becea7516369/software-delivery-process.svg?v=7c2315733b5ccb23" alt="Artifact-preserving delivery with checksummed image handoff, publication gated by enabled checks, no-rebuild promotion, and deployment supported by the run record and relevant conditional checks"><figcaption><span class="figure-number">Figure 1: </span>Follow the checksummed image handoff through gated publication and promotion; conditional checks support deployment decisions.</figcaption></figure>
-<p>Runner placement follows the work, not the application language. A build or
-isolated test can run without access to private services; target checks and
-deployment need approved routes and credentials. Platform engineers maintain
-that access and the environment configuration so each application need not
-reconstruct the account and network setup.</p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/7c2315733b5ccb235cf75239d49610a108edf6b680bc54493b84becea7516369/software-delivery-process.svg?v=7c2315733b5ccb23" alt="Artifact-preserving delivery with checksummed image handoff, publication gated by enabled checks, no-rebuild promotion, and deployment supported by the run record and relevant conditional checks"><figcaption><span class="figure-number">Figure 2: </span>Follow the checksummed image handoff through gated publication and promotion; conditional checks support deployment decisions.</figcaption></figure>
+<p>Choose runners according to the access each job needs, regardless of the
+application language. A build or isolated test can run without access to private
+services. Target checks and deployment need approved routes and credentials.
+Platform engineers maintain that access and the environment configuration so
+each application need not reconstruct the account and network setup.</p>
 <p>The workflow can exchange a GitHub OpenID Connect token for short-lived cloud
 credentials [6]. That removes the need for long-lived cloud credentials in the
 job, but access still depends on which code and workflow are trusted. Untrusted
@@ -429,6 +430,8 @@ The request must be valid, the acceptance event must retain the delivery option,
 and the query must show the accepted order before a deadline. Those expectations
 belong beside the code review, even when the scenario lives in a separate
 testbench repository.</p>
+<p><a id="figure--fig-order-system"></a></p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/e5c4e0d068c2908beef5aa2141f18bec8195f1130fe1a3f5d95af4fad4cd17e3/order-system-view.svg?v=e5c4e0d068c2908b" alt="System view of the express-order example: application to order API, event stream, consumer and query store, with a query service returning the accepted order to the application. The test follows one unique order reference and checks that express delivery is preserved before the deadline."><figcaption><span class="figure-number">Figure 3: </span>The illustrative order system. The API publishes the delivery option through the event stream; the consumer preserves it in the query model. The scenario follows one order across that path and checks the query result before the agreed deadline. Dashed links represent query and response exchanges.</figcaption></figure>
 <figure class="code-listing" id="code-snippet--lst-order-scenario"><figcaption class="code-toolbar"><span class="code-language">gherkin</span><span class="code-caption">Illustrative express-order behavior with project-defined tags.</span><span class="code-actions"><a href="#code-snippet--lst-order-scenario" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--lst-order-scenario-L1" href="#code-snippet--lst-order-scenario-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--lst-order-scenario-L2" href="#code-snippet--lst-order-scenario-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--lst-order-scenario-L3" href="#code-snippet--lst-order-scenario-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--lst-order-scenario-L4" href="#code-snippet--lst-order-scenario-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--lst-order-scenario-L5" href="#code-snippet--lst-order-scenario-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--lst-order-scenario-L6" href="#code-snippet--lst-order-scenario-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--lst-order-scenario-L7" href="#code-snippet--lst-order-scenario-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--lst-order-scenario-L8" href="#code-snippet--lst-order-scenario-L8" aria-label="Link to line 8" data-line="8"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-gherkin"><span style="color:#323232;">@domain-orders @capability-order-acceptance @usecase-express-delivery
 </span><span style="color:#323232;">Feature: Order delivery options
 </span><span style="color:#323232;">
@@ -452,26 +455,25 @@ steps fail validation; new kinds of checks need reviewed catalog or probe
 changes. The pipeline invokes the testbench as a test command supplied for the
 acceptance stage.</p>
 <h2><a href="#build-the-part-of-the-platform-you-need" aria-hidden="true" class="anchor" id="build-the-part-of-the-platform-you-need"></a><span class="section-num">6</span> Build the part of the platform you need</h2>
-<p>The order scenario needs more than the API, but less than the whole platform.
-It needs the event stream, the consumer, and the query service and its store.
-Authentication or customer services also belong in that setup if the request
-depends on them. Unrelated applications need not run just because they share
-the same platform or organization.</p>
-<p>For this stage, teams assemble a repeatable <em>slice</em> around the behavior being
-checked: selected scenarios, participating services and dependencies,
-configuration, test data, and observations. Its boundary follows the use case,
-domain, or capability, not necessarily a repository or a team's service boundary.</p>
-<p>The example tags group express delivery by use case, orders by domain, and
-order acceptance by capability. Those views can overlap and share setup; they
-do not imply separate stacks. Teams define the labels, not spex. Tag filtering
-does not discover dependencies or remove services from the setup; teams maintain
-that boundary.</p>
-<p>That boundary matters when interpreting a result. A fixture can show how the
-consumer handles a selected response; a check against the real dependency is
-needed to learn whether it actually returns that response. A small order slice
-can establish the delivery-option behavior without establishing every production
-interaction or the platform's behavior under load. Review deployments need
-pipeline-owned access and lifetime management as well as a suitable slice.</p>
+<p>The order scenario needs the API, event stream, consumer, and query service with
+its store. Authentication or customer services also belong in that setup if the
+request depends on them. Unrelated applications can stay out of the test, even
+when they share the same platform or organization.</p>
+<p>Teams assemble a repeatable <em>slice</em> around the behavior being checked. It includes
+the selected scenarios and their participating services and dependencies, along
+with configuration, test data, and observations. A use case, domain, or capability
+defines the slice; it may cross repository and service-team boundaries.</p>
+<p>The example tags group express delivery by use case, orders by domain, and order
+acceptance by capability. These groups can overlap and share setup without
+needing separate stacks. Teams define the labels themselves. Filtering by tag in
+spex selects scenarios; it neither discovers their dependencies nor removes
+services from the setup. Teams maintain that boundary.</p>
+<p>A fixture can show how the consumer handles a selected response. To find out
+whether the dependency actually returns it, the test must reach the real service.
+A small order slice can establish the delivery-option behavior without
+establishing every production interaction or the platform's behavior under load.
+Review deployments need pipeline-owned access and lifetime management as well
+as a suitable slice.</p>
 <h3><a href="#optional-implementation-with-spex" aria-hidden="true" class="anchor" id="optional-implementation-with-spex"></a><span class="section-num">6.1</span> Optional implementation with spex</h3>
 <p>The spex testbench separates scenario selection from application setup [9]:</p>
 <ul>
@@ -498,7 +500,7 @@ and the matching profile creates only test-owned resources.</p>
 returned the accepted order before the deadline. To use that result later, we
 need to know which API and consumer produced it, which settings were active,
 and whether the probes exercised the intended services.</p>
-<p>The pipeline therefore keeps a record of the run:</p>
+<p>The pipeline keeps a record of the run:</p>
 <div data-component="paper-table">
 <p><a id="table--tab-run-record"></a></p>
 <div class="table-caption">
@@ -564,17 +566,18 @@ and whether the probes exercised the intended services.</p>
 </table>
 </div>
 <p>Resolve artifact tags to content digests and workflow references to commits.
-The runner checks actual deployments and settings against the recorded setup;
-recording what a job intended to deploy is not enough. These details help
-reconstruct failures, although data from an external service may need to be
-modeled in a regression test rather than reproduced exactly.</p>
+The runner checks actual deployments and settings against the recorded setup.
+The record must reflect what ran, even if that differs from what the job
+intended to deploy. These details help reconstruct failures, although data from
+an external service may need to be modeled in a regression test rather than
+reproduced exactly.</p>
 <h3><a href="#if-deployment-approval-uses-a-shared-target" aria-hidden="true" class="anchor" id="if-deployment-approval-uses-a-shared-target"></a><span class="section-num">7.1</span> If deployment approval uses a shared target</h3>
-<p>Use an isolated slice when the required services can be recreated. Only where
-access or infrastructure constraints require a shared target does this branch
-apply. Another team may replace the consumer while the test runs: the order
-assertions might pass without establishing which combination produced the
-result. Version checks before and after the test also miss a temporary
-replacement between those snapshots.</p>
+<p>Use an isolated slice when the required services can be recreated. A shared
+target may be necessary because of access or infrastructure constraints, but
+another team can replace the consumer during the test. The order assertions
+might then pass without establishing which combination produced the result.
+Checking versions before and after the test also misses a temporary replacement
+between those snapshots.</p>
 <p>If a shared, changeable target supplies release evidence, the platform must
 control competing writes. Each run reserves the resources that affect its
 assertions from deployment through result collection. Participating jobs use the
@@ -592,11 +595,11 @@ A detected change, a lost reservation, or a gap in those observations makes
 the run unusable for approving deployment, even if the order checks passed.
 Waiting deployments, out-of-band replacements, and resumed stale jobs are cases
 to exercise when checking the pipeline itself.</p>
-<p>This control has a boundary too. An administrator may bypass it, and an external
-service may change without exposing a version we can observe. The suite names
-those dependencies and uses isolated test identities or disposable targets where
-shared data would confuse the result. A reservation does not freeze a database
-or turn an external service into a reproducible fixture.</p>
+<p>An administrator may bypass this control. An external service may also change
+without exposing a version we can observe. The suite names those dependencies
+and uses isolated test identities or disposable targets where shared data would
+confuse the result. A reservation does not freeze a database or turn an external
+service into a reproducible fixture.</p>
 <h3><a href="#keep-reports-tied-to-the-image" aria-hidden="true" class="anchor" id="keep-reports-tied-to-the-image"></a><span class="section-num">7.2</span> Keep reports tied to the image</h3>
 <p>Test tools produce reports; spex, for example, collects scenario and suite
 results with JUnit output for CI [8]. Shared jobs tie those reports to the image,
@@ -605,16 +608,16 @@ The deployment job accepts records only from approved build and test runs,
 linked to the image and stored where another job cannot replace them. It checks
 that origin before trusting a report. Export allowlisted configuration and redact
 credential-bearing fields in captured requests, responses, and logs.</p>
-<p>When a run fails, the observations give investigation a starting point. Did the
-API reject the request, did the event lose the option, or did the consumer never
-update the query? Those are different failures from an unavailable broker or
-a wrong endpoint. The initial diagnosis may change as more information arrives,
-but the engineer should not have to infer the whole path from a red CI badge.</p>
+<p>When a run fails, the observations help locate the fault. The API may have
+rejected the request, the event may have lost the option, or the consumer may
+never have updated the query. An unavailable broker or a wrong endpoint calls
+for a different fix. The diagnosis can change as more information arrives, but
+the engineer should have more to work with than a red CI badge.</p>
 <h2><a href="#deploy-the-combination-that-was-checked" aria-hidden="true" class="anchor" id="deploy-the-combination-that-was-checked"></a><span class="section-num">8</span> Deploy the combination that was checked</h2>
 <p>Before deploying, compare the proposed service combination and settings with
 the recorded coverage. Include intermediate rollout states, not just the final
 versions. If coverage is missing, obtain a relevant result or run the checks.</p>
-<p>Consider one illustrative decision. <code>A2</code> names an API image digest; <code>C1</code> and
+<p>For an illustrative release decision, <code>A2</code> names an API image digest; <code>C1</code> and
 <code>C2</code> name different consumer image digests. The express option stays enabled,
 and the remaining declared inputs stay fixed.</p>
 <div data-component="paper-table">
@@ -655,12 +658,13 @@ the approval screen. The deployment control checks those versions and settings
 on the target and prevents competing jobs from changing them while deployment
 proceeds. The development environment need not stay locked while production
 approval waits.</p>
-<p>Reusing evidence does not require identical environments. Service teams identify
-the settings each acceptance claim depends on: feature flags, event formats,
-consumer modes, storage-schema expectations, and any timeout or retry policy
-behind a deadline. The rollout must use the tested values or have explicit
-coverage of the alternatives. If configuration changes without explanation,
-verify it; do not assume it is harmless.</p>
+<p>The test environment need not match production, but the assumptions behind the
+test must hold in both. For the express-order scenario, that includes compatible
+event formats, a consumer that preserves the delivery option, and processing
+that meets the agreed deadline. Where possible, make those assumptions
+executable checks. Before using the result to approve a rollout, check whether
+any environment differences could invalidate it. If they could, rerun the
+affected checks against the proposed setup.</p>
 <p>Endpoint addresses and secret references may differ under a reviewed substitution
 policy. Keep them in the record, then check routes, authentication, and intended
 service identities on the target. Those checks show that the substituted
@@ -681,13 +685,12 @@ records and replayed events, not just newly submitted orders.</p>
 the order. An unchanged query response read before the consumer handles the
 replayed event says nothing about replay behavior. The teams agree how to
 observe completion rather than leave that choice to the step implementation.</p>
-<p>The release coordinator needs the affected teams to agree on those combinations
-and on how long older formats remain supported. The target operator must be able
-to stop the rollout. If teams disagree about support, priority, or acceptable
-risk, a named authority must settle it; a workflow cannot. The same applies to
-exceptions: policy names who may approve them, and the decision records the
-scope, unresolved risk, and accountable person. An exception does not make a
-failed or inapplicable test result pass.</p>
+<p>The release coordinator needs agreement from the affected teams on those
+combinations and on how long older formats remain supported. The target operator
+must be able to stop the rollout. A named authority settles disagreements about
+support, priority, or acceptable risk. Policy must also name who can approve
+exceptions. Each exception records its scope, unresolved risk, and accountable
+person; the failed or inapplicable test result stays on record as such.</p>
 <p>During activation, the operations owner watches the delay from acceptance to
 query and the consumer backlog against agreed stop conditions. Exceeding them
 holds further activation and starts recovery. Turning off the option or limiting
@@ -698,13 +701,13 @@ or recall events already in flight.</p>
 investigation should produce both a correction and, where practical, a regression
 scenario. The scenario belongs in the relevant slice, so the next engineer can
 exercise that failure without reconstructing it from messages and memory.
-That improves the next change; it does not replace immediate recovery.</p>
+The regression scenario helps with future changes; immediate recovery is still
+necessary.</p>
 <h2><a href="#keep-the-shared-setup-worth-maintaining" aria-hidden="true" class="anchor" id="keep-the-shared-setup-worth-maintaining"></a><span class="section-num">9</span> Keep the shared setup worth maintaining</h2>
-<p>A slice makes the test scope explicit, but it still needs maintenance. The teams
-responsible for the order behavior agree its scenarios and keep track of affected
-consumers and required checks. Tags help organize the scenarios; they are not an
-automatic analysis of what a code change can break. An incomplete dependency map
-can leave out the very consumer that needed checking.</p>
+<p>The teams responsible for the order behavior maintain the slice. They agree on
+its scenarios and track affected consumers and required checks. Tags organize
+those scenarios, but teams still have to assess what a code change can break.
+An incomplete dependency map can leave out the consumer that needed checking.</p>
 <p>Shared state also limits parallelism. Independent scenarios may run together,
 but different builds using the same reserved resources need isolated targets
 or must wait. More runners do not remove that queue. If waiting or repeated
@@ -716,7 +719,7 @@ by the run, not infrastructure that was already there.</p>
 workspaces and execution plans must stay readable. Otherwise, a simple scenario
 merely transfers work to the engineer investigating its failure. New assertions,
 service versions, profile changes, and workflow upgrades need time in the teams'
-plans, not just names in an ownership table.</p>
+plans.</p>
 <p>Adoption can start with shared build and test jobs, then add a slice for a
 recurring cross-service check. Consumers choose supported workflow versions and
 an upgrade policy. Commit references pin revisions; moving release tags require
@@ -726,16 +729,16 @@ agree which workflow and record versions deployment jobs accept; an old revision
 output does not remain supported indefinitely. Separately referenced actions need
 the same upgrade policy and resolved-commit record; pinning the workflow does not
 pin those actions.</p>
-<p>Assess shared delivery jobs and the testbench investment separately: repeated
-build and setup work, defects found, debugging effort, deployment queues, and
-runner and maintenance costs. A faster build can simply move work into manual
-diagnosis. Comparable observations are needed before claiming the whole process
-improved.</p>
-<p>For the order change, shared jobs handle the artifact, the selected slice checks
-the request-to-query behavior, and deployment checks whether the proposed rollout
-falls within that coverage. Teams retain their Dockerfiles and test commands
-while sharing the jobs that build, transfer, verify, and deploy their images.
-Approve the covered service combination, not an isolated green build.</p>
+<p>Assess the shared delivery jobs and the testbench investment separately. Track
+repeated build and setup work, defects found, debugging effort, deployment
+queues, and runner and maintenance costs. A faster build may leave more work for
+manual diagnosis. Compare those observations before claiming that the whole
+process improved.</p>
+<p>For the order change, teams keep their Dockerfiles and test commands while
+sharing the jobs that build, transfer, verify, and deploy their images. The
+selected slice checks the request-to-query behavior. Deployment approval then
+depends on whether those checks cover the proposed service combination and
+rollout.</p>
 <h2><a href="#references" aria-hidden="true" class="anchor" id="references"></a><span class="section-num">10</span> References</h2>
 <ol>
 <li>H. Vocke, <a href="https://martinfowler.com/articles/practical-test-pyramid.html" target="_blank" rel="noopener">The Practical Test Pyramid</a>, February 26, 2018.</li>
