@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="178mm" height="127.143mm" viewBox="0 0 1120 800" role="img" aria-labelledby="title description">
   <title id="title">Maintain metric state; reuse assembled responses</title>
-  <desc id="description">Conceptual design, not an implementation topology. Periodic telemetry enters an event stream. A state updater batches per device and merges newer metric timestamps into a cache. A read service uses metric state, reuses or refreshes response snapshots, and queries historical storage on a miss or as a fallback. The read service can populate the cache from historical results. Clients request readings through the service. Solid arrows show telemetry updates; dashed double-ended links show exchanges. Historical ingestion is omitted. Snapshot and observation age remain separate.</desc>
+  <desc id="description">Conceptual design, not an implementation topology. Periodic telemetry enters an event stream. A state updater batches per device and merges newer metric timestamps into shared metric state. A read service can reuse short-lived local JSON snapshots, load shared metric state, or query history for missing devices when allowed. Snapshot reuse and historical lookups have independent policies. A snapshot-only read contacts neither backend. Historical results can enter the local snapshots when policy allows; write-back to shared metric state is not asserted. Solid arrows show telemetry updates; dashed links show possible exchanges, not paths taken on every request. Historical ingestion is omitted. Snapshot and observation age remain separate.</desc>
   <defs>
     <marker id="update-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
       <path d="M1 1 L9 5 L1 9 Z" fill="#3d5948"/>
@@ -48,7 +48,7 @@
   <path d="M482 210 H552" class="update"/>
   <path d="M778 210 H848" class="update"/>
 
-  <!-- Read exchanges include cache-aside population and snapshot refresh. -->
+  <!-- Read paths depend on snapshot policy and separate permission to query history. -->
   <rect x="32" y="420" width="190" height="120" class="component"/>
   <text x="127" y="460" text-anchor="middle" class="heading">Clients</text>
   <text x="127" y="494" text-anchor="middle" class="body">Table views / APIs</text>
@@ -59,11 +59,11 @@
 
   <path d="M222 480 H322" class="read"/>
   <path d="M487 420 V334 H968 V270" class="read"/>
-  <text x="714" y="321" text-anchor="middle" class="body">Read / populate on a miss</text>
+  <text x="714" y="321" text-anchor="middle" class="body">Load shared metric state</text>
 
   <rect x="848" y="420" width="240" height="120" fill="#e5ebe2" stroke="#647965" stroke-width="1.5"/>
-  <text x="968" y="460" text-anchor="middle" class="heading">Snapshot cache</text>
-  <text x="968" y="494" text-anchor="middle" class="body">Precomputed JSON</text>
+  <text x="968" y="460" text-anchor="middle" class="heading">Local snapshots</text>
+  <text x="968" y="494" text-anchor="middle" class="body">Short-lived JSON</text>
   <path d="M652 480 H848" class="read"/>
   <text x="750" y="459" text-anchor="middle" class="body">Reuse / refresh</text>
 
@@ -71,7 +71,7 @@
   <text x="127" y="654" text-anchor="middle" class="heading">History store</text>
   <text x="127" y="688" text-anchor="middle" class="body">Recorded readings</text>
   <path d="M487 540 V669 H222" class="read"/>
-  <text x="357" y="648" text-anchor="middle" class="body">Miss / fallback</text>
+  <text x="357" y="648" text-anchor="middle" class="body">Miss, if allowed</text>
 
   <rect x="552" y="614" width="536" height="110" fill="#f4e7dc"/>
   <path d="M552 614 H1088" stroke="#a96243" stroke-width="2"/>
@@ -79,6 +79,6 @@
   <text x="574" y="682" class="body">Snapshot: when the JSON was assembled.</text>
   <text x="574" y="710" class="body">Observation: when a reading was produced.</text>
 
-  <text x="32" y="765" class="small">Solid arrows: telemetry updates. Dashed links: reads / responses and snapshot refresh.</text>
+  <text x="32" y="765" class="small">Dashed links are possible paths: snapshot-only reads contact neither backend.</text>
   <text x="32" y="791" class="small">Generalized design, not deployment boundaries. Historical ingestion is omitted.</text>
 </svg>

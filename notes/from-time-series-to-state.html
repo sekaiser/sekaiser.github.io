@@ -246,8 +246,8 @@ up the latest observations, assembled the devices, and serialized the result.
 The next request repeated much of that work, even when few readings had changed.</p>
 <p>The proposed design stores each device as a hash of independently encoded
 metrics. An update replaces one field; a selective read decodes only the fields
-it needs. Assembled JSON has a separate place in the design: a response snapshot
-that readers can reuse when its age is acceptable.</p>
+it needs. Assembled JSON has a separate place in the design: a short-lived local
+snapshot. Snapshot reuse and permission to query history are separate choices.</p>
 </div>
 <div class="ox-hugo-toc toc has-section-numbers">
 <div class="heading">Table of Contents</div>
@@ -312,7 +312,7 @@ and writing the value in separate operations would let concurrent updates
 overwrite one another. The timestamp must also be a meaningful ordering key;
 the rule cannot correct a wrongly timestamped observation.</p>
 <p><a id="figure--fig-telemetry-state"></a></p>
-<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/ea9a378a0f89b5a025fed404278035d245f0f93cea0d5cd380d0b684aaebad13/telemetry-state.svg?v=ea9a378a0f89b5a0" alt="Conceptual design: telemetry passes through an event stream and per-device batching consumer into current metric state. A read service uses that state, reuses or refreshes response snapshots, and queries historical storage on a miss. Historical ingestion is not shown."><figcaption><span class="figure-number">Figure 1: </span>Conceptual update and read paths. Telemetry maintains per-metric state; reads can reuse a response snapshot, assemble one from that state, or fetch missing data from historical storage. Historical ingestion is omitted.</figcaption></figure>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/1a3df3ac1a17666d81c8a7e6fde304956dda27264c9218277e76b178c67821a4/telemetry-state.svg?v=1a3df3ac1a17666d" alt="Telemetry updates shared metric state through an event stream and per-device batching consumer. A read service can reuse local snapshots, load shared metric state, and query historical storage for missing devices when allowed. Snapshot-only requests use neither backend. Historical ingestion is omitted."><figcaption><span class="figure-number">Figure 1: </span>Conceptual update and read paths. The service can reuse local snapshots or load shared metric state. Historical queries for missing devices are separately controlled; a snapshot-only request uses neither backend. Historical ingestion is omitted.</figcaption></figure>
 <p>The state is an aggregate of observations, not a measurement of the whole
 device at one instant. That fits the table's purpose without pretending the
 devices report more synchronously than they do.</p>
@@ -395,6 +395,9 @@ are ordered <code>t0 &lt; t1 &lt; t2 &lt; t3</code>; arrival order differs from 
 <code>t3</code>. It does not fetch or decode voltage. A view needing both metrics can select
 both, retaining their different timestamps. Neither read needs to replay the
 arrivals to discover which values survived.</p>
+<p>This example describes the storage layout's capabilities. A public API can
+choose a coarser boundary, such as returning all metrics for the selected
+devices; field-level storage does not require field selection in every endpoint.</p>
 <h2><a href="#give-updates-a-short-window-to-meet" aria-hidden="true" class="anchor" id="give-updates-a-short-window-to-meet"></a><span class="section-num">5</span> Give updates a short window to meet</h2>
 <p>Field-level updates remove the full-object rewrite. Issuing a separate request
 for every incoming metric would still create substantial network overhead under
@@ -412,8 +415,9 @@ seconds or minutes apart.</p>
 <p>Once the state is cheap to read, the table still needs a response containing
 many devices. Fetching fields from the cache does not remove the CPU work of
 turning them into JSON.</p>
-<p>For repeated reads of one device, a precomputed JSON snapshot can avoid rebuilding
-the same response. A request spanning many devices also needs efficient assembly:
+<p>For repeated reads of one device, a short-lived JSON snapshot local to the
+read service can avoid rebuilding the same response. A request spanning many
+devices also needs efficient assembly:
 collect the selected fields into a shared buffer, reuse memory where practical,
 and reuse per-device snapshots when they fit the request.</p>
 <p>This gives the two cache representations different jobs. Metric fields are
@@ -421,27 +425,40 @@ convenient to update and select. Serialized snapshots are convenient to return.
 Using both avoids making every update pay for a response that nobody may read,
 or making every reader assemble a response that was just assembled.</p>
 <h2><a href="#how-fresh-does-this-request-need-to-be" aria-hidden="true" class="anchor" id="how-fresh-does-this-request-need-to-be"></a><span class="section-num">7</span> How fresh does this request need to be?</h2>
-<p>A snapshot may predate a metric update. Whether it can be returned depends on
-what the caller needs. A routine table refresh can accept a short-lived
-snapshot; another request may need the service to check or rebuild it.</p>
-<p>A request policy can express that choice: reuse a suitable snapshot, require
-fresh assembly from metric fields, or use only an available cached response.
-The service defines its own assembly policy; HTTP caching provides a reference
-for expressing freshness preferences [2].</p>
+<p>A routine table read can reuse unexpired local snapshots and load the devices
+missing from them. Those snapshots expire after a configured lifetime. If a
+reader wants a newly assembled response, it can skip existing snapshots and
+replace them with the loaded result. Another request can skip snapshot reads
+and writes altogether, leaving the local cache undisturbed.</p>
+<p>A snapshot-only read makes a different trade-off: it returns what is available
+locally without contacting either backend. That can mean a partial result, or
+an empty one when none of the requested devices are available. It does not
+start rebuilding the missing snapshots.</p>
+<p>Permission to query history is a separate choice. A table refresh can still
+read shared metric state while avoiding the cost of historical queries for
+missing devices. An existing snapshot may contain data obtained by an earlier
+historical lookup; disabling that lookup for this request does not change
+where an already cached result came from.</p>
 <p>There are two ages here. Snapshot age describes when the response was assembled.
 Observation age describes when the device produced a reading. A snapshot built
-now may contain a consumption value from several minutes ago, and a short
-snapshot lifetime cannot compensate for a stalled telemetry consumer.</p>
+now may contain a consumption value from several minutes ago. Expiring the
+snapshot does not make that measurement newer, and an old metric timestamp does
+not by itself trigger a historical query. The caller must judge the reading's
+age separately from the lifetime of its JSON representation.</p>
 <p>For a view that can accept a short delay, snapshot reuse avoids repeated assembly
 between device reports. A view of both metrics might reuse a device snapshot
-made before <code>t3</code> if the caller accepts its age. Requiring fresh assembly would
-read the current metric fields instead; it need not query the historical store
-again.</p>
+made before <code>t3</code> while that snapshot remains unexpired. Skipping it would load
+the current metric state instead. Whether missing devices also trigger
+historical queries depends on the separate lookup policy.</p>
 <h2><a href="#when-the-live-state-stops-moving" aria-hidden="true" class="anchor" id="when-the-live-state-stops-moving"></a><span class="section-num">8</span> When the live state stops moving</h2>
-<p>On a cache miss, the service can fetch the required readings from historical
-storage and populate the cache. That is cache-aside: a read can fill a gap in
-the projection. If the cache is unavailable, the historical query remains a
-slower fallback.</p>
+<p>When a requested device is missing from shared metric state, the service can
+query history if the request allows it. The assembled result can enter the
+local snapshot cache when the snapshot policy permits. A request restricted
+to local snapshots never reaches this path.</p>
+<p>Without historical lookups, missing devices are omitted from the result. A
+failure to reach the shared cache is still an error, not proof that the devices
+have no readings. Keeping those cases separate prevents a backend outage from
+looking like a successful but empty table.</p>
 <p>If the consumer stops, cached readings stop advancing. Catching up requires
 retained events or reconstruction from history, including updates that were
 buffered but not written before the consumer exited.</p>
@@ -451,8 +468,9 @@ readers judge the result's age, but the service also needs to distinguish a quie
 device from an ingestion path that has stopped receiving updates.</p>
 <h2><a href="#where-the-work-belongs" aria-hidden="true" class="anchor" id="where-the-work-belongs"></a><span class="section-num">9</span> Where the work belongs</h2>
 <p>Historical storage remains useful for history and recovery. The proposed read
-path serves the usual request from maintained metric state, with serialized
-snapshots available when their age is acceptable.</p>
+path serves the usual request from maintained metric state, with short-lived
+local snapshots avoiding repeated assembly. Readers can control snapshot reuse
+without automatically enabling expensive historical lookups.</p>
 <p>The changes follow the work that was being repeated. Per-metric state avoids
 reconstructing devices from history. Short, per-device batches reduce write
 overhead. Response snapshots avoid assembling the same JSON for every reader.</p>
@@ -463,7 +481,6 @@ Those decisions can be considered independently of the database products.</p>
 <h2><a href="#references" aria-hidden="true" class="anchor" id="references"></a><span class="section-num">10</span> References</h2>
 <ol>
 <li>Redis, <a href="https://redis.io/docs/latest/develop/data-types/hashes/" target="_blank" rel="noopener">Redis hashes</a>, a public example of field-addressable storage, not a statement of the deployed technology.</li>
-<li>IETF, <a href="https://www.rfc-editor.org/rfc/rfc9111.html#section-5.2.1" target="_blank" rel="noopener">RFC 9111: HTTP Caching, request directives</a>.</li>
 </ol>
 </div>
   </div>
