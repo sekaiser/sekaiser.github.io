@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="https://sekaiser.github.io/static/favicon.svg?v=d722fec0e0cca8eb" type="image/svg+xml">
   <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/vendor.css?v=cf6814bed6634e0a" type="text/css" media="screen" />
-  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/notebook.css?v=8029337c56b8059d">
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/notebook.css?v=566a296313d9bcd7">
   
   
   
@@ -15,7 +15,7 @@
 
   
 
-  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/project.css?v=277bc09a31ea9484">
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/project.css?v=c7d11d28265ad107">
   <script src="https://sekaiser.github.io/static/js/main.js?v=7ffe88eb20e1b177"></script>
 
   
@@ -248,6 +248,32 @@ from fresh verification without assuming identical runtime behavior across
 environments. The discussion compares alternatives
 and makes the maintenance, access, and coordination costs explicit.</p>
 </div>
+<div class="ox-hugo-toc toc has-section-numbers">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><span class="section-num">1</span> <a href="#one-change-several-teams">One change, several teams</a></li>
+<li><span class="section-num">2</span> <a href="#what-the-test-pyramid-leaves-to-the-pipeline">What the test pyramid leaves to the pipeline</a></li>
+<li><span class="section-num">3</span> <a href="#alternatives-and-their-limits">Alternatives and their limits</a></li>
+<li><span class="section-num">4</span> <a href="#reuse-delivery-jobs-across-applications">Reuse delivery jobs across applications</a></li>
+<li><span class="section-num">5</span> <a href="#start-with-the-behavior">Start with the behavior</a></li>
+<li><span class="section-num">6</span> <a href="#build-the-part-of-the-platform-you-need">Build the part of the platform you need</a><ul>
+<li><span class="section-num">6.1</span> <a href="#optional-implementation-with-spex">Optional implementation with spex</a></li>
+</ul>
+</li>
+<li><span class="section-num">7</span> <a href="#know-what-a-passing-test-covered">Know what a passing test covered</a><ul>
+<li><span class="section-num">7.1</span> <a href="#if-deployment-approval-uses-a-shared-target">If deployment approval uses a shared target</a></li>
+<li><span class="section-num">7.2</span> <a href="#keep-reports-tied-to-the-image">Keep reports tied to the image</a></li>
+</ul>
+</li>
+<li><span class="section-num">8</span> <a href="#deploy-the-combination-that-was-checked">Deploy the combination that was checked</a><ul>
+<li><span class="section-num">8.1</span> <a href="#roll-out-and-recover-the-express-order-change">Roll out and recover the express-order change</a></li>
+</ul>
+</li>
+<li><span class="section-num">9</span> <a href="#keep-the-shared-setup-worth-maintaining">Keep the shared setup worth maintaining</a></li>
+<li><span class="section-num">10</span> <a href="#references">References</a></li>
+</ul>
+</div>
+<!--endtoc-->
 </div>
 <h2><a href="#one-change-several-teams" aria-hidden="true" class="anchor" id="one-change-several-teams"></a><span class="section-num">1</span> One change, several teams</h2>
 <p>Consider adding a delivery option to an order-processing application. The order
