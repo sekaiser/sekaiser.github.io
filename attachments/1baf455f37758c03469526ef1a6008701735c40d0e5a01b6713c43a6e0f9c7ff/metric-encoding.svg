@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="178mm" height="135.089mm" viewBox="0 0 1120 850" role="img" aria-labelledby="title description">
+  <title id="title">One device hash, independently encoded metrics</title>
+  <desc id="description">Illustrative values with explicit field widths. A hash for device A maps temperature and voltage to separate byte strings. The temperature field contains an 8-byte or 64-bit Unix-millisecond timestamp, a 2-byte or 16-bit value length, the 4-byte or 32-bit UTF-8 text 21.4, a 1-byte or 8-bit unit length, and the 3-byte or 24-bit UTF-8 text degree sign followed by C. Fixed fields occupy 11 bytes. This example totals 18 bytes or 144 bits, excluding field names, device keys, and storage overhead. Segment widths are schematic; byte order is not specified. Updating voltage replaces only its field. Reading temperature fetches and decodes only that field.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M1 1 L9 5 L1 9 Z" fill="#3d5948"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: Helvetica, Arial, sans-serif; fill: #26362f; }
+    .title { font-size: 30px; font-weight: 700; }
+    .heading { font-size: 23px; font-weight: 700; }
+    .body { font-size: 20px; }
+    .small { font-size: 18px; fill: #4c5b53; }
+    .size { font-size: 16px; fill: #4c5b53; }
+    .value { font-family: Menlo, Consolas, monospace; font-size: 25px; }
+    .rule { stroke: #b8bfb4; stroke-width: 1; }
+    .link { fill: none; stroke: #3d5948; stroke-width: 2; marker-end: url(#arrow); }
+  </style>
+  <rect width="1120" height="850" fill="#fcfaf5"/>
+  <text x="32" y="47" class="title">One device hash, independently encoded metrics</text>
+  <text x="32" y="80" class="body">Select a metric by field name; decode only its payload.</text>
+
+  <!-- Logical field mapping. No production key names or metadata are included. -->
+  <rect x="32" y="124" width="1056" height="252" fill="none" stroke="#647965" stroke-width="1.5"/>
+  <rect x="32" y="124" width="1056" height="56" fill="#e5ebe2"/>
+  <text x="54" y="160" class="heading">Device A</text>
+  <text x="1058" y="160" text-anchor="end" class="body">One hash</text>
+  <text x="58" y="218" class="small">Metric field</text>
+  <text x="444" y="218" class="small">Stored value</text>
+
+  <text x="58" y="263" class="heading">temperature</text>
+  <path d="M278 254 H420" class="link"/>
+  <rect x="444" y="232" width="610" height="48" fill="#f4e7dc" stroke="#a96243" stroke-width="1"/>
+  <text x="749" y="263" text-anchor="middle" class="body">Encoded temperature observation</text>
+
+  <path d="M58 298 H1062" class="rule"/>
+  <text x="58" y="342" class="heading">voltage</text>
+  <path d="M278 333 H420" class="link"/>
+  <rect x="444" y="311" width="610" height="48" fill="#e5ebe2"/>
+  <text x="749" y="342" text-anchor="middle" class="body">Encoded voltage observation</text>
+
+  <!-- Explicit byte counts; cell widths are schematic, not proportional to storage. -->
+  <text x="32" y="432" class="heading">Inside the temperature field</text>
+  <text x="32" y="463" class="small">Fixed-width timestamp and lengths; variable-length UTF-8 contents. Cells are schematic.</text>
+
+  <rect x="32" y="490" width="1056" height="132" fill="#e5ebe2" stroke="#647965" stroke-width="1.5"/>
+  <rect x="242" y="490" width="170" height="132" fill="#fcfaf5"/>
+  <rect x="692" y="490" width="160" height="132" fill="#fcfaf5"/>
+  <path d="M242 490 V622 M412 490 V622 M692 490 V622 M852 490 V622" class="rule"/>
+
+  <text x="137" y="523" text-anchor="middle" class="body">Timestamp</text>
+  <text x="137" y="552" text-anchor="middle" class="size">8 bytes / 64 bits</text>
+  <text x="137" y="596" text-anchor="middle" class="value">t1</text>
+  <text x="327" y="523" text-anchor="middle" class="body">Value length</text>
+  <text x="327" y="552" text-anchor="middle" class="size">2 bytes / 16 bits</text>
+  <text x="327" y="596" text-anchor="middle" class="value">4</text>
+  <text x="552" y="523" text-anchor="middle" class="body">Value (UTF-8)</text>
+  <text x="552" y="552" text-anchor="middle" class="size">4 bytes / 32 bits here</text>
+  <text x="552" y="596" text-anchor="middle" class="value">21.4</text>
+  <text x="772" y="523" text-anchor="middle" class="body">Unit length</text>
+  <text x="772" y="552" text-anchor="middle" class="size">1 byte / 8 bits</text>
+  <text x="772" y="596" text-anchor="middle" class="value">3</text>
+  <text x="970" y="523" text-anchor="middle" class="body">Unit (UTF-8)</text>
+  <text x="970" y="552" text-anchor="middle" class="size">3 bytes / 24 bits here</text>
+  <text x="970" y="596" text-anchor="middle" class="value">°C</text>
+
+  <text x="32" y="652" class="body">Example payload: 18 bytes (144 bits) = 11 fixed + 4 value + 3 unit.</text>
+  <text x="32" y="680" class="small">Lengths count UTF-8 bytes. Field names, device keys and cache overhead are not included.</text>
+
+  <path d="M32 710 H1088" class="rule"/>
+  <text x="32" y="747" class="heading">Update voltage</text>
+  <text x="32" y="778" class="body">Replace its field; leave temperature untouched.</text>
+  <text x="600" y="747" class="heading">Read temperature</text>
+  <text x="600" y="778" class="body">Fetch and decode only the selected field.</text>
+  <text x="32" y="829" class="small">Illustrative contents; t1 is a Unix-millisecond timestamp. Byte order is not specified.</text>
+</svg>
