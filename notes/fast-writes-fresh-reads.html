@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="https://sekaiser.github.io/static/favicon.svg?v=d722fec0e0cca8eb" type="image/svg+xml">
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/vendor.css?v=cf6814bed6634e0a" type="text/css" media="screen" />
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/notebook.css?v=131c4a7cb01fddc2">
+  
+  
+  
+  <script src="https://sekaiser.github.io/static/js/study.js?v=097960b1aa1fd3bf" defer></script>
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/article.css?v=919c161ba2902f9c">
+  
+
+  
+
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/project.css?v=1a0d7a21c51adfc4">
+  <script src="https://sekaiser.github.io/static/js/main.js?v=7ffe88eb20e1b177"></script>
+
+  
+  
+
+
+
+
+  
+  
+  
+  
+
+<title>Fast Writes, Fresh Reads | Sebastian Kaiser</title>
+<meta name="description" content="Where should the work happen? A practical guide to background indexing in Go and Rust.">
+<meta property="og:title" content="Fast Writes, Fresh Reads | Sebastian Kaiser">
+<meta property="og:description" content="Where should the work happen? A practical guide to background indexing in Go and Rust.">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Sebastian Kaiser — engineering notebook">
+<meta name="twitter:card" content="summary">
+
+  
+  
+  <link rel="canonical" href="https://sekaiser.github.io/notes/fast-writes-fresh-reads.html">
+  <meta property="og:url" content="https:&#x2F;&#x2F;sekaiser.github.io&#x2F;notes&#x2F;fast-writes-fresh-reads.html">
+  <meta property="og:image" content="https://sekaiser.github.io/static/pics/study/engineering-desk.png?v=478d3aa3a9ffa967">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1254">
+  <meta property="og:image:height" content="1254">
+  <meta property="og:image:alt" content="An illustrated desk with a notebook, computer, and reading lamp.">
+
+
+  <meta property="article:published_time" content="2026-10-24">
+  
+
+<link rel="me" href="https://www.linkedin.com/in/sekaiser/">
+
+  
+</head>
+<body>
+  
+<div class="margin-sketches" aria-hidden="true">
+  <svg class="margin-sketch-definitions" width="0" height="0" focusable="false">
+    <defs>
+      <symbol id="margin-branches" viewBox="0 0 88 270">
+        <path d="M44 34 C44 67 18 60 18 96 M44 34 C44 67 70 60 70 96 M18 112 C18 153 44 145 44 177 M70 112 C70 153 44 145 44 177 M44 193 L44 230"/>
+        <circle cx="44" cy="26" r="8" class="sketch-node"/>
+        <rect x="10" y="96" width="16" height="16" rx="3"/>
+        <rect x="62" y="96" width="16" height="16" rx="3"/>
+        <circle cx="44" cy="185" r="8" class="sketch-node"/>
+        <path d="M36 238 L44 230 L52 238 L44 246 Z" class="sketch-accent"/>
+      </symbol>
+      <symbol id="margin-pages" viewBox="0 0 88 270">
+        <path d="M29 27 L62 30 L59 76 L26 73 Z M22 34 L55 37 L52 83 L19 80 Z"/>
+        <path d="M30 47 L46 49 M29 55 L43 57 M29 63 L38 64"/>
+        <path d="M38 93 C37 126 69 112 67 145 C65 167 30 153 29 183" stroke-dasharray="2 7"/>
+        <circle cx="29" cy="191" r="8" class="sketch-node"/>
+        <path d="M36 195 L62 216 M62 210 L68 216 L62 222 L56 216 Z" class="sketch-accent"/>
+        <circle cx="13" cy="130" r="3"/>
+      </symbol>
+      <symbol id="margin-orbit" viewBox="0 0 88 270">
+        <ellipse cx="44" cy="72" rx="31" ry="39"/>
+        <ellipse cx="44" cy="72" rx="17" ry="39" transform="rotate(28 44 72)"/>
+        <circle cx="44" cy="72" r="6" class="sketch-node"/>
+        <circle cx="71" cy="52" r="4" class="sketch-accent"/>
+        <path d="M44 121 L44 164 M30 182 L44 164 L58 182 Z M44 183 L44 212" stroke-dasharray="3 6"/>
+        <path d="M35 230 Q44 215 53 230 Q44 244 35 230 Z"/>
+      </symbol>
+      <symbol id="margin-stack" viewBox="0 0 88 270">
+        <path d="M10 54 L44 36 L78 54 L44 72 Z M10 70 L44 88 L78 70 M10 86 L44 104 L78 86"/>
+        <path d="M44 116 L44 150 M20 168 L44 150 L68 168 M20 168 L20 193 M68 168 L68 193"/>
+        <rect x="12" y="194" width="16" height="16" rx="3"/>
+        <circle cx="68" cy="202" r="8" class="sketch-node"/>
+        <path d="M37 239 L51 239 M44 232 L44 246" class="sketch-accent"/>
+      </symbol>
+      <symbol id="margin-signal" viewBox="0 0 88 270">
+        <path d="M12 58 L26 58 L26 36 L42 36 L42 80 L58 80 L58 58 L76 58"/>
+        <path d="M12 114 Q27 85 44 114 T76 114"/>
+        <path d="M12 153 L76 153" stroke-dasharray="2 7"/>
+        <circle cx="26" cy="153" r="4" class="sketch-node"/>
+        <circle cx="62" cy="153" r="4" class="sketch-accent"/>
+        <path d="M23 202 L44 182 L65 202 L44 222 Z M23 202 L65 202"/>
+      </symbol>
+      <symbol id="margin-network" viewBox="0 0 88 270">
+        <path d="M19 45 L68 66 L36 108 L19 45 M36 108 L70 155 L18 179 L36 108 M18 179 L48 226 L70 155"/>
+        <circle cx="19" cy="45" r="6" class="sketch-node"/>
+        <circle cx="68" cy="66" r="5"/>
+        <circle cx="36" cy="108" r="8" class="sketch-node"/>
+        <circle cx="70" cy="155" r="5"/>
+        <circle cx="18" cy="179" r="6"/>
+        <circle cx="48" cy="226" r="6" class="sketch-accent"/>
+      </symbol>
+    </defs>
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:0" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:1" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:2" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-stack" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:3" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-signal" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:4" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:5" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:6" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:7" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:0" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:1" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:2" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-signal" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:3" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:4" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:5" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-stack" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:6" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:7" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+</div>
+
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div id="root" class="site-shell">
+        
+<header class="study-masthead">
+  <a class="study-signature" href="https://sekaiser.github.io/">
+    <span class="study-bookmark" aria-hidden="true">sk.</span>
+    <span class="study-identity"><span class="study-name">Sebastian <em>Kaiser</em></span><small>A personal engineering notebook</small></span>
+  </a>
+  <nav aria-label="Main navigation">
+    <a href="https://sekaiser.github.io/notes.html" aria-current="true">Notes</a>
+    <a href="https://sekaiser.github.io/feed.html">Reading</a>
+    <a href="https://sekaiser.github.io/about.html">About</a>
+    <a href="https://sekaiser.github.io/search.html">Search</a>
+  </nav>
+</header>
+
+
+
+        <main id="main" tabindex="-1">
+           
+
+          
+<article class="study-page">
+  <header class="study-opening">
+    <div class="study-heading">
+      <div class="study-title">
+        <p class="study-context"><a href="https://sekaiser.github.io/notes.html">The notebook</a>
+  
+</p>
+        <h1>
+  
+    Fast Writes, Fresh Reads
+  
+</h1>
+        <div class="study-metadata">
+          <dl class="study-dates">
+            <div><dt>Published</dt><dd><time datetime="2026-10-24">24 Oct 2026</time></dd></div>
+            
+          </dl>
+          <nav class="study-topics" aria-label="Article topics">
+
+
+<a class="paper-tag" data-tag="storage" data-tag-color="38" href="https://sekaiser.github.io/tags/storage.html"><span>storage</span></a>
+
+
+
+<a class="paper-tag" data-tag="backpressure" data-tag-color="61" href="https://sekaiser.github.io/tags/backpressure.html"><span>backpressure</span></a>
+
+
+
+<a class="paper-tag" data-tag="concurrency" data-tag-color="24" href="https://sekaiser.github.io/tags/concurrency.html"><span>concurrency</span></a>
+</nav>
+        </div>
+      </div>
+      <div class="study-introduction"></div>
+    </div>
+  </header>
+  <div class="study-layout">
+    <aside class="study-margin" aria-label="Article navigation and reading notes">
+      <div class="study-margin-content">
+        <details class="study-contents" hidden>
+          <summary>On this page</summary>
+          <nav aria-label="On this page"></nav>
+        </details>
+        
+      </div>
+    </aside>
+    <div class="document-body study-prose"><div class="frontmatter">
+<div class="abstract">
+<p>A client submits a device event. The service replies <strong>accepted</strong>. An operator refreshes the dashboard and still sees the old value.</p>
+<p>The event may already be safely recorded. The table behind the dashboard is still catching up. Without some indication of its progress, the operator has no way to tell a delayed view from a missing update.</p>
+</div>
+<div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a href="#the-contract">Decide what “accepted” means</a></li>
+<li><a href="#the-cost">Choose who pays for the lookup</a><ul>
+<li><a href="#pay-when-somebody-reads">Pay when somebody reads</a></li>
+<li><a href="#pay-before-replying">Pay before replying</a></li>
+<li><a href="#pay-after-replying">Pay after replying</a></li>
+</ul>
+</li>
+<li><a href="#freshness">Put freshness in the answer</a></li>
+<li><a href="#backpressure">Give unfinished work a budget</a></li>
+<li><a href="#ownership">Decide who owns the batch</a><ul>
+<li><a href="#what-changes-at-the-handoff">What changes at the handoff</a></li>
+<li><a href="#look-at-the-allocation-pattern">Look at the allocation pattern</a></li>
+</ul>
+</li>
+<li><a href="#research">Ask whether the same work is necessary</a><ul>
+<li><a href="#change-which-bytes-move">Change which bytes move</a></li>
+<li><a href="#spend-memory-and-maintenance-where-they-help">Spend memory and maintenance where they help</a></li>
+<li><a href="#schedule-maintenance-with-foreground-demand">Schedule maintenance with foreground demand</a></li>
+</ul>
+</li>
+<li><a href="#measurement">Measure acknowledgement and visibility</a><ul>
+<li><a href="#what-the-local-runs-showed">What the local runs showed</a></li>
+<li><a href="#choose-the-language-at-the-constraint-that-matters">Choose the language at the constraint that matters</a></li>
+</ul>
+</li>
+<li><a href="#references">References</a></li>
+</ul>
+</div>
+<!--endtoc-->
+</div>
+<blockquote>
+<p>Recording an event and making it available to readers can finish at different times. The service needs to say which of those it has promised when it replies.</p>
+</blockquote>
+<p>Updating the table before replying closes this visibility gap for readers of that table. Moving the update into a worker can shorten the acknowledgement path, provided the service tracks the work still waiting. If lookups are rare, it may be cheaper to scan the journal when a query arrives and maintain no table at all.</p>
+<p>I want to compare those choices through a small journal design in Go and Rust. The interesting question is where the lookup work belongs, and what a fast acknowledgement leaves the service to finish afterward. The code also gives us a concrete place to compare the languages' ownership and synchronization rules.</p>
+<p>In this article: <a href="#the-contract">The contract</a> · <a href="#the-cost">The cost</a> · <a href="#freshness">Freshness</a> · <a href="#backpressure">Backpressure</a> · <a href="#ownership">Ownership</a> · <a href="#research">Research</a> · <a href="#measurement">Measurement</a></p>
+<hr />
+<h2><a href="#the-contract" aria-hidden="true" class="anchor" id="the-contract"></a>Decide what “accepted” means</h2>
+<p>Consider a service that records unconditional device updates. Ingestion is its main job. Latest-value lookups happen less often and can tolerate some delay, as long as the service reports it. The lookup table is a <em>projection</em>: a representation derived from the journal to serve those reads.</p>
+<p>For this design, accepting a write means appending its records to a local journal and successfully synchronizing the file. Only then may the background worker consume them. The reply confirms that the journal has recorded the write; the projection may still be behind.</p>
+<p>The writer publishes its progress after synchronization:</p>
+<figure class="code-listing" id="code-f6ad5f8635e607a5"><figcaption class="code-toolbar"><span class="code-language">Text</span><span class="code-actions"><a href="#code-f6ad5f8635e607a5" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><pre tabindex="0" aria-label="Code listing"><code class="language-text"><span style="color:#323232;">append bytes  →  synchronize file  →  publish completed position
+</span></code></pre></div></figure>
+<p>These excerpts show that ordering for synchronized writes with a background projection. They omit setup and instrumentation. The Rust writer here is a file; a user-space buffering wrapper would have to be flushed before synchronizing the underlying file.<sup class="footnote-ref"><a href="#fn-fn:1">fn:1</a></sup><sup>, </sup><sup class="footnote-ref"><a href="#fn-fn:2">fn:2</a></sup></p>
+<figure class="code-listing" id="code-snippet--publish-after-sync-go"><figcaption class="code-toolbar"><span class="code-language">go</span><span class="code-caption">Publishing after synchronization: Go, with explicit error propagation.</span><span class="code-actions"><a href="#code-snippet--publish-after-sync-go" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--publish-after-sync-go-L1" href="#code-snippet--publish-after-sync-go-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--publish-after-sync-go-L2" href="#code-snippet--publish-after-sync-go-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--publish-after-sync-go-L3" href="#code-snippet--publish-after-sync-go-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--publish-after-sync-go-L4" href="#code-snippet--publish-after-sync-go-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--publish-after-sync-go-L5" href="#code-snippet--publish-after-sync-go-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--publish-after-sync-go-L6" href="#code-snippet--publish-after-sync-go-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--publish-after-sync-go-L7" href="#code-snippet--publish-after-sync-go-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--publish-after-sync-go-L8" href="#code-snippet--publish-after-sync-go-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--publish-after-sync-go-L9" href="#code-snippet--publish-after-sync-go-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--publish-after-sync-go-L10" href="#code-snippet--publish-after-sync-go-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-snippet--publish-after-sync-go-L11" href="#code-snippet--publish-after-sync-go-L11" aria-label="Link to line 11" data-line="11"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-go"><span style="font-weight:bold;color:#a71d5d;">if</span><span style="color:#323232;"> err </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">writeAll(f, buffer[:count</span><span style="font-weight:bold;color:#a71d5d;">*</span><span style="color:#323232;">width]); err </span><span style="font-weight:bold;color:#a71d5d;">!= </span><span style="color:#0086b3;">nil </span><span style="color:#323232;">{
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">return
+</span><span style="color:#323232;">}
+</span><span style="font-weight:bold;color:#a71d5d;">if</span><span style="color:#323232;"> err </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> f.Sync(); err </span><span style="font-weight:bold;color:#a71d5d;">!= </span><span style="color:#0086b3;">nil </span><span style="color:#323232;">{
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">return
+</span><span style="color:#323232;">}
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">p.mu.Lock()
+</span><span style="color:#323232;">p.head </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> base </span><span style="font-weight:bold;color:#a71d5d;">+</span><span style="color:#323232;"> count
+</span><span style="color:#323232;">p.cv.Broadcast()
+</span><span style="color:#323232;">p.mu.Unlock()
+</span></code></pre></div></figure>
+<figure class="code-listing" id="code-snippet--publish-after-sync-rust"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">Publishing after synchronization: Rust, with error propagation through ?.</span><span class="code-actions"><a href="#code-snippet--publish-after-sync-rust" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--publish-after-sync-rust-L1" href="#code-snippet--publish-after-sync-rust-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--publish-after-sync-rust-L2" href="#code-snippet--publish-after-sync-rust-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--publish-after-sync-rust-L3" href="#code-snippet--publish-after-sync-rust-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--publish-after-sync-rust-L4" href="#code-snippet--publish-after-sync-rust-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--publish-after-sync-rust-L5" href="#code-snippet--publish-after-sync-rust-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--publish-after-sync-rust-L6" href="#code-snippet--publish-after-sync-rust-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--publish-after-sync-rust-L7" href="#code-snippet--publish-after-sync-rust-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--publish-after-sync-rust-L8" href="#code-snippet--publish-after-sync-rust-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--publish-after-sync-rust-L9" href="#code-snippet--publish-after-sync-rust-L9" aria-label="Link to line 9" data-line="9"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="color:#323232;">writer.</span><span style="color:#62a35c;">write_all</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">buffer[</span><span style="font-weight:bold;color:#a71d5d;">..</span><span style="color:#323232;">count </span><span style="font-weight:bold;color:#a71d5d;">* </span><span style="color:#0086b3;">WIDTH</span><span style="color:#323232;">])</span><span style="font-weight:bold;color:#a71d5d;">?</span><span style="color:#323232;">;
+</span><span style="color:#323232;">writer.</span><span style="color:#62a35c;">sync_all</span><span style="color:#323232;">()</span><span style="font-weight:bold;color:#a71d5d;">?</span><span style="color:#323232;">;
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">{
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">let mut</span><span style="color:#323232;"> state </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> p.mu.</span><span style="color:#62a35c;">lock</span><span style="color:#323232;">()
+</span><span style="color:#323232;">        .</span><span style="color:#62a35c;">expect</span><span style="color:#323232;">(</span><span style="color:#183691;">&quot;projection lock poisoned&quot;</span><span style="color:#323232;">);
+</span><span style="color:#323232;">    state.head </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> base </span><span style="font-weight:bold;color:#a71d5d;">+</span><span style="color:#323232;"> count;
+</span><span style="color:#323232;">    p.cv.</span><span style="color:#62a35c;">notify_all</span><span style="color:#323232;">();
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<p>Neither version advances <code>head</code> if synchronization reports an error. The mutex makes the new position visible to the worker; file synchronization handles a separate obligation to storage.<sup class="footnote-ref"><a href="#fn-fn:3">fn:3</a></sup><sup>, </sup><sup class="footnote-ref"><a href="#fn-fn:4">fn:4</a></sup><sup>, </sup><sup class="footnote-ref"><a href="#fn-fn:1">fn:1</a></sup></p>
+<details>
+<summary>Partial writes and failure boundaries</summary>
+<p>Rust's <code>write_all</code> keeps writing until the buffer is consumed or it encounters an error it cannot retry. The companion's Go helper loops over partial progress and rejects zero progress. Neither operation makes a batch atomic: an error can leave part of it in the file. Both programs stop on a write or synchronization error instead of retrying an uncertain append.<sup class="footnote-ref"><a href="#fn-fn:5">fn:5</a></sup><sup>, </sup><sup class="footnote-ref"><a href="#fn-fn:2">fn:2</a></sup></p>
+<p>Creating the journal is part of the persistence protocol too. Both programs create a new file exclusively and, in synchronized mode, synchronize the empty file and its containing directory before timing writes. On Linux, file synchronization alone does not necessarily persist the directory entry. These setup steps still do not qualify the programs for every power-loss scenario.<sup class="footnote-ref"><a href="#fn-fn:6">fn:6</a></sup></p>
+<p>A crash after synchronization but before the reply can also leave a recorded write that the client believes failed. Retrying safely requires a request identity or an application rule for duplicate updates. Delaying the projection does not resolve this acknowledgement ambiguity.</p>
+</details>
+<blockquote>
+<p>The lookup projection is optional for accepting these unconditional updates. If acceptance depends on a uniqueness check or a conditional update, the service needs sufficiently current state to make that decision before accepting the write.</p>
+</blockquote>
+<h2><a href="#the-cost" aria-hidden="true" class="anchor" id="the-cost"></a>Choose who pays for the lookup</h2>
+<p>The three policies append the same records. They differ in when they do the work needed by readers.</p>
+<div id="fig-indexing-policies" class="notebook-diagram">
+<p><a id="figure--fig-indexing-policies-image"></a></p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/af0cd72b08ee1e26247c6f77dcbef6310d05bd568e9f345ba67336f9acde1446/indexing-policies.svg?v=af0cd72b08ee1e26" alt="Three dependency paths: journal-only acknowledges after synchronization and scans on a query; eager indexing updates the table before acknowledging; background indexing publishes a completed position, then acknowledgement and replay proceed independently."><figcaption><span class="figure-number">Figure 1: </span>Three dependency paths for the same journal records. Background acknowledgement and replay branch after publication. Admission may still delay the next append. Arrows show dependencies, not durations.</figcaption></figure>
+<div class="diagram-actions">
+<p><a href="https://sekaiser.github.io/attachments/af0cd72b08ee1e26247c6f77dcbef6310d05bd568e9f345ba67336f9acde1446/indexing-policies.svg?v=af0cd72b08ee1e26">Open the full-size diagram</a></p>
+</div>
+</div>
+<h3><a href="#pay-when-somebody-reads" aria-hidden="true" class="anchor" id="pay-when-somebody-reads"></a>Pay when somebody reads</h3>
+<p>With no lookup table, a query can scan backward in blocks from a captured journal boundary. It stops at the first record for the device. A recent value may be quick to find; a device with no record requires scanning the entire captured history.</p>
+<p>This avoids maintaining a table for events nobody queries. It becomes expensive when an investigation asks for many old values or missing devices. Infrequent reads can still have a response-time requirement.</p>
+<h3><a href="#pay-before-replying" aria-hidden="true" class="anchor" id="pay-before-replying"></a>Pay before replying</h3>
+<p>The eager writer updates the in-memory table after synchronization and before replying. A subsequent reader of that same table, using the same lock, can see the write or a later update. A different replica or response cache needs its own visibility guarantee.</p>
+<p>The table can remain in memory because the journal is enough to rebuild it. Persisting the table would be a separate choice to reduce recovery time. For a small table, updating it directly may cost less than coordinating a worker.</p>
+<h3><a href="#pay-after-replying" aria-hidden="true" class="anchor" id="pay-after-replying"></a>Pay after replying</h3>
+<p>A background worker replays the published journal prefix into the table. The writer can usually reply without waiting for that replay. The service does, however, pay for another read pass, decoding and checksum verification, as well as worker coordination.</p>
+<p>Those reads may hit the page cache and avoid physical I/O, but still use CPU and memory bandwidth. Moving replay out of the acknowledgement path can shorten the response while increasing total work.</p>
+<blockquote>
+<p>For a service with rare lookups, a scan may be enough. Frequent reads can justify a table. A worker is worth adding when the shorter acknowledgement path is useful enough to pay for replay and delayed visibility.</p>
+</blockquote>
+<h2><a href="#freshness" aria-hidden="true" class="anchor" id="freshness"></a>Put freshness in the answer</h2>
+<p>Suppose the journal is published through record 10,000 and the projection has applied through 9,700. The view is missing 300 events. These are illustrative positions, not benchmark results.</p>
+<div id="fig-freshness-prefix" class="notebook-diagram">
+<p><a id="figure--fig-freshness-prefix-image"></a></p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/3688ee4ccdc6b534120e73f773dfcaf172d05b980b264b6b6439fd3b49030739/freshness-prefix.svg?v=3688ee4ccdc6b534" alt="The journal is published through record 10000, but the projection covers only records through 9700. The 300-record suffix awaits replay. One device may last have changed at 9200 even though the view represents every record through 9700."><figcaption><span class="figure-number">Figure 2: </span>The view covers a journal prefix; a device's last-update position may be older. Positions and widths are illustrative. A live freshness-wait API is not implemented by the benchmark.</figcaption></figure>
+<div class="diagram-actions">
+<p><a href="https://sekaiser.github.io/attachments/3688ee4ccdc6b534120e73f773dfcaf172d05b980b264b6b6439fd3b49030739/freshness-prefix.svg?v=3688ee4ccdc6b534">Open the full-size diagram</a></p>
+</div>
+</div>
+<p>A value alone hides that gap. A value accompanied by <code>as_of_sequence = 9,700</code> states the view's boundary. The value's own last-update sequence may be older; a particular device need not change in every batch.</p>
+<p>The view must represent a contiguous prefix:</p>
+<figure class="code-listing" id="code-7f8245840e966b89"><figcaption class="code-toolbar"><span class="code-language">Text</span><span class="code-actions"><a href="#code-7f8245840e966b89" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-7f8245840e966b89-L1" href="#code-7f8245840e966b89-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-7f8245840e966b89-L2" href="#code-7f8245840e966b89-L2" aria-label="Link to line 2" data-line="2"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-text"><span style="color:#323232;">0 &lt;= indexed &lt;= head
+</span><span style="color:#323232;">projection = apply every record from 1 through indexed, in order
+</span></code></pre></div></figure>
+<p>A single worker reads and validates the next batch outside the lock. It then applies the table changes and advances its position in the same critical section. Readers must never observe the new position with the old table.</p>
+<figure class="code-listing" id="code-snippet--publish-progress-go"><figcaption class="code-toolbar"><span class="code-language">go</span><span class="code-caption">Updating data and progress together: Go fields protected by convention.</span><span class="code-actions"><a href="#code-snippet--publish-progress-go" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--publish-progress-go-L1" href="#code-snippet--publish-progress-go-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--publish-progress-go-L2" href="#code-snippet--publish-progress-go-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--publish-progress-go-L3" href="#code-snippet--publish-progress-go-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--publish-progress-go-L4" href="#code-snippet--publish-progress-go-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--publish-progress-go-L5" href="#code-snippet--publish-progress-go-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--publish-progress-go-L6" href="#code-snippet--publish-progress-go-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--publish-progress-go-L7" href="#code-snippet--publish-progress-go-L7" aria-label="Link to line 7" data-line="7"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-go"><span style="color:#323232;">p.mu.Lock()
+</span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">_, r </span><span style="font-weight:bold;color:#a71d5d;">:= range</span><span style="color:#323232;"> decoded[:count] {
+</span><span style="color:#323232;">    p.entries[r.Key] </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> Entry{r.Seq, r.Value}
+</span><span style="color:#323232;">}
+</span><span style="color:#323232;">p.indexed </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> start </span><span style="font-weight:bold;color:#a71d5d;">+</span><span style="color:#323232;"> count
+</span><span style="color:#323232;">p.cv.Broadcast()
+</span><span style="color:#323232;">p.mu.Unlock()
+</span></code></pre></div></figure>
+<figure class="code-listing" id="code-snippet--publish-progress-rust"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">Updating data and progress together: Rust state accessed through a guard.</span><span class="code-actions"><a href="#code-snippet--publish-progress-rust" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--publish-progress-rust-L1" href="#code-snippet--publish-progress-rust-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--publish-progress-rust-L2" href="#code-snippet--publish-progress-rust-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--publish-progress-rust-L3" href="#code-snippet--publish-progress-rust-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--publish-progress-rust-L4" href="#code-snippet--publish-progress-rust-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--publish-progress-rust-L5" href="#code-snippet--publish-progress-rust-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--publish-progress-rust-L6" href="#code-snippet--publish-progress-rust-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--publish-progress-rust-L7" href="#code-snippet--publish-progress-rust-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--publish-progress-rust-L8" href="#code-snippet--publish-progress-rust-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--publish-progress-rust-L9" href="#code-snippet--publish-progress-rust-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--publish-progress-rust-L10" href="#code-snippet--publish-progress-rust-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-snippet--publish-progress-rust-L11" href="#code-snippet--publish-progress-rust-L11" aria-label="Link to line 11" data-line="11"></a></div><div class="code-line-reference" style="--line-offset:11"><a id="code-snippet--publish-progress-rust-L12" href="#code-snippet--publish-progress-rust-L12" aria-label="Link to line 12" data-line="12"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="color:#323232;">{
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">let mut</span><span style="color:#323232;"> state </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">self.mu.</span><span style="color:#62a35c;">lock</span><span style="color:#323232;">()
+</span><span style="color:#323232;">        .</span><span style="color:#62a35c;">expect</span><span style="color:#323232;">(</span><span style="color:#183691;">&quot;projection lock poisoned&quot;</span><span style="color:#323232;">);
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">for</span><span style="color:#323232;"> r </span><span style="font-weight:bold;color:#a71d5d;">in &amp;</span><span style="color:#323232;">decoded[</span><span style="font-weight:bold;color:#a71d5d;">..</span><span style="color:#323232;">count] {
+</span><span style="color:#323232;">        state.entries[r.key </span><span style="font-weight:bold;color:#a71d5d;">as usize</span><span style="color:#323232;">] </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> Entry {
+</span><span style="color:#323232;">            seq: r.seq,
+</span><span style="color:#323232;">            value: r.value,
+</span><span style="color:#323232;">        };
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">    state.indexed </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> start </span><span style="font-weight:bold;color:#a71d5d;">+</span><span style="color:#323232;"> count;
+</span><span style="color:#323232;">    self.cv.</span><span style="color:#62a35c;">notify_all</span><span style="color:#323232;">();
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<p>A live reader must copy the entry and the projection position under that same lock. For read-your-writes, the write response can return its journal sequence. A reader waits for <code>indexed &gt;</code> required_sequence= and copies the result while still holding the lock. It may see a later update to the same device: the position is a minimum freshness requirement, not an exact historical snapshot.</p>
+<p>A timeout says the view did not reach that position before the deadline. The recorded write may still be waiting to appear.</p>
+<p>Here, “latest” means last in journal order. A delayed device observation appended later will replace an earlier entry, even if its measurement timestamp is older. A service that needs the newest measurement instead needs an event-time or version comparison and a rule for ties.</p>
+<details>
+<summary>What the lock enforces</summary>
+<p>Go places a mutex beside the protected fields. The compiler does not require callers to acquire it. Package boundaries, review, and race-enabled tests help enforce the convention; a race detector only observes executed paths.<sup class="footnote-ref"><a href="#fn-fn:7">fn:7</a></sup></p>
+<p>Rust's <code>Mutex&lt;State&gt;</code> supplies protected access through a guard, whose scope makes the lock lifetime visible. <code>Arc&lt;Projection&gt;</code> lets threads share ownership; the projection still needs synchronization for its mutable state.<sup class="footnote-ref"><a href="#fn-fn:8">fn:8</a></sup><sup>, </sup><sup class="footnote-ref"><a href="#fn-fn:9">fn:9</a></sup></p>
+<p>Rust will still compile code that advances <code>indexed</code> too early while holding the correct lock. Preserving the contiguous prefix is our responsibility in either language. Reading and decoding outside the lock also matters because the critical section blocks readers and the writer's progress publication.</p>
+<p>Parallel replay workers would need an ordered commit protocol: a later batch finishing first must not advance the position past an unfinished earlier batch. The live freshness API also needs its own tests; queries made only after catch-up cannot exercise it.</p>
+</details>
+<h2><a href="#backpressure" aria-hidden="true" class="anchor" id="backpressure"></a>Give unfinished work a budget</h2>
+<p>A worker can finish a short test after traffic stops and still be too slow for the service's normal arrival rate.</p>
+<table>
+<tr>
+<th>Assumed input rate</th>
+<th>Assumed worker rate</th>
+<th>Backlog added in 10 seconds</th>
+</tr>
+<tr>
+<td>300,000 records/s</td>
+<td>270,000 records/s</td>
+<td>300,000 records</td>
+</tr>
+</table>
+<p><em>Illustration, not measurement: 30,000 additional records per second × 10 seconds. At 32 bytes per record, the outstanding journal suffix is 9.6 MB.</em></p>
+<p>A larger queue gives the worker longer to absorb a burst. If that rate difference persists, the dashboard falls further behind and shutdown has more work to drain.</p>
+<p>The writer can limit that lag by checking capacity before appending another batch:</p>
+<figure class="code-listing" id="code-5a85bf5fde0f53fe"><figcaption class="code-toolbar"><span class="code-language">Text</span><span class="code-actions"><a href="#code-5a85bf5fde0f53fe" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-5a85bf5fde0f53fe-L1" href="#code-5a85bf5fde0f53fe-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-5a85bf5fde0f53fe-L2" href="#code-5a85bf5fde0f53fe-L2" aria-label="Link to line 2" data-line="2"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-text"><span style="color:#323232;">current lag + next batch &lt;= lag limit
+</span><span style="color:#323232;">head - indexed + count &lt;= limit
+</span></code></pre></div></figure>
+<p>When the condition fails, the writer waits. Once the budget fills, a sustained write rate is constrained by the worker's progress. Measuring only the earlier fast acknowledgements would hide that limit.</p>
+<div id="fig-lag-budget" class="notebook-diagram">
+<p><a id="figure--fig-lag-budget-image"></a></p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/557133ef91b0016e5d7046a8b2893e944582f4bf80032ce56192899fa2c9f7c0/lag-budget.svg?v=557133ef91b0016e" alt="Two illustrative position-over-time plots. Without admission control the published journal position pulls away from the worker's applied position. With a lag budget the writer pauses until replay makes room for the next batch. These are conceptual trajectories, not benchmark traces."><figcaption><span class="figure-number">Figure 3: </span>A record budget makes the writer wait for replay instead of admitting an ever-growing gap. These trajectories are schematic. The bound is on record count, not age, journal size or upstream queues.</figcaption></figure>
+<div class="diagram-actions">
+<p><a href="https://sekaiser.github.io/attachments/557133ef91b0016e5d7046a8b2893e944582f4bf80032ce56192899fa2c9f7c0/lag-budget.svg?v=557133ef91b0016e">Open the full-size diagram</a></p>
+</div>
+</div>
+<details>
+<summary>Inspect the Go and Rust admission gates</summary>
+<figure class="code-listing" id="code-snippet--admission-gate-go"><figcaption class="code-toolbar"><span class="code-language">go</span><span class="code-caption">Waiting for capacity: Go's condition variable has a locker.</span><span class="code-actions"><a href="#code-snippet--admission-gate-go" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--admission-gate-go-L1" href="#code-snippet--admission-gate-go-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--admission-gate-go-L2" href="#code-snippet--admission-gate-go-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--admission-gate-go-L3" href="#code-snippet--admission-gate-go-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--admission-gate-go-L4" href="#code-snippet--admission-gate-go-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--admission-gate-go-L5" href="#code-snippet--admission-gate-go-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--admission-gate-go-L6" href="#code-snippet--admission-gate-go-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--admission-gate-go-L7" href="#code-snippet--admission-gate-go-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--admission-gate-go-L8" href="#code-snippet--admission-gate-go-L8" aria-label="Link to line 8" data-line="8"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-go"><span style="font-weight:bold;color:#a71d5d;">func </span><span style="color:#323232;">(p </span><span style="font-weight:bold;color:#a71d5d;">*</span><span style="color:#323232;">projection) </span><span style="font-weight:bold;color:#795da3;">reserve</span><span style="color:#323232;">(count, limit </span><span style="font-weight:bold;color:#a71d5d;">int</span><span style="color:#323232;">) </span><span style="font-weight:bold;color:#a71d5d;">error </span><span style="color:#323232;">{
+</span><span style="color:#323232;">    p.mu.Lock()
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">defer</span><span style="color:#323232;"> p.mu.Unlock()
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">for</span><span style="color:#323232;"> p.head</span><span style="font-weight:bold;color:#a71d5d;">-</span><span style="color:#323232;">p.indexed</span><span style="font-weight:bold;color:#a71d5d;">+</span><span style="color:#323232;">count </span><span style="font-weight:bold;color:#a71d5d;">&gt;</span><span style="color:#323232;"> limit </span><span style="font-weight:bold;color:#a71d5d;">&amp;&amp;</span><span style="color:#323232;"> p.failure </span><span style="font-weight:bold;color:#a71d5d;">== </span><span style="color:#0086b3;">nil </span><span style="color:#323232;">{
+</span><span style="color:#323232;">        p.cv.Wait()
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">return</span><span style="color:#323232;"> p.failure
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<figure class="code-listing" id="code-snippet--admission-gate-rust"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">Waiting for capacity: Rust's wait consumes and returns the guard.</span><span class="code-actions"><a href="#code-snippet--admission-gate-rust" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--admission-gate-rust-L1" href="#code-snippet--admission-gate-rust-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--admission-gate-rust-L2" href="#code-snippet--admission-gate-rust-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--admission-gate-rust-L3" href="#code-snippet--admission-gate-rust-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--admission-gate-rust-L4" href="#code-snippet--admission-gate-rust-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--admission-gate-rust-L5" href="#code-snippet--admission-gate-rust-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--admission-gate-rust-L6" href="#code-snippet--admission-gate-rust-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--admission-gate-rust-L7" href="#code-snippet--admission-gate-rust-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--admission-gate-rust-L8" href="#code-snippet--admission-gate-rust-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--admission-gate-rust-L9" href="#code-snippet--admission-gate-rust-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--admission-gate-rust-L10" href="#code-snippet--admission-gate-rust-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-snippet--admission-gate-rust-L11" href="#code-snippet--admission-gate-rust-L11" aria-label="Link to line 11" data-line="11"></a></div><div class="code-line-reference" style="--line-offset:11"><a id="code-snippet--admission-gate-rust-L12" href="#code-snippet--admission-gate-rust-L12" aria-label="Link to line 12" data-line="12"></a></div><div class="code-line-reference" style="--line-offset:12"><a id="code-snippet--admission-gate-rust-L13" href="#code-snippet--admission-gate-rust-L13" aria-label="Link to line 13" data-line="13"></a></div><div class="code-line-reference" style="--line-offset:13"><a id="code-snippet--admission-gate-rust-L14" href="#code-snippet--admission-gate-rust-L14" aria-label="Link to line 14" data-line="14"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">reserve</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self, count: </span><span style="font-weight:bold;color:#a71d5d;">usize</span><span style="color:#323232;">, limit: </span><span style="font-weight:bold;color:#a71d5d;">usize</span><span style="color:#323232;">) -&gt; io::Result&lt;()&gt; {
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">let mut</span><span style="color:#323232;"> state </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">self.mu.</span><span style="color:#62a35c;">lock</span><span style="color:#323232;">()
+</span><span style="color:#323232;">        .</span><span style="color:#62a35c;">expect</span><span style="color:#323232;">(</span><span style="color:#183691;">&quot;projection lock poisoned&quot;</span><span style="color:#323232;">);
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">while</span><span style="color:#323232;"> state.head </span><span style="font-weight:bold;color:#a71d5d;">-</span><span style="color:#323232;"> state.indexed </span><span style="font-weight:bold;color:#a71d5d;">+</span><span style="color:#323232;"> count </span><span style="font-weight:bold;color:#a71d5d;">&gt;</span><span style="color:#323232;"> limit
+</span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">&amp;&amp;</span><span style="color:#323232;"> state.failure.</span><span style="color:#62a35c;">is_none</span><span style="color:#323232;">()
+</span><span style="color:#323232;">    {
+</span><span style="color:#323232;">        state </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">self.cv.</span><span style="color:#62a35c;">wait</span><span style="color:#323232;">(state)
+</span><span style="color:#323232;">            .</span><span style="color:#62a35c;">expect</span><span style="color:#323232;">(</span><span style="color:#183691;">&quot;projection lock poisoned&quot;</span><span style="color:#323232;">);
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">match &amp;</span><span style="color:#323232;">state.failure {
+</span><span style="color:#323232;">        </span><span style="color:#0086b3;">Some</span><span style="color:#323232;">(error) </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">Err</span><span style="color:#323232;">(</span><span style="color:#62a35c;">invalid</span><span style="color:#323232;">(error.</span><span style="color:#62a35c;">clone</span><span style="color:#323232;">())),
+</span><span style="color:#323232;">        </span><span style="color:#0086b3;">None </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(()),
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<p>Both waits release the mutex and reacquire it before continuing. Both loops must recheck the predicate. Go's wait requires notification to return, but notification does not imply the predicate is true. Rust additionally permits spurious wakeups.<sup class="footnote-ref"><a href="#fn-fn:10">fn:10</a></sup><sup>, </sup><sup class="footnote-ref"><a href="#fn-fn:11">fn:11</a></sup></p>
+<p>The full worker code records I/O or decoding failures under the lock and notifies waiters. Neither wait has a request deadline or cancellation path, though. Storage that stalls without returning an error can leave callers waiting indefinitely.</p>
+<p>The full programs reject a lag limit smaller than the configured batch size and cap record counts and batch sizes for their 64-bit target. Those checks matter if this excerpt is reused: an oversized batch can never fit, and unbounded position arithmetic can overflow.<sup class="footnote-ref"><a href="#fn-fn:12">fn:12</a></sup><sup>, </sup><sup class="footnote-ref"><a href="#fn-fn:13">fn:13</a></sup></p>
+</details>
+<blockquote>
+<p>These excerpts assume one writer. Despite its name, the method checks capacity without reserving it. Two writers could both pass the check and then exceed the limit. Multiple writers need reservations or serialized admission, whichever language implements them.</p>
+</blockquote>
+<p>The limit bounds how many accepted records are waiting for replay, not how long they have waited. Even one event can remain stale indefinitely if the worker stops. It also leaves other budgets untouched: the full journal can keep growing and requests may queue upstream. Variable-size or variable-cost events may need a byte or work budget instead of a record count.</p>
+<h2><a href="#ownership" aria-hidden="true" class="anchor" id="ownership"></a>Decide who owns the batch</h2>
+<p>In the replay design, the worker owns a read descriptor and reusable buffers. The writer publishes a position and has no batch memory to share with it. This keeps ownership simple, at the cost of replay and decoding.</p>
+<p>An alternative sends the decoded batch directly after persistence. This avoids replay, but the writer must not reuse the batch while the worker is still reading it.</p>
+<p>The next two functions show different handoff contracts. Go keeps the caller's original buffer; Rust transfers it. These are teaching examples from <code>examples/handoff</code>, separate from the journal policies being compared.</p>
+<figure class="code-listing" id="code-snippet--enqueue-copy-go"><figcaption class="code-toolbar"><span class="code-language">go</span><span class="code-caption">Go: keep the original and copy the records for the worker.</span><span class="code-actions"><a href="#code-snippet--enqueue-copy-go" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--enqueue-copy-go-L1" href="#code-snippet--enqueue-copy-go-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--enqueue-copy-go-L2" href="#code-snippet--enqueue-copy-go-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--enqueue-copy-go-L3" href="#code-snippet--enqueue-copy-go-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--enqueue-copy-go-L4" href="#code-snippet--enqueue-copy-go-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--enqueue-copy-go-L5" href="#code-snippet--enqueue-copy-go-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--enqueue-copy-go-L6" href="#code-snippet--enqueue-copy-go-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--enqueue-copy-go-L7" href="#code-snippet--enqueue-copy-go-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--enqueue-copy-go-L8" href="#code-snippet--enqueue-copy-go-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--enqueue-copy-go-L9" href="#code-snippet--enqueue-copy-go-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--enqueue-copy-go-L10" href="#code-snippet--enqueue-copy-go-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-snippet--enqueue-copy-go-L11" href="#code-snippet--enqueue-copy-go-L11" aria-label="Link to line 11" data-line="11"></a></div><div class="code-line-reference" style="--line-offset:11"><a id="code-snippet--enqueue-copy-go-L12" href="#code-snippet--enqueue-copy-go-L12" aria-label="Link to line 12" data-line="12"></a></div><div class="code-line-reference" style="--line-offset:12"><a id="code-snippet--enqueue-copy-go-L13" href="#code-snippet--enqueue-copy-go-L13" aria-label="Link to line 13" data-line="13"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-go"><span style="font-weight:bold;color:#a71d5d;">func </span><span style="font-weight:bold;color:#795da3;">EnqueueCopy</span><span style="color:#323232;">(
+</span><span style="color:#323232;">    ctx context.Context,
+</span><span style="color:#323232;">    out chan&lt;- []Record,
+</span><span style="color:#323232;">    batch []Record,
+</span><span style="color:#323232;">) </span><span style="font-weight:bold;color:#a71d5d;">error </span><span style="color:#323232;">{
+</span><span style="color:#323232;">    owned </span><span style="font-weight:bold;color:#a71d5d;">:= </span><span style="color:#62a35c;">append</span><span style="color:#323232;">([]Record(</span><span style="color:#0086b3;">nil</span><span style="color:#323232;">), batch...)
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">select </span><span style="color:#323232;">{
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">case</span><span style="color:#323232;"> out </span><span style="font-weight:bold;color:#a71d5d;">&lt;-</span><span style="color:#323232;"> owned:
+</span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">return </span><span style="color:#0086b3;">nil
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">case &lt;-</span><span style="color:#323232;">ctx.Done():
+</span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">return</span><span style="color:#323232;"> ctx.Err()
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<figure class="code-listing" id="code-snippet--enqueue-owned-rust"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">Rust: move the existing allocation to the worker.</span><span class="code-actions"><a href="#code-snippet--enqueue-owned-rust" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--enqueue-owned-rust-L1" href="#code-snippet--enqueue-owned-rust-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--enqueue-owned-rust-L2" href="#code-snippet--enqueue-owned-rust-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--enqueue-owned-rust-L3" href="#code-snippet--enqueue-owned-rust-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--enqueue-owned-rust-L4" href="#code-snippet--enqueue-owned-rust-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--enqueue-owned-rust-L5" href="#code-snippet--enqueue-owned-rust-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--enqueue-owned-rust-L6" href="#code-snippet--enqueue-owned-rust-L6" aria-label="Link to line 6" data-line="6"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">enqueue_owned</span><span style="color:#323232;">(
+</span><span style="color:#323232;">    out: </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">SyncSender&lt;Vec&lt;Record&gt;&gt;,
+</span><span style="color:#323232;">    batch: Vec&lt;Record&gt;,
+</span><span style="color:#323232;">) -&gt; Result&lt;(), SendError&lt;Vec&lt;Record&gt;&gt;&gt; {
+</span><span style="color:#323232;">    out.</span><span style="color:#62a35c;">send</span><span style="color:#323232;">(batch)
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<h3><a href="#what-changes-at-the-handoff" aria-hidden="true" class="anchor" id="what-changes-at-the-handoff"></a>What changes at the handoff</h3>
+<p>A Go channel transfers the slice descriptor, not an independent backing array. Sending it does not prohibit later access by the sender, nor establish that processing is finished. This version copies the batch to preserve the caller's ability to reuse the original after the call.<sup class="footnote-ref"><a href="#fn-fn:14">fn:14</a></sup><sup>, </sup><sup class="footnote-ref"><a href="#fn-fn:3">fn:3</a></sup></p>
+<p>Rust moves the vector into the channel. The caller cannot keep using the moved value, and the backing array is not cloned. If the receiver disconnects before the send succeeds, <code>SendError</code> carries the unsent vector back.<sup class="footnote-ref"><a href="#fn-fn:15">fn:15</a></sup><sup>, </sup><sup class="footnote-ref"><a href="#fn-fn:16">fn:16</a></sup><sup>, </sup><sup class="footnote-ref"><a href="#fn-fn:17">fn:17</a></sup></p>
+<div id="fig-batch-ownership" class="notebook-diagram">
+<p><a id="figure--fig-batch-ownership-image"></a></p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/39aec132d7cc5e682b9102a9c03a0978829a9f6d89e00b8b4b4728acda1b988d/batch-ownership.svg?v=39aec132d7cc5e68" alt="The Go teaching example retains one backing array for the caller and sends a second independent array to the receiver. The Rust teaching example transfers the existing allocation to the receiver; the caller cannot reuse the moved vector. These handoff examples are separate from the benchmark policies."><figcaption><span class="figure-number">Figure 4: </span>These teaching functions have different caller contracts: Go retains an original and sends a copy; Rust transfers the existing allocation. Both need a return protocol to reuse storage. Sending is not processing completion.</figcaption></figure>
+<div class="diagram-actions">
+<p><a href="https://sekaiser.github.io/attachments/39aec132d7cc5e682b9102a9c03a0978829a9f6d89e00b8b4b4728acda1b988d/batch-ownership.svg?v=39aec132d7cc5e68">Open the full-size diagram</a></p>
+</div>
+</div>
+<p>Successful submission still does not mean the worker has applied the batch. A buffered send can finish before the receiver takes it; even an unbuffered handoff only confirms receipt. The projection's progress position remains the way to tell whether processing has finished.<sup class="footnote-ref"><a href="#fn-fn:3">fn:3</a></sup><sup>, </sup><sup class="footnote-ref"><a href="#fn-fn:16">fn:16</a></sup></p>
+<table>
+<tr>
+<th>Choice</th>
+<th>Go</th>
+<th>Rust</th>
+</tr>
+<tr>
+<td>Transfer without copying payload</td>
+<td>Possible; sender relinquishes access by convention</td>
+<td>Ownership move restricts subsequent use</td>
+</tr>
+<tr>
+<td>Retain an independently mutable original</td>
+<td>Copy the records</td>
+<td>Clone or otherwise copy the records</td>
+</tr>
+<tr>
+<td>Reuse storage after worker completion</td>
+<td>Return buffer through an agreed protocol</td>
+<td>Return the owned vector through a protocol</td>
+</tr>
+<tr>
+<td>Waiting in the shown API</td>
+<td>Context can cancel the wait</td>
+<td>Standard <code>send</code> waits for capacity or disconnection</td>
+</tr>
+</table>
+<p>Moving a reusable buffer transfers its allocation too:</p>
+<figure class="code-listing" id="code-snippet--move-reusable-buffer-rust"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-actions"><a href="#code-snippet--move-reusable-buffer-rust" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--move-reusable-buffer-rust-L1" href="#code-snippet--move-reusable-buffer-rust-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--move-reusable-buffer-rust-L2" href="#code-snippet--move-reusable-buffer-rust-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--move-reusable-buffer-rust-L3" href="#code-snippet--move-reusable-buffer-rust-L3" aria-label="Link to line 3" data-line="3"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> submitted </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">std::mem::take(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut</span><span style="color:#323232;"> batch);
+</span><span style="color:#62a35c;">enqueue_owned</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">tx, submitted)</span><span style="font-weight:bold;color:#a71d5d;">?</span><span style="color:#323232;">;
+</span><span style="font-style:italic;color:#969896;">// `batch` is now empty; its former allocation moved to the worker.
+</span></code></pre></div></figure>
+<p>The writer therefore needs replacement storage for its next batch. A pool with a return path can reuse allocations in either language. Go relies on a convention that the sender stops accessing transferred storage; Rust checks the move at compile time.<sup class="footnote-ref"><a href="#fn-fn:18">fn:18</a></sup></p>
+<details>
+<summary>Copying, cancellation, and recovery</summary>
+<p>These records contain only integers, so the Go slice copy duplicates all record data. With pointers or nested slices it would be shallow. The caller must keep the input stable while copying, and channel closure must be coordinated with sends.</p>
+<p>The Go function copies before it checks cancellation. If both the send and cancellation are ready, the select may choose either, so cancellation has no priority. Rust's standard <code>SyncSender::send</code> takes no cancellation token at all; a deadline-aware submission protocol needs additional machinery or another channel API.<sup class="footnote-ref"><a href="#fn-fn:19">fn:19</a></sup><sup>, </sup><sup class="footnote-ref"><a href="#fn-fn:16">fn:16</a></sup></p>
+<p>A bounded channel limits queued messages, but callers can still allocate batches before blocking on it. In this Go example, each waiting caller retains an extra copy. Bound the number of producers and batch sizes, or acquire capacity before allocating, if the channel is meant to enforce a memory budget. The same issue applies to Rust producers retaining owned vectors while waiting to send.</p>
+<p>Direct handoff would still need journal-based recovery after a crash. A batch leaving memory must not become a hole in the projection merely because no worker had consumed it yet.</p>
+</details>
+<h3><a href="#look-at-the-allocation-pattern" aria-hidden="true" class="anchor" id="look-at-the-allocation-pattern"></a>Look at the allocation pattern</h3>
+<p>Both table examples use a dense array indexed by bounded integer device IDs. Each entry holds two 64-bit integers. Updating an entry replaces those values without requiring a separate allocation for the update.</p>
+<details>
+<summary>Inspect the table layout in both languages</summary>
+<figure class="code-listing" id="code-snippet--table-layout-go"><figcaption class="code-toolbar"><span class="code-language">go</span><span class="code-caption">Go's table: one slice of values.</span><span class="code-actions"><a href="#code-snippet--table-layout-go" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--table-layout-go-L1" href="#code-snippet--table-layout-go-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--table-layout-go-L2" href="#code-snippet--table-layout-go-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--table-layout-go-L3" href="#code-snippet--table-layout-go-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--table-layout-go-L4" href="#code-snippet--table-layout-go-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--table-layout-go-L5" href="#code-snippet--table-layout-go-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--table-layout-go-L6" href="#code-snippet--table-layout-go-L6" aria-label="Link to line 6" data-line="6"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-go"><span style="font-weight:bold;color:#a71d5d;">type </span><span style="color:#323232;">Entry </span><span style="font-weight:bold;color:#a71d5d;">struct </span><span style="color:#323232;">{
+</span><span style="color:#323232;">    Seq   </span><span style="font-weight:bold;color:#a71d5d;">uint64
+</span><span style="color:#323232;">    Value </span><span style="font-weight:bold;color:#a71d5d;">uint64
+</span><span style="color:#323232;">}
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">entries </span><span style="font-weight:bold;color:#a71d5d;">:= </span><span style="color:#62a35c;">make</span><span style="color:#323232;">([]Entry, keyCount)
+</span></code></pre></div></figure>
+<figure class="code-listing" id="code-snippet--table-layout-rust"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">Rust's table: one vector of values.</span><span class="code-actions"><a href="#code-snippet--table-layout-rust" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--table-layout-rust-L1" href="#code-snippet--table-layout-rust-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--table-layout-rust-L2" href="#code-snippet--table-layout-rust-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--table-layout-rust-L3" href="#code-snippet--table-layout-rust-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--table-layout-rust-L4" href="#code-snippet--table-layout-rust-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--table-layout-rust-L5" href="#code-snippet--table-layout-rust-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--table-layout-rust-L6" href="#code-snippet--table-layout-rust-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--table-layout-rust-L7" href="#code-snippet--table-layout-rust-L7" aria-label="Link to line 7" data-line="7"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="color:#323232;">#[derive(Clone, Copy, Default)]
+</span><span style="font-weight:bold;color:#a71d5d;">struct </span><span style="color:#323232;">Entry {
+</span><span style="color:#323232;">    seq: </span><span style="font-weight:bold;color:#a71d5d;">u64</span><span style="color:#323232;">,
+</span><span style="color:#323232;">    value: </span><span style="font-weight:bold;color:#a71d5d;">u64</span><span style="color:#323232;">,
+</span><span style="color:#323232;">}
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> entries </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">vec![Entry::default(); key_count];
+</span></code></pre></div></figure>
+<p>Each logical entry contributes 16 bytes of field data. That excludes collection metadata and allocator overhead; actual memory use needs measuring on the target. Dense IDs make the layout reasonable. Sparse IDs could waste most of the table, while a hash table would introduce its own storage and hashing costs.</p>
+</details>
+<p>In Go, keeping pointers out of this table reduces the collector's scanning work relative to a pointer-rich graph. To judge the remaining cost, inspect allocation rate and retained heap as well as collector CPU, including allocation assists. Pause time tells only part of that story.<sup class="footnote-ref"><a href="#fn-fn:20">fn:20</a></sup></p>
+<p>Rust has no tracing garbage collector in these examples. Destruction and deallocation still take time: dropping an owned structure or the last strong <code>Arc</code> can run cleanup on a latency-sensitive thread. The work depends on what is owned; a vector of these integer-only entries has much less to destroy than a graph of objects with custom cleanup.<sup class="footnote-ref"><a href="#fn-fn:17">fn:17</a></sup><sup>, </sup><sup class="footnote-ref"><a href="#fn-fn:9">fn:9</a></sup></p>
+<p>These examples avoid a long-lived graph of per-event objects. Their allocation pattern says little about a service with string keys or variable payloads.</p>
+<h2><a href="#research" aria-hidden="true" class="anchor" id="research"></a>Ask whether the same work is necessary</h2>
+<p>Moving work to a different thread is only one way to change the trade-off. Storage research also changes the representation, memory allocation, and amount of maintenance required.</p>
+<p>The <em>RUM conjecture</em> describes a trade-off between read cost, update cost, and memory or storage overhead: optimizing two tends to come at the expense of the third. It is a conjecture about access methods, not a rule that fixes the best design for this service. For our projection, it is a reason to include space in the comparison alongside read and write costs. Freshness and backlog are additional service constraints.<sup class="footnote-ref"><a href="#fn-fn:21">fn:21</a></sup></p>
+<h3><a href="#change-which-bytes-move" aria-hidden="true" class="anchor" id="change-which-bytes-move"></a>Change which bytes move</h3>
+<p>WiscKey (FAST 2016) keeps keys and value locations in an LSM-tree while storing values in a separate log. This reduces value movement during compaction, at the cost of managing that log and changing range-query access patterns. It suggests a useful question for our worker: how much of each event actually needs to be copied, decoded, or reorganized?<sup class="footnote-ref"><a href="#fn-fn:22">fn:22</a></sup></p>
+<h3><a href="#spend-memory-and-maintenance-where-they-help" aria-hidden="true" class="anchor" id="spend-memory-and-maintenance-where-they-help"></a>Spend memory and maintenance where they help</h3>
+<p>Monkey (SIGMOD 2017) distributes Bloom-filter memory across LSM levels to reduce the combined false-positive cost of lookups. Giving every level the same bits per key misses that opportunity.<sup class="footnote-ref"><a href="#fn-fn:23">fn:23</a></sup></p>
+<p>Dostoevsky (SIGMOD 2018) reduces merging where it contributes little to point lookups, long range queries, or space reclamation. Its design also accounts for the different needs of short range queries. That distinction matters when deciding which maintenance work earns its cost.<sup class="footnote-ref"><a href="#fn-fn:24">fn:24</a></sup></p>
+<p>For the journal, the corresponding question is which representation earns its maintenance cost under the queries people actually make.</p>
+<h3><a href="#schedule-maintenance-with-foreground-demand" aria-hidden="true" class="anchor" id="schedule-maintenance-with-foreground-demand"></a>Schedule maintenance with foreground demand</h3>
+<p>EcoTune (SIGMOD 2025) treats compaction as an investment of CPU and I/O resources to improve future queries. HATS (FAST 2026), implemented in Cassandra, combines replica selection for reads with adaptive compaction rate control.<sup class="footnote-ref"><a href="#fn-fn:25">fn:25</a></sup><sup>, </sup><sup class="footnote-ref"><a href="#fn-fn:26">fn:26</a></sup></p>
+<p>Neither paper implements this projection protocol. They address a problem the worker shares with compaction: background tasks compete with foreground requests for the resources intended to make those requests faster.</p>
+<blockquote>
+<p>A writer can slow down even when it never waits directly for the worker. Both still use the same CPU, caches, memory bandwidth, and storage device.</p>
+</blockquote>
+<p>For the journal, this leaves several choices worth measuring: reduce the bytes replayed, maintain less state, or schedule replay around foreground demand. Changing threads is only one option.</p>
+<h2><a href="#measurement" aria-hidden="true" class="anchor" id="measurement"></a>Measure acknowledgement and visibility</h2>
+<p>The producer needs an acknowledgement. The operator needs a sufficiently fresh answer. The service must sustain both without accumulating an ever-growing backlog.</p>
+<table>
+<tr>
+<th>Whose requirement?</th>
+<th>Measure</th>
+<th>What a misleading result leaves out</th>
+</tr>
+<tr>
+<td>Producer</td>
+<td>Arrival-to-acknowledgement latency</td>
+<td>Upstream queueing and batch formation</td>
+</tr>
+<tr>
+<td>Operator</td>
+<td>Visibility delay and lookup latency at a stated freshness</td>
+<td>Whether the answer includes the write</td>
+</tr>
+<tr>
+<td>Service</td>
+<td>Lag, catch-up time, CPU, memory, and physical I/O</td>
+<td>Work still unfinished when the timer stops</td>
+</tr>
+<tr>
+<td>Recovery</td>
+<td>Time to the required serving state</td>
+<td>Which representations must actually be rebuilt</td>
+</tr>
+</table>
+<p>The companion records batch acknowledgement timing, time in the lag gate, maximum record lag, and catch-up time after writes stop. Its lookups run over the same completed history in all three designs. The gate timer includes acquiring and checking the mutex even when no wait is needed, so it is not a pure blocked-time measure.</p>
+<p>Those post-drain lookups still leave the operator's experience untested. To measure live freshness and interference, queries must run while writes continue. A timer around a ready batch also excludes upstream queueing and time spent waiting for the batch to fill.</p>
+<details>
+<summary>Keeping the experiment comparable</summary>
+<p>The companion uses the same 32-byte record format, deterministic input, batching, table layout, worker batch size, and lag limit in both languages. An independently generated fixture checks the encoder, and the comparison runner checks journal hashes and query results. Buffered writes belong in a separate comparison from synchronized writes because their acknowledgement contracts differ.</p>
+<p>The harness does not collect process CPU, RSS, allocation profiles, or physical device I/O. Its read-byte counters include data served from the page cache, and its table-size counter covers only logical entry payload. A sustained experiment needs those additional measurements and must run long enough for a slow worker to reach its lag limit. A short run with writes followed by catch-up cannot establish a service-level latency or freshness guarantee.</p>
+<p>Measure recovery to the serving state each policy actually requires. A journal-only service need not build a projection before answering queries. A projection-backed service may choose to finish replay before serving or expose partial progress. Recovering from a partial trailing record also needs testing separately from broader power-loss behavior.</p>
+</details>
+<h3><a href="#what-the-local-runs-showed" aria-hidden="true" class="anchor" id="what-the-local-runs-showed"></a>What the local runs showed</h3>
+<p>The measurements below were run locally on this machine:</p>
+<table>
+<tr>
+<th>Component</th>
+<th>Configuration</th>
+</tr>
+<tr>
+<td>Processor</td>
+<td>Apple M3 Max, 16 CPU cores, arm64 (Mac15,9)</td>
+</tr>
+<tr>
+<td>Memory</td>
+<td>128 GiB</td>
+</tr>
+<tr>
+<td>Operating system</td>
+<td>macOS 26.6.2, build 25G83</td>
+</tr>
+<tr>
+<td>Storage</td>
+<td>Internal storage, APFS filesystem</td>
+</tr>
+<tr>
+<td>Toolchains</td>
+<td>Go 1.27.3 and Rust 1.99.1, optimized builds</td>
+</tr>
+<tr>
+<td>Runtime settings</td>
+<td>AC power; <code>GOMAXPROCS=16</code>; no CPU affinity or quota</td>
+</tr>
+</table>
+<p>Runs used normal filesystem caching, without cache eviction or exclusive machine access. Each condition ran seven times in randomized order, with one benchmark process at a time. All 168 measured runs agreed on journal bytes and query results within their workloads; twelve warmup runs were excluded. These results describe this machine and workload, rather than a hardware-independent performance expectation.</p>
+<p>For the synchronized baseline, 100,000 records in batches of 64 took roughly seven seconds under each policy. The background worker showed no consistent acknowledgement advantage, and every synchronized background run peaked at just one batch of lag. Synchronization made this a poor workload for testing pressure on a 4,096-record budget.</p>
+<p>The longer buffered runs made the maintenance cost easier to see. Each wrote two million records across 4,096 possible keys. The table held only 64 KiB of logical entry data. These are medians of seven runs; the p99 columns summarize the seven per-run batch percentiles.</p>
+<table>
+<tr>
+<th>Policy</th>
+<th>Go write + drain, ms</th>
+<th>Rust write + drain, ms</th>
+<th>Go batch ack p99, µs</th>
+<th>Rust batch ack p99, µs</th>
+</tr>
+<tr>
+<td>Journal only</td>
+<td>124.95</td>
+<td>116.19</td>
+<td>12.46</td>
+<td>12.21</td>
+</tr>
+<tr>
+<td>Eager table</td>
+<td>122.62</td>
+<td>111.68</td>
+<td>12.38</td>
+<td>11.96</td>
+</tr>
+<tr>
+<td>Background table</td>
+<td>171.70</td>
+<td>157.94</td>
+<td>14.58</td>
+<td>14.38</td>
+</tr>
+</table>
+<div id="fig-benchmark-runs" class="notebook-diagram">
+<p><a id="figure--fig-benchmark-runs-image"></a></p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/cd35ae7b36baec9237b13d4b56d9f43fb6f6ec8ecaabbc6c8d855ffac0758599/benchmark-runs.svg?v=cd35ae7b36baec92" alt="Forty-two observed write-and-drain times. Go medians are 124.95 milliseconds for journal-only, 122.62 for eager, and 171.70 for background. Rust medians are 116.19, 111.68, and 157.94 milliseconds. Each group shows seven individual runs and its median, not a confidence interval."><figcaption><span class="figure-number">Figure 5: </span>Seven runs per policy; diamonds mark medians. M3 Max, 16 cores, 128 GiB RAM, macOS 26.6.2, APFS. Vertical offsets separate overlapping points and have no data meaning. Buffered writes only; queries and recovery are outside the timed phase.</figcaption></figure>
+<div class="diagram-actions">
+<p><a href="https://sekaiser.github.io/attachments/cd35ae7b36baec9237b13d4b56d9f43fb6f6ec8ecaabbc6c8d855ffac0758599/benchmark-runs.svg?v=cd35ae7b36baec92">Open the full-size plot</a></p>
+</div>
+</div>
+<p>Here, the background median elapsed time was about 40% higher than eager maintenance in both implementations. Its batch-acknowledgement p99 was higher too. Updating this small table directly was cheap; the worker added replay and coordination, including another logical read of all 64 MB of journal data. Moving that work into a worker did not pay off in this experiment. These buffered numbers do not describe synchronized-write throughput.</p>
+<p>Reducing both the lag limit and worker block to 64 records exercised tighter coordination. All fourteen background runs reached that bound without exceeding it. Median write-and-drain time rose to 206.73 ms in Go and 313.19 ms in Rust. Because both settings changed, and the unchanged eager controls also ran faster in this later campaign, I would not attribute an exact slowdown to the lag limit alone.</p>
+<p>The journal-only policy paid at query time: post-drain lookup p99 medians were about 28 ms in Go and 20 ms in Rust in the longer buffered workload, which included 36 absent-device queries out of 256. Table lookups were close to the timer's resolution. Those measurements show why the read workload matters; they do not predict HTTP latency or settle a language choice. A larger or more expensive projection could change the maintenance comparison, but this experiment has not demonstrated that benefit.</p>
+<h3><a href="#choose-the-language-at-the-constraint-that-matters" aria-hidden="true" class="anchor" id="choose-the-language-at-the-constraint-that-matters"></a>Choose the language at the constraint that matters</h3>
+<p>For an existing Go ingestion service with adequate memory headroom and contained ownership boundaries, Go is a reasonable starting point. For a new storage component dominated by buffer recycling, reclamation, and shared mutable state, Rust's static ownership constraints can be a substantial advantage.</p>
+<p>Profiling should precede a rewrite. If synchronization accounts for an assumed 90% of operation time and stays unchanged, halving everything else reduces total time by 5%, equivalent to about a 1.053× speedup. That arithmetic does not predict either language's result.</p>
+<details>
+<summary>Worker shutdown and failure</summary>
+<p>The Go worker runs in a goroutine; the Rust worker uses a dedicated standard-library thread. They have different scheduling models. These examples do not compare async runtimes.<sup class="footnote-ref"><a href="#fn-fn:27">fn:27</a></sup></p>
+<p>Both programs stop and join their worker on normal completion and returned errors. Go defers the stop-and-wait procedure before file cleanup. Rust performs it explicitly before propagating the write result; dropping a join handle alone would detach the thread.<sup class="footnote-ref"><a href="#fn-fn:28">fn:28</a></sup></p>
+<p>The full Rust worker also catches unwinding panics and explicitly publishes failure to wake waiters. That does not make shutdown generally panic-safe: the excerpts still panic on a poisoned mutex, and an abort or permanently blocked I/O operation lies outside that mechanism. Poisoning itself is advisory and does not establish whether the state is intact.<sup class="footnote-ref"><a href="#fn-fn:8">fn:8</a></sup><sup>, </sup><sup class="footnote-ref"><a href="#fn-fn:11">fn:11</a></sup></p>
+</details>
+<p>For the operator refreshing the dashboard, the useful response is a value with a stated progress position, or a clear timeout waiting for the requested write. For the service, that promise has a cost: once replay falls far enough behind, new writes must wait or be rejected. I would establish that behavior under a mixed workload before using acknowledgement latency to choose an indexing policy or a language.</p>
+<hr />
+<details>
+<summary>Companion code and validation status</summary>
+<p>The companion contains both journal implementations, an independent byte fixture, tests, and a comparison runner. The separate handoff examples illustrate buffer ownership; they are not another journal policy. Article excerpts omit setup and instrumentation and are not standalone programs.</p>
+<p>Checks passed with the project's pinned Go 1.27.3 and Rust 1.99.1 toolchains on macOS/arm64: nine core Go tests and two handoff tests with the race detector, vet for both Go packages, five core Rust tests and three handoff tests in debug and release, and the ownership compile-fail doctest in both profiles. Optimized binaries completed 168 measured runs with matching journal hashes and query checksums within each workload. Every measured background run stayed within its lag limit.</p>
+<p>The measurements use one writer, fixed-size records, a small dense table, and queries only after catch-up. They are local comparisons, not a production capacity estimate or a general performance ranking of Go and Rust. Concurrent live freshness, process-resource use, physical device I/O, and power-loss behavior remain unqualified.</p>
+</details>
+<h2><a href="#references" aria-hidden="true" class="anchor" id="references"></a>References</h2>
+<section class="footnote-definition" id="fn-fn:1">
+<p><span class="footnote-label">[fn:1]</span> Rust standard library. <a href="https://doc.rust-lang.org/std/fs/struct.File.html#method.sync_all" target="_blank" rel="noopener">File::sync_all</a>.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:2">
+<p><span class="footnote-label">[fn:2]</span> Rust standard library. <a href="https://doc.rust-lang.org/std/io/trait.Write.html#method.write_all" target="_blank" rel="noopener">Write::write_all</a>.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:3">
+<p><span class="footnote-label">[fn:3]</span> The Go team. <a href="https://go.dev/ref/mem" target="_blank" rel="noopener">The Go Memory Model</a>, especially channel and lock synchronization.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:4">
+<p><span class="footnote-label">[fn:4]</span> Go standard library. <a href="https://pkg.go.dev/os#File.Sync" target="_blank" rel="noopener">os.File.Sync</a>.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:5">
+<p><span class="footnote-label">[fn:5]</span> Go standard library. <a href="https://pkg.go.dev/io#Writer" target="_blank" rel="noopener">io.Writer</a>, including partial-write and buffer-retention contracts.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:6">
+<p><span class="footnote-label">[fn:6]</span> Linux man-pages project. <a href="https://man7.org/linux/man-pages/man2/fsync.2.html" target="_blank" rel="noopener">fsync(2)</a>, particularly synchronization of directory entries.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:7">
+<p><span class="footnote-label">[fn:7]</span> The Go team. <a href="https://go.dev/doc/articles/race_detector" target="_blank" rel="noopener">Data Race Detector</a>.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:8">
+<p><span class="footnote-label">[fn:8]</span> Rust standard library. <a href="https://doc.rust-lang.org/std/sync/struct.Mutex.html" target="_blank" rel="noopener">Mutex</a>, including lock guards and poisoning.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:9">
+<p><span class="footnote-label">[fn:9]</span> Rust standard library. <a href="https://doc.rust-lang.org/std/sync/struct.Arc.html" target="_blank" rel="noopener">Arc</a>.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:10">
+<p><span class="footnote-label">[fn:10]</span> Go standard library. <a href="https://pkg.go.dev/sync#Cond.Wait" target="_blank" rel="noopener">sync.Cond.Wait</a>.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:11">
+<p><span class="footnote-label">[fn:11]</span> Rust standard library. <a href="https://doc.rust-lang.org/std/sync/struct.Condvar.html#method.wait" target="_blank" rel="noopener">Condvar::wait</a>.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:12">
+<p><span class="footnote-label">[fn:12]</span> The Go language specification. <a href="https://go.dev/ref/spec#Integer_overflow" target="_blank" rel="noopener">Integer overflow</a>.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:13">
+<p><span class="footnote-label">[fn:13]</span> The Rust Reference. <a href="https://doc.rust-lang.org/reference/expressions/operator-expr.html#overflow" target="_blank" rel="noopener">Integer overflow in operator expressions</a>.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:14">
+<p><span class="footnote-label">[fn:14]</span> Andrew Gerrand. <a href="https://go.dev/blog/slices-intro" target="_blank" rel="noopener">Go Slices: usage and internals</a>, 2011.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:15">
+<p><span class="footnote-label">[fn:15]</span> <em>The Rust Programming Language</em>. <a href="https://doc.rust-lang.org/book/ch16-02-message-passing.html" target="_blank" rel="noopener">Using Message Passing to Transfer Data Between Threads</a>.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:16">
+<p><span class="footnote-label">[fn:16]</span> Rust standard library. <a href="https://doc.rust-lang.org/std/sync/mpsc/struct.SyncSender.html#method.send" target="_blank" rel="noopener">SyncSender::send</a>.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:17">
+<p><span class="footnote-label">[fn:17]</span> Rust standard library. <a href="https://doc.rust-lang.org/std/vec/struct.Vec.html" target="_blank" rel="noopener">Vec</a>, particularly its allocation and representation guarantees.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:18">
+<p><span class="footnote-label">[fn:18]</span> Rust standard library. <a href="https://doc.rust-lang.org/std/mem/fn.take.html" target="_blank" rel="noopener">std::mem::take</a>.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:19">
+<p><span class="footnote-label">[fn:19]</span> The Go language specification. <a href="https://go.dev/ref/spec#Select_statements" target="_blank" rel="noopener">Select statements</a>, including selection among simultaneously ready cases.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:20">
+<p><span class="footnote-label">[fn:20]</span> The Go team. <a href="https://go.dev/doc/gc-guide" target="_blank" rel="noopener">A Guide to the Go Garbage Collector</a>, especially allocation, latency, and pointer-free data.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:21">
+<p><span class="footnote-label">[fn:21]</span> Manos Athanassoulis et al. <a href="https://research.ibm.com/publications/designing-access-methods-the-rum-conjecture" target="_blank" rel="noopener">Designing Access Methods: The RUM Conjecture</a>. EDBT 2016.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:22">
+<p><span class="footnote-label">[fn:22]</span> Lanyue Lu et al. <a href="https://www.usenix.org/conference/fast16/technical-sessions/presentation/lu" target="_blank" rel="noopener">WiscKey: Separating Keys from Values in SSD-conscious Storage</a>. FAST 2016.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:23">
+<p><span class="footnote-label">[fn:23]</span> Niv Dayan, Manos Athanassoulis, and Stratos Idreos. <a href="https://nivdayan.github.io/monkeykeyvaluestore.pdf" target="_blank" rel="noopener">Monkey: Optimal Navigable Key-Value Store</a>. SIGMOD 2017.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:24">
+<p><span class="footnote-label">[fn:24]</span> Niv Dayan and Stratos Idreos. <a href="https://nivdayan.github.io/dostoevsky.pdf" target="_blank" rel="noopener">Dostoevsky: Better Space-Time Trade-Offs for LSM-Tree Based Key-Value Stores via Adaptive Removal of Superfluous Merging</a>. SIGMOD 2018.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:25">
+<p><span class="footnote-label">[fn:25]</span> Hengrui Wang et al. <a href="https://people.iiis.tsinghua.edu.cn/~huanchen/publications/ecotune-sigmod25.pdf" target="_blank" rel="noopener">Rethinking The Compaction Policies in LSM-trees</a>. <em>Proceedings of the ACM on Management of Data</em> 3(3), Article 207, June 2025. DOI: 10.1145/3725344.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:26">
+<p><span class="footnote-label">[fn:26]</span> Yuanming Ren et al. <a href="https://www.usenix.org/conference/fast26/presentation/ren" target="_blank" rel="noopener">Holistic and Automated Task Scheduling for Distributed LSM-tree-based Storage</a>. FAST 2026.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:27">
+<p><span class="footnote-label">[fn:27]</span> The Go team. <a href="https://go.dev/doc/effective_go#goroutines" target="_blank" rel="noopener">Effective Go: Goroutines</a>.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:28">
+<p><span class="footnote-label">[fn:28]</span> Rust standard library. <a href="https://doc.rust-lang.org/std/thread/struct.JoinHandle.html" target="_blank" rel="noopener">JoinHandle</a>, including detachment on drop.</p>
+</section>
+</div>
+  </div>
+  <footer class="study-end">
+    
+    
+  
+  
+  
+  
+  
+
+
+    
+    <a class="study-return" href="https://sekaiser.github.io/notes.html">Back to all notes</a>
+  </footer>
+</article>
+
+        </main>
+
+        
+            <footer class="site-footer">
+  <div class="footer-colophon">
+    <a class="footer-home" href="https://sekaiser.github.io/">
+      <span class="footer-bookplate" aria-hidden="true">sk.</span>
+      <span class="footer-name">Sebastian Kaiser</span>
+    </a>
+    <p>A personal notebook. Built with Berlin.</p>
+  </div>
+  <nav aria-label="Elsewhere">
+    
+      <a class="footer-icon" href="https://github.com/sekaiser" aria-label="GitHub" title="GitHub" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M12 .5a12 12 0 0 0-3.793 23.385c.6.111.82-.261.82-.577 0-.285-.01-1.04-.016-2.04-3.338.725-4.043-1.61-4.043-1.61-.546-1.386-1.333-1.755-1.333-1.755-1.09-.745.083-.73.083-.73 1.205.085 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.419-1.305.762-1.605-2.665-.303-5.467-1.333-5.467-5.931 0-1.31.469-2.381 1.236-3.221-.124-.303-.536-1.524.117-3.176 0 0 1.008-.323 3.301 1.23a11.52 11.52 0 0 1 6.006 0c2.291-1.553 3.297-1.23 3.297-1.23.655 1.652.243 2.873.12 3.176.77.84 1.235 1.911 1.235 3.221 0 4.61-2.807 5.625-5.479 5.922.43.372.823 1.102.823 2.222 0 1.606-.015 2.902-.015 3.296 0 .319.216.694.825.576A12 12 0 0 0 12 .5Z"/>
+        </svg>
+      </a>
+    
+    
+      <a class="footer-icon" href="https://www.linkedin.com/in/sekaiser/" aria-label="LinkedIn" title="LinkedIn" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.049c.476-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286ZM5.337 7.433a2.062 2.062 0 1 1 0-4.124 2.062 2.062 0 0 1 0 4.124ZM7.119 20.452H3.555V9h3.564v11.452ZM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0Z"/>
+        </svg>
+      </a>
+    
+    <a class="footer-icon" href="#main" aria-label="Back to top" title="Back to top">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <path d="M5 4h14M6 13l6-6 6 6M12 7v13"/>
+      </svg>
+    </a>
+  </nav>
+</footer>
+
+        
+
+  </div>
+</body>
+</html>

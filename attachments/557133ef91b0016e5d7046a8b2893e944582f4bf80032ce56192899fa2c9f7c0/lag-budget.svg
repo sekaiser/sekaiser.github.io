@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1030" viewBox="0 0 1000 1030" role="img" aria-labelledby="title description">
+<title id="title">Admission turns replay lag into waiting</title><desc id="description">Without an admission budget, a faster writer can publish records faster than the worker applies them, so replay lag grows. With a finite record budget, the writer must wait until the current lag plus the next batch fits. The shaded difference is pending replay. The limit bounds a count of records, not their age, total journal storage or upstream queues. The plateau illustrates admission waiting; it is not a measured pause.</desc>
+
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9" fill="none" stroke="#3d5948" stroke-width="1.7"/></marker></defs>
+<style>
+text{font-family:Helvetica,Arial,sans-serif;fill:#273b32}
+.title{font-size:31px;font-weight:600}.heading{font-size:27px;font-weight:600}
+.body{font-size:24px}.label{font-size:24px;font-weight:600}
+.small{font-size:21px;fill:#526157}.code{font-family:Menlo,Consolas,monospace;font-size:23px}
+.rule{fill:none;stroke:#cbd3c6;stroke-width:1.3}
+.arrow{fill:none;stroke:#3d5948;stroke-width:2.2;marker-end:url(#arrow)}
+.work{fill:#e5ebe2;stroke:#3d5948;stroke-width:1.4}
+.plain{fill:#fcfaf5;stroke:#3d5948;stroke-width:1.4}
+.ack{fill:#f4e7dc;stroke:#a05237;stroke-width:1.6}
+.pending{fill:#f4e7dc;stroke:#a05237;stroke-width:1.4}
+.clay{fill:#a05237}.green{fill:#3d5948}
+</style>
+<rect width="1000" height="1030" fill="#fcfaf5"/>
+<text x="40" y="55" class="title" text-anchor="start" >Admission turns replay lag into waiting</text><text x="40" y="94" class="small" text-anchor="start" >Two schematic trajectories, not sampled benchmark data.</text><path d="M40 120L960 120" class="rule" />
+<text x="40" y="166" class="heading" text-anchor="start" >Without a lag budget</text><path d="M120.00 420.00 L280.00 384.00 L440.00 348.00 L600.00 312.00 L760.00 276.00 L920.00 240.00 L920.00 339.00 L760.00 355.20 L600.00 371.40 L440.00 387.60 L280.00 403.80 L120.00 420.00Z" fill="#f4e7dc"/><path d="M120.00 420.00 L280.00 384.00 L440.00 348.00 L600.00 312.00 L760.00 276.00 L920.00 240.00" fill="none" stroke="#a05237" stroke-width="3"/>
+    <path d="M120.00 420.00 L280.00 403.80 L440.00 387.60 L600.00 371.40 L760.00 355.20 L920.00 339.00" fill="none" stroke="#3d5948" stroke-width="3" stroke-dasharray="9 5"/><path d="M120 230L120 430" class="rule" /><path d="M110 420L930 420" class="rule" /><text x="120" y="212" class="small" text-anchor="start" >Journal position</text><text x="920" y="457" class="small" text-anchor="end" >Time</text><text x="250" y="320" class="small" text-anchor="start" >Published head</text><text x="735" y="405" class="small" text-anchor="start" >Applied index</text><text x="600" y="210" class="label" text-anchor="start" >The gap keeps growing.</text><path d="M40 486L960 486" class="rule" /><text x="40" y="536" class="heading" text-anchor="start" >With a record budget</text><path d="M120.00 790.00 L216.00 739.60 L280.00 703.60 L336.00 689.20 L472.00 689.20 L536.00 660.40 L664.00 660.40 L728.00 631.60 L856.00 631.60 L920.00 617.20 L920.00 646.00 L840.00 660.40 L720.00 682.00 L600.00 703.60 L480.00 725.20 L360.00 746.80 L240.00 768.40 L120.00 790.00Z" fill="#f4e7dc"/><path d="M120.00 790.00 L216.00 739.60 L280.00 703.60 L336.00 689.20 L472.00 689.20 L536.00 660.40 L664.00 660.40 L728.00 631.60 L856.00 631.60 L920.00 617.20" fill="none" stroke="#a05237" stroke-width="3"/>
+    <path d="M120.00 790.00 L240.00 768.40 L360.00 746.80 L480.00 725.20 L600.00 703.60 L720.00 682.00 L840.00 660.40 L920.00 646.00" fill="none" stroke="#3d5948" stroke-width="3" stroke-dasharray="9 5"/><path d="M120 600L120 800" class="rule" /><path d="M110 790L930 790" class="rule" /><text x="120" y="582" class="small" text-anchor="start" >Journal position</text><text x="920" y="827" class="small" text-anchor="end" >Time</text><text x="154" y="628" class="small" text-anchor="start" >Published head</text><text x="710" y="734" class="small" text-anchor="start" >Applied index</text><path d="M420 605V686" class="arrow" /><text x="430" y="580" class="label" text-anchor="start" >Admission waits for room.</text><text x="40" y="889" class="heading" text-anchor="start" >Admit the next batch only when:</text><text x="40" y="935" class="code" text-anchor="start" >head - indexed + next_batch &lt;= lag_limit</text><text x="40" y="998" class="small" text-anchor="start" >A record limit is not an age limit, a journal-size limit, or a bound on upstream queues.</text>
+</svg>
