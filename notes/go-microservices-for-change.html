@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="https://sekaiser.github.io/static/favicon.svg?v=d722fec0e0cca8eb" type="image/svg+xml">
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/vendor.css?v=cf6814bed6634e0a" type="text/css" media="screen" />
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/notebook.css?v=8634ea4c55d0c6d8">
+  
+  
+  
+  <script src="https://sekaiser.github.io/static/js/study.js?v=097960b1aa1fd3bf" defer></script>
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/article.css?v=919c161ba2902f9c">
+  
+
+  
+
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/project.css?v=33d3a7ca518ed352">
+  <script src="https://sekaiser.github.io/static/js/main.js?v=7ffe88eb20e1b177"></script>
+
+  
+  
+
+
+
+
+  
+  
+  
+  
+
+<title>How I structure Go microservices for change | Sebastian Kaiser</title>
+<meta name="description" content="Evolving a Go service through consumer-owned ports, composable handlers, and executable checks, with repository context and reviewable evidence for agent-assisted changes.">
+<meta property="og:title" content="How I structure Go microservices for change | Sebastian Kaiser">
+<meta property="og:description" content="Evolving a Go service through consumer-owned ports, composable handlers, and executable checks, with repository context and reviewable evidence for agent-assisted changes.">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Sebastian Kaiser — engineering notebook">
+<meta name="twitter:card" content="summary">
+
+  
+  
+  <link rel="canonical" href="https://sekaiser.github.io/notes/go-microservices-for-change.html">
+  <meta property="og:url" content="https:&#x2F;&#x2F;sekaiser.github.io&#x2F;notes&#x2F;go-microservices-for-change.html">
+  <meta property="og:image" content="https://sekaiser.github.io/static/pics/study/engineering-desk.png?v=478d3aa3a9ffa967">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1254">
+  <meta property="og:image:height" content="1254">
+  <meta property="og:image:alt" content="An illustrated desk with a notebook, computer, and reading lamp.">
+
+
+  <meta property="article:published_time" content="2026-10-31">
+  
+
+
+
+  
+</head>
+<body>
+  
+<div class="margin-sketches" aria-hidden="true">
+  <svg class="margin-sketch-definitions" width="0" height="0" focusable="false">
+    <defs>
+      <symbol id="margin-branches" viewBox="0 0 88 270">
+        <path d="M44 34 C44 67 18 60 18 96 M44 34 C44 67 70 60 70 96 M18 112 C18 153 44 145 44 177 M70 112 C70 153 44 145 44 177 M44 193 L44 230"/>
+        <circle cx="44" cy="26" r="8" class="sketch-node"/>
+        <rect x="10" y="96" width="16" height="16" rx="3"/>
+        <rect x="62" y="96" width="16" height="16" rx="3"/>
+        <circle cx="44" cy="185" r="8" class="sketch-node"/>
+        <path d="M36 238 L44 230 L52 238 L44 246 Z" class="sketch-accent"/>
+      </symbol>
+      <symbol id="margin-pages" viewBox="0 0 88 270">
+        <path d="M29 27 L62 30 L59 76 L26 73 Z M22 34 L55 37 L52 83 L19 80 Z"/>
+        <path d="M30 47 L46 49 M29 55 L43 57 M29 63 L38 64"/>
+        <path d="M38 93 C37 126 69 112 67 145 C65 167 30 153 29 183" stroke-dasharray="2 7"/>
+        <circle cx="29" cy="191" r="8" class="sketch-node"/>
+        <path d="M36 195 L62 216 M62 210 L68 216 L62 222 L56 216 Z" class="sketch-accent"/>
+        <circle cx="13" cy="130" r="3"/>
+      </symbol>
+      <symbol id="margin-orbit" viewBox="0 0 88 270">
+        <ellipse cx="44" cy="72" rx="31" ry="39"/>
+        <ellipse cx="44" cy="72" rx="17" ry="39" transform="rotate(28 44 72)"/>
+        <circle cx="44" cy="72" r="6" class="sketch-node"/>
+        <circle cx="71" cy="52" r="4" class="sketch-accent"/>
+        <path d="M44 121 L44 164 M30 182 L44 164 L58 182 Z M44 183 L44 212" stroke-dasharray="3 6"/>
+        <path d="M35 230 Q44 215 53 230 Q44 244 35 230 Z"/>
+      </symbol>
+      <symbol id="margin-stack" viewBox="0 0 88 270">
+        <path d="M10 54 L44 36 L78 54 L44 72 Z M10 70 L44 88 L78 70 M10 86 L44 104 L78 86"/>
+        <path d="M44 116 L44 150 M20 168 L44 150 L68 168 M20 168 L20 193 M68 168 L68 193"/>
+        <rect x="12" y="194" width="16" height="16" rx="3"/>
+        <circle cx="68" cy="202" r="8" class="sketch-node"/>
+        <path d="M37 239 L51 239 M44 232 L44 246" class="sketch-accent"/>
+      </symbol>
+      <symbol id="margin-signal" viewBox="0 0 88 270">
+        <path d="M12 58 L26 58 L26 36 L42 36 L42 80 L58 80 L58 58 L76 58"/>
+        <path d="M12 114 Q27 85 44 114 T76 114"/>
+        <path d="M12 153 L76 153" stroke-dasharray="2 7"/>
+        <circle cx="26" cy="153" r="4" class="sketch-node"/>
+        <circle cx="62" cy="153" r="4" class="sketch-accent"/>
+        <path d="M23 202 L44 182 L65 202 L44 222 Z M23 202 L65 202"/>
+      </symbol>
+      <symbol id="margin-network" viewBox="0 0 88 270">
+        <path d="M19 45 L68 66 L36 108 L19 45 M36 108 L70 155 L18 179 L36 108 M18 179 L48 226 L70 155"/>
+        <circle cx="19" cy="45" r="6" class="sketch-node"/>
+        <circle cx="68" cy="66" r="5"/>
+        <circle cx="36" cy="108" r="8" class="sketch-node"/>
+        <circle cx="70" cy="155" r="5"/>
+        <circle cx="18" cy="179" r="6"/>
+        <circle cx="48" cy="226" r="6" class="sketch-accent"/>
+      </symbol>
+    </defs>
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:0" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:1" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:2" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-stack" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:3" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-signal" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:4" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:5" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:6" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:7" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:0" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:1" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:2" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-signal" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:3" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:4" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:5" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-stack" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:6" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:7" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+</div>
+
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div id="root" class="site-shell">
+        
+<header class="study-masthead">
+  <a class="study-signature" href="https://sekaiser.github.io/">
+    <span class="study-bookmark" aria-hidden="true">sk.</span>
+    <span class="study-identity"><span class="study-name">Sebastian <em>Kaiser</em></span><small>A personal engineering notebook</small></span>
+  </a>
+  <nav aria-label="Main navigation">
+    <a href="https://sekaiser.github.io/notes.html" aria-current="true">Notes</a>
+    <a href="https://sekaiser.github.io/feed.html">Reading</a>
+    <a href="https://sekaiser.github.io/about.html">About</a>
+    <a href="https://sekaiser.github.io/search.html">Search</a>
+  </nav>
+</header>
+
+
+
+        <main id="main" tabindex="-1">
+           
+
+          
+<article class="study-page">
+  <header class="study-opening">
+    <div class="study-heading">
+      <div class="study-title">
+        <p class="study-context"><a href="https://sekaiser.github.io/notes.html">The notebook</a>
+  
+</p>
+        <h1>
+  
+    How I structure Go microservices for change
+  
+</h1>
+        <div class="study-metadata">
+          <dl class="study-dates">
+            <div><dt>Published</dt><dd><time datetime="2026-10-31">31 Oct 2026</time></dd></div>
+            
+          </dl>
+          <nav class="study-topics" aria-label="Article topics">
+
+
+<a class="paper-tag" data-tag="architecture" data-tag-color="2" href="https://sekaiser.github.io/tags/architecture.html"><span>architecture</span></a>
+
+
+
+<a class="paper-tag" data-tag="go" data-tag-color="11" href="https://sekaiser.github.io/tags/go.html"><span>go</span></a>
+
+
+
+<a class="paper-tag" data-tag="testing" data-tag-color="27" href="https://sekaiser.github.io/tags/testing.html"><span>testing</span></a>
+</nav>
+        </div>
+      </div>
+      <div class="study-introduction"></div>
+    </div>
+  </header>
+  <div class="study-layout">
+    <aside class="study-margin" aria-label="Article navigation and reading notes">
+      <div class="study-margin-content">
+        <details class="study-contents" hidden>
+          <summary>On this page</summary>
+          <nav aria-label="On this page"></nav>
+        </details>
+        
+      </div>
+    </aside>
+    <div class="document-body study-prose"><div class="frontmatter">
+<div class="abstract">
+<p>When I return to a Go service after a few months, I want to find the behavior I need to change without first reconstructing the whole application. I want to understand which dependencies it uses, test the change locally, and know whether I have crossed a boundary the service was meant to preserve.</p>
+<p>Hexagonal architecture gives me useful places to put those boundaries. Small interfaces keep the dependencies understandable. A common handler shape makes recurring work composable. Tests and architecture checks help keep those decisions in place as the service changes.</p>
+<p>That structure matters when I delegate a change, too. A coding agent can work from the booking contract and the checks around it. I want its result to come with evidence I can inspect, and its unanswered business questions to remain visible.</p>
+</div>
+<div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a href="#start-with-a-change">Extract a booking operation both callers can use</a></li>
+<li><a href="#consumer-owned-ports">Let the application define its dependencies</a></li>
+<li><a href="#typed-handlers">Use a common contract for application handlers</a></li>
+<li><a href="#time-as-input">Pass time into the booking rule</a></li>
+<li><a href="#handler-decorators">Add logging and metrics with decorators</a></li>
+<li><a href="#shared-booking-entry-points">Connect both adapters in the composition root</a></li>
+<li><a href="#testing-boundaries">Choose tests that exercise the failure you care about</a></li>
+<li><a href="#delivery-and-retries">Decide when a booking can be retried</a></li>
+<li><a href="#executable-architecture">Check architectural boundaries in the build</a></li>
+<li><a href="#delegating-changes">Prepare the context for an agent's change</a></li>
+<li><a href="#reviewing-agent-changes">Review the change and the evidence</a></li>
+<li><a href="#full-presentation">The full presentation</a></li>
+<li><a href="#references">References</a></li>
+</ul>
+</div>
+<!--endtoc-->
+</div>
+<p>The handler and decorator approach owes a good deal to <a href="https://github.com/ThreeDotsLabs/wild-workouts-go-ddd-example" target="_blank" rel="noopener">Three Dots Labs' Wild Workouts example</a>. I've adapted the ideas to the services I work on. The delivery-booking example below uses neutral vocabulary to explain the structure; its booking rules are illustrative.</p>
+<p>I'll assume you can read Go functions and interfaces. We'll follow a booking operation from an HTTP endpoint into a shared application handler, then consider how to delegate that extraction to a coding agent. Along the way, the booking's expiry rule gives us a few decisions that the package structure cannot settle.</p>
+<h2><a href="#start-with-a-change" aria-hidden="true" class="anchor" id="start-with-a-change"></a>Extract a booking operation both callers can use</h2>
+<p>Suppose an HTTP endpoint accepts a delivery booking. It decodes the request, checks whether a reservation hold is still valid, and writes a database document. All of that can fit in one handler. Then a broker consumer needs to accept bookings too.</p>
+<p>I want both entry points to use the same booking behavior. Copying the validation into the consumer would give me two places to update the next time the rule changes. Calling the HTTP endpoint from the consumer would make an internal operation depend on transport details it does not need.</p>
+<p>That gives the first extraction a specific purpose: move booking orchestration behind a callable application boundary. The HTTP endpoint keeps decoding requests and mapping results to responses. The broker consumer gets its own translation and delivery policy. Both call the booking operation.</p>
+<p>Before moving the code, I write down what the existing endpoint actually does. What counts as an expired hold? Which failure does the caller see when storage is unavailable? What happens if the same booking arrives again? If the answers are unclear, moving code is premature. A cleaner package layout would leave the uncertainty intact.</p>
+<p>I also establish a dependency check early: application code may not import a database adapter. Otherwise the extracted handler can grow a direct MongoDB dependency during the next change, and I am back to explaining the same boundary in reviews.</p>
+<p>An existing service will probably violate some of the intended rules already. I use a baseline to record the accepted findings, refuse new ones, and remove entries as their violations are fixed. The identity of each finding matters. Keeping the total number unchanged would still allow a new violation to replace an old one.</p>
+<p><a id="figure--fig-go-guardrails"></a></p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/b38578f1d0c2177f2ae14ff32f55af8116600c9db88f0e3c010f5157ef7623e5/guardrails.webp?v=b38578f1d0c2177f" alt="Application code may not import adapters. A build check rejects forbidden imports, with a baseline allowing existing violations while rejecting new and reintroduced ones."><figcaption><span class="figure-number">Figure 1: </span>A dependency check rejects new violations while a baseline records the existing ones for gradual removal. Slide from the accompanying presentation.</figcaption></figure>
+<h2><a href="#consumer-owned-ports" aria-hidden="true" class="anchor" id="consumer-owned-ports"></a>Let the application define its dependencies</h2>
+<p>For the booking operation, the application needs to record a delivery booking. It does not need to construct a BSON filter or know which MongoDB collection stores it.</p>
+<figure class="code-listing" id="code-snippet--delivery-booking-port"><figcaption class="code-toolbar"><span class="code-language">go</span><span class="code-caption">A driven port declared in the application package that consumes it.</span><span class="code-actions"><a href="#code-snippet--delivery-booking-port" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--delivery-booking-port-L1" href="#code-snippet--delivery-booking-port-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--delivery-booking-port-L2" href="#code-snippet--delivery-booking-port-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--delivery-booking-port-L3" href="#code-snippet--delivery-booking-port-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--delivery-booking-port-L4" href="#code-snippet--delivery-booking-port-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--delivery-booking-port-L5" href="#code-snippet--delivery-booking-port-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--delivery-booking-port-L6" href="#code-snippet--delivery-booking-port-L6" aria-label="Link to line 6" data-line="6"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-go"><span style="font-weight:bold;color:#a71d5d;">type </span><span style="color:#323232;">DeliveryBookingRepository </span><span style="font-weight:bold;color:#a71d5d;">interface</span><span style="color:#323232;"> {
+</span><span style="color:#323232;">    RecordDeliveryBooking(
+</span><span style="color:#323232;">        context.Context,
+</span><span style="color:#323232;">        booking.DeliveryBooking,
+</span><span style="color:#323232;">    ) </span><span style="font-weight:bold;color:#a71d5d;">error
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<p>I declare this interface beside the booking handler. The database adapter implements it using domain values at the boundary and its own persistence representation internally. Go's implicit interface implementation lets the concrete adapter satisfy the interface without importing the application package merely to declare that relationship. The Go code review guidance recommends placing interfaces with their consumers.<sup class="footnote-ref"><a href="#fn-fn:1">fn:1</a></sup></p>
+<p>This is a <em>driven port</em>: something the application calls. The operation the HTTP adapter invokes is a <em>driving port</em>: a way to ask the application to do work. Both contracts belong to the application core. Cockburn's original Ports and Adapters description makes this ability to drive the application independently of its eventual UI and database central to the design.<sup class="footnote-ref"><a href="#fn-fn:2">fn:2</a></sup></p>
+<p>The distinction between dependencies and calls takes a moment to get used to. At runtime, the booking handler calls the database adapter through an interface. In source code, the application refers to its own interface, while the adapter refers to domain types and provides the required method. The application has no import of the adapter.</p>
+<p><a id="figure--fig-go-dependencies"></a></p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/3c14300e1df8320b8d541563d6b135862ceedb1fa160dfcf72e7b0b55b3db41a/code-dependencies.webp?v=3c14300e1df8320b" alt="Code dependencies connect an HTTP or MQTT driving adapter to a core-owned driving port. BookDelivery implements that port and depends on domain rules and a driven port implemented by a MongoDB adapter."><figcaption><span class="figure-number">Figure 2: </span>Both contracts belong to the core. The use case depends on its driven port, and the database adapter implements that contract; these arrows describe code dependencies, not the direction of every runtime call.</figcaption></figure>
+<p>A small arrangement might look like this:</p>
+<figure class="code-listing" id="org-example-block--booking-package-layout"><figcaption class="code-toolbar"><span class="code-language">Text</span><span class="code-caption">One possible layout. The interfaces live with application code; the composition root connects their implementations.</span><span class="code-actions"><a href="#org-example-block--booking-package-layout" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="org-example-block--booking-package-layout-L1" href="#org-example-block--booking-package-layout-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="org-example-block--booking-package-layout-L2" href="#org-example-block--booking-package-layout-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="org-example-block--booking-package-layout-L3" href="#org-example-block--booking-package-layout-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="org-example-block--booking-package-layout-L4" href="#org-example-block--booking-package-layout-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="org-example-block--booking-package-layout-L5" href="#org-example-block--booking-package-layout-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="org-example-block--booking-package-layout-L6" href="#org-example-block--booking-package-layout-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="org-example-block--booking-package-layout-L7" href="#org-example-block--booking-package-layout-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="org-example-block--booking-package-layout-L8" href="#org-example-block--booking-package-layout-L8" aria-label="Link to line 8" data-line="8"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-text"><span style="color:#323232;">internal/
+</span><span style="color:#323232;">  booking/
+</span><span style="color:#323232;">    domain/             booking values and rules
+</span><span style="color:#323232;">    app/command/        BookDelivery and its repository port
+</span><span style="color:#323232;">    app/query/          read operations
+</span><span style="color:#323232;">    adapters/http/      request and response translation
+</span><span style="color:#323232;">    adapters/mongodb/   persistence mapping
+</span><span style="color:#323232;">  service/              construction, wiring, and lifecycle
+</span></code></pre></div></figure>
+<p>There is no need to create all of these packages before they contain useful work. The import direction is what I preserve when I introduce a boundary.</p>
+<p>I also avoid creating a general repository interface simply because the MongoDB implementation has several methods. That would make each caller depend on the provider's entire API. The booking handler asks for the behavior it needs. Another use case can have a different interface, even if one concrete adapter satisfies both.</p>
+<p>Small does not have to mean one method. If a consumer needs a coherent set of operations with shared transaction semantics, splitting it into several unrelated interfaces can obscure that requirement. The consumer's contract determines the boundary.</p>
+<p>HTTP structs can carry JSON tags, MongoDB documents can carry BSON tags, and the domain keeps its own values. This costs mapping code. I accept that cost when it prevents storage or transport changes from spreading into business rules, and I test the mappings because they can be wrong too.</p>
+<p>For a small service whose work consists almost entirely of storing and returning records, I may keep a concrete implementation and a few functions for longer. Here, the second caller gives the booking boundary a job: keep the hold rule shared while each adapter handles its own protocol. I introduce the extra structure when I can explain what change or test it makes easier.</p>
+<h2><a href="#typed-handlers" aria-hidden="true" class="anchor" id="typed-handlers"></a>Use a common contract for application handlers</h2>
+<p>Once the booking operation has a home, I want its entry point to look familiar. I use this shape for application handlers:</p>
+<figure class="code-listing" id="code-snippet--handler-contract"><figcaption class="code-toolbar"><span class="code-language">go</span><span class="code-caption">A common contract for application work, plus a function adapter used by wrappers and tests.</span><span class="code-actions"><a href="#code-snippet--handler-contract" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--handler-contract-L1" href="#code-snippet--handler-contract-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--handler-contract-L2" href="#code-snippet--handler-contract-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--handler-contract-L3" href="#code-snippet--handler-contract-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--handler-contract-L4" href="#code-snippet--handler-contract-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--handler-contract-L5" href="#code-snippet--handler-contract-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--handler-contract-L6" href="#code-snippet--handler-contract-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--handler-contract-L7" href="#code-snippet--handler-contract-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--handler-contract-L8" href="#code-snippet--handler-contract-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--handler-contract-L9" href="#code-snippet--handler-contract-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--handler-contract-L10" href="#code-snippet--handler-contract-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-snippet--handler-contract-L11" href="#code-snippet--handler-contract-L11" aria-label="Link to line 11" data-line="11"></a></div><div class="code-line-reference" style="--line-offset:11"><a id="code-snippet--handler-contract-L12" href="#code-snippet--handler-contract-L12" aria-label="Link to line 12" data-line="12"></a></div><div class="code-line-reference" style="--line-offset:12"><a id="code-snippet--handler-contract-L13" href="#code-snippet--handler-contract-L13" aria-label="Link to line 13" data-line="13"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-go"><span style="font-weight:bold;color:#a71d5d;">type </span><span style="color:#323232;">Handler[I, O any] </span><span style="font-weight:bold;color:#a71d5d;">interface</span><span style="color:#323232;"> {
+</span><span style="color:#323232;">    Handle(context.Context, I) (O, </span><span style="font-weight:bold;color:#a71d5d;">error</span><span style="color:#323232;">)
+</span><span style="color:#323232;">}
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">type </span><span style="color:#323232;">HandlerFunc[I, O any] </span><span style="font-weight:bold;color:#a71d5d;">func</span><span style="color:#323232;">(context.Context, I) (O, </span><span style="font-weight:bold;color:#a71d5d;">error</span><span style="color:#323232;">)
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">func </span><span style="color:#323232;">(f HandlerFunc[I, O]) Handle(
+</span><span style="color:#323232;">    ctx context.Context, input I,
+</span><span style="color:#323232;">) (O, error) {
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">return </span><span style="color:#323232;">f(ctx, input)
+</span><span style="color:#323232;">}
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">type </span><span style="color:#323232;">Void </span><span style="font-weight:bold;color:#a71d5d;">struct</span><span style="color:#323232;">{}
+</span></code></pre></div></figure>
+<p>The input describes one operation. The result has a concrete type, and failures use an error. A command with no result payload uses <code>Void</code>. A query uses its result type. That keeps logging and instrumentation wrappers independent of any particular booking request.</p>
+<p>A function with the same signature could do this work. <code>HandlerFunc</code> lets such a function participate in the same composition. I use the interface for handlers that hold dependencies, with a consistent <code>Handle</code> method for their wrappers. Across several operations, that saves me from writing a separate wrapper API for each one. For a single short function, I would often keep the function.</p>
+<p>I keep command and query intent visible in the application packages. A query returning bookings and a command recording one make different promises, even though both fit the handler interface. This separation is useful without separate read databases or event sourcing.</p>
+<p>The common signature does not decide whether an operation is safe to repeat. A command may provide idempotency. A query may observe different data on the next attempt or consume enough resources that retrying it makes an outage worse. Those are properties of the operation and its dependencies.</p>
+<p>For this example, the handler creates a domain value and asks the repository to record it:</p>
+<figure class="code-listing" id="code-snippet--book-delivery-handler"><figcaption class="code-toolbar"><span class="code-language">go</span><span class="code-caption">Booking orchestration. The constructor supplies the repository and a time source; the domain receives a time value.</span><span class="code-actions"><a href="#code-snippet--book-delivery-handler" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--book-delivery-handler-L1" href="#code-snippet--book-delivery-handler-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--book-delivery-handler-L2" href="#code-snippet--book-delivery-handler-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--book-delivery-handler-L3" href="#code-snippet--book-delivery-handler-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--book-delivery-handler-L4" href="#code-snippet--book-delivery-handler-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--book-delivery-handler-L5" href="#code-snippet--book-delivery-handler-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--book-delivery-handler-L6" href="#code-snippet--book-delivery-handler-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--book-delivery-handler-L7" href="#code-snippet--book-delivery-handler-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--book-delivery-handler-L8" href="#code-snippet--book-delivery-handler-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--book-delivery-handler-L9" href="#code-snippet--book-delivery-handler-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--book-delivery-handler-L10" href="#code-snippet--book-delivery-handler-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-snippet--book-delivery-handler-L11" href="#code-snippet--book-delivery-handler-L11" aria-label="Link to line 11" data-line="11"></a></div><div class="code-line-reference" style="--line-offset:11"><a id="code-snippet--book-delivery-handler-L12" href="#code-snippet--book-delivery-handler-L12" aria-label="Link to line 12" data-line="12"></a></div><div class="code-line-reference" style="--line-offset:12"><a id="code-snippet--book-delivery-handler-L13" href="#code-snippet--book-delivery-handler-L13" aria-label="Link to line 13" data-line="13"></a></div><div class="code-line-reference" style="--line-offset:13"><a id="code-snippet--book-delivery-handler-L14" href="#code-snippet--book-delivery-handler-L14" aria-label="Link to line 14" data-line="14"></a></div><div class="code-line-reference" style="--line-offset:14"><a id="code-snippet--book-delivery-handler-L15" href="#code-snippet--book-delivery-handler-L15" aria-label="Link to line 15" data-line="15"></a></div><div class="code-line-reference" style="--line-offset:15"><a id="code-snippet--book-delivery-handler-L16" href="#code-snippet--book-delivery-handler-L16" aria-label="Link to line 16" data-line="16"></a></div><div class="code-line-reference" style="--line-offset:16"><a id="code-snippet--book-delivery-handler-L17" href="#code-snippet--book-delivery-handler-L17" aria-label="Link to line 17" data-line="17"></a></div><div class="code-line-reference" style="--line-offset:17"><a id="code-snippet--book-delivery-handler-L18" href="#code-snippet--book-delivery-handler-L18" aria-label="Link to line 18" data-line="18"></a></div><div class="code-line-reference" style="--line-offset:18"><a id="code-snippet--book-delivery-handler-L19" href="#code-snippet--book-delivery-handler-L19" aria-label="Link to line 19" data-line="19"></a></div><div class="code-line-reference" style="--line-offset:19"><a id="code-snippet--book-delivery-handler-L20" href="#code-snippet--book-delivery-handler-L20" aria-label="Link to line 20" data-line="20"></a></div><div class="code-line-reference" style="--line-offset:20"><a id="code-snippet--book-delivery-handler-L21" href="#code-snippet--book-delivery-handler-L21" aria-label="Link to line 21" data-line="21"></a></div><div class="code-line-reference" style="--line-offset:21"><a id="code-snippet--book-delivery-handler-L22" href="#code-snippet--book-delivery-handler-L22" aria-label="Link to line 22" data-line="22"></a></div><div class="code-line-reference" style="--line-offset:22"><a id="code-snippet--book-delivery-handler-L23" href="#code-snippet--book-delivery-handler-L23" aria-label="Link to line 23" data-line="23"></a></div><div class="code-line-reference" style="--line-offset:23"><a id="code-snippet--book-delivery-handler-L24" href="#code-snippet--book-delivery-handler-L24" aria-label="Link to line 24" data-line="24"></a></div><div class="code-line-reference" style="--line-offset:24"><a id="code-snippet--book-delivery-handler-L25" href="#code-snippet--book-delivery-handler-L25" aria-label="Link to line 25" data-line="25"></a></div><div class="code-line-reference" style="--line-offset:25"><a id="code-snippet--book-delivery-handler-L26" href="#code-snippet--book-delivery-handler-L26" aria-label="Link to line 26" data-line="26"></a></div><div class="code-line-reference" style="--line-offset:26"><a id="code-snippet--book-delivery-handler-L27" href="#code-snippet--book-delivery-handler-L27" aria-label="Link to line 27" data-line="27"></a></div><div class="code-line-reference" style="--line-offset:27"><a id="code-snippet--book-delivery-handler-L28" href="#code-snippet--book-delivery-handler-L28" aria-label="Link to line 28" data-line="28"></a></div><div class="code-line-reference" style="--line-offset:28"><a id="code-snippet--book-delivery-handler-L29" href="#code-snippet--book-delivery-handler-L29" aria-label="Link to line 29" data-line="29"></a></div><div class="code-line-reference" style="--line-offset:29"><a id="code-snippet--book-delivery-handler-L30" href="#code-snippet--book-delivery-handler-L30" aria-label="Link to line 30" data-line="30"></a></div><div class="code-line-reference" style="--line-offset:30"><a id="code-snippet--book-delivery-handler-L31" href="#code-snippet--book-delivery-handler-L31" aria-label="Link to line 31" data-line="31"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-go"><span style="font-weight:bold;color:#a71d5d;">type </span><span style="color:#323232;">BookDelivery </span><span style="font-weight:bold;color:#a71d5d;">struct </span><span style="color:#323232;">{
+</span><span style="color:#323232;">    ID        </span><span style="font-weight:bold;color:#a71d5d;">string
+</span><span style="color:#323232;">    HoldUntil time.Time
+</span><span style="color:#323232;">}
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">type </span><span style="color:#323232;">bookDeliveryHandler </span><span style="font-weight:bold;color:#a71d5d;">struct </span><span style="color:#323232;">{
+</span><span style="color:#323232;">    repository DeliveryBookingRepository
+</span><span style="color:#323232;">    now        </span><span style="font-weight:bold;color:#a71d5d;">func</span><span style="color:#323232;">() time.Time
+</span><span style="color:#323232;">}
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">func </span><span style="font-weight:bold;color:#795da3;">NewBookDeliveryHandler</span><span style="color:#323232;">(
+</span><span style="color:#323232;">    repository DeliveryBookingRepository,
+</span><span style="color:#323232;">    now func() time.Time,
+</span><span style="color:#323232;">) decorator.Handler[BookDelivery, decorator.Void] {
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">return</span><span style="color:#323232;"> bookDeliveryHandler{repository: repository, now: now}
+</span><span style="color:#323232;">}
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">func </span><span style="color:#323232;">(h bookDeliveryHandler) </span><span style="font-weight:bold;color:#795da3;">Handle</span><span style="color:#323232;">(
+</span><span style="color:#323232;">    ctx context.Context, cmd BookDelivery,
+</span><span style="color:#323232;">) (decorator.Void, </span><span style="font-weight:bold;color:#a71d5d;">error</span><span style="color:#323232;">) {
+</span><span style="color:#323232;">    b, err </span><span style="font-weight:bold;color:#a71d5d;">:=</span><span style="color:#323232;"> booking.NewDeliveryBooking(
+</span><span style="color:#323232;">        cmd.ID, cmd.HoldUntil, h.now(),
+</span><span style="color:#323232;">    )
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">if</span><span style="color:#323232;"> err </span><span style="font-weight:bold;color:#a71d5d;">!= </span><span style="color:#0086b3;">nil </span><span style="color:#323232;">{
+</span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">return</span><span style="color:#323232;"> decorator.Void{}, err
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">if </span><span style="color:#323232;">err </span><span style="font-weight:bold;color:#a71d5d;">:=</span><span style="color:#323232;"> h.repository.RecordDeliveryBooking(ctx, b); err </span><span style="font-weight:bold;color:#a71d5d;">!= </span><span style="color:#0086b3;">nil </span><span style="color:#323232;">{
+</span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">return</span><span style="color:#323232;"> decorator.Void{}, fmt.Errorf(</span><span style="color:#183691;">&quot;record booking: </span><span style="background-color:#f5f5f5;font-weight:bold;color:#b52a1d;">%</span><span style="color:#183691;">w&quot;</span><span style="color:#323232;">, err)
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">return</span><span style="color:#323232;"> decorator.Void{}, </span><span style="color:#0086b3;">nil
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<p>The HTTP adapter can decode its generated request type into <code>BookDelivery</code> and map the returned error to an HTTP response. A broker adapter can construct the same command from an event. Neither needs to reimplement the hold rule.</p>
+<p>The constructor returns <code>decorator.Handler</code> to keep construction and decoration on the same public contract. Returning the concrete handler would also work; it satisfies the interface when passed to <code>ChainDecorators</code>. Go's usual guidance favors returning concrete types.<sup class="footnote-ref"><a href="#fn-fn:1">fn:1</a></sup> Here, I accept hiding any additional methods from callers. If they need more behavior, I reconsider that choice instead of adding type assertions around it.</p>
+<h2><a href="#time-as-input" aria-hidden="true" class="anchor" id="time-as-input"></a>Pass time into the booking rule</h2>
+<p>For the example, a booking is valid only while its hold has not expired. I want the boundary case to be explicit: at the deadline itself, the hold is expired.</p>
+<figure class="code-listing" id="code-snippet--booking-domain-rule"><figcaption class="code-toolbar"><span class="code-language">go</span><span class="code-caption">The illustrative domain model. Time comes from the caller, so the expiry rule is deterministic for a given input.</span><span class="code-actions"><a href="#code-snippet--booking-domain-rule" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--booking-domain-rule-L1" href="#code-snippet--booking-domain-rule-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--booking-domain-rule-L2" href="#code-snippet--booking-domain-rule-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--booking-domain-rule-L3" href="#code-snippet--booking-domain-rule-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--booking-domain-rule-L4" href="#code-snippet--booking-domain-rule-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--booking-domain-rule-L5" href="#code-snippet--booking-domain-rule-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--booking-domain-rule-L6" href="#code-snippet--booking-domain-rule-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--booking-domain-rule-L7" href="#code-snippet--booking-domain-rule-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--booking-domain-rule-L8" href="#code-snippet--booking-domain-rule-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--booking-domain-rule-L9" href="#code-snippet--booking-domain-rule-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--booking-domain-rule-L10" href="#code-snippet--booking-domain-rule-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-snippet--booking-domain-rule-L11" href="#code-snippet--booking-domain-rule-L11" aria-label="Link to line 11" data-line="11"></a></div><div class="code-line-reference" style="--line-offset:11"><a id="code-snippet--booking-domain-rule-L12" href="#code-snippet--booking-domain-rule-L12" aria-label="Link to line 12" data-line="12"></a></div><div class="code-line-reference" style="--line-offset:12"><a id="code-snippet--booking-domain-rule-L13" href="#code-snippet--booking-domain-rule-L13" aria-label="Link to line 13" data-line="13"></a></div><div class="code-line-reference" style="--line-offset:13"><a id="code-snippet--booking-domain-rule-L14" href="#code-snippet--booking-domain-rule-L14" aria-label="Link to line 14" data-line="14"></a></div><div class="code-line-reference" style="--line-offset:14"><a id="code-snippet--booking-domain-rule-L15" href="#code-snippet--booking-domain-rule-L15" aria-label="Link to line 15" data-line="15"></a></div><div class="code-line-reference" style="--line-offset:15"><a id="code-snippet--booking-domain-rule-L16" href="#code-snippet--booking-domain-rule-L16" aria-label="Link to line 16" data-line="16"></a></div><div class="code-line-reference" style="--line-offset:16"><a id="code-snippet--booking-domain-rule-L17" href="#code-snippet--booking-domain-rule-L17" aria-label="Link to line 17" data-line="17"></a></div><div class="code-line-reference" style="--line-offset:17"><a id="code-snippet--booking-domain-rule-L18" href="#code-snippet--booking-domain-rule-L18" aria-label="Link to line 18" data-line="18"></a></div><div class="code-line-reference" style="--line-offset:18"><a id="code-snippet--booking-domain-rule-L19" href="#code-snippet--booking-domain-rule-L19" aria-label="Link to line 19" data-line="19"></a></div><div class="code-line-reference" style="--line-offset:19"><a id="code-snippet--booking-domain-rule-L20" href="#code-snippet--booking-domain-rule-L20" aria-label="Link to line 20" data-line="20"></a></div><div class="code-line-reference" style="--line-offset:20"><a id="code-snippet--booking-domain-rule-L21" href="#code-snippet--booking-domain-rule-L21" aria-label="Link to line 21" data-line="21"></a></div><div class="code-line-reference" style="--line-offset:21"><a id="code-snippet--booking-domain-rule-L22" href="#code-snippet--booking-domain-rule-L22" aria-label="Link to line 22" data-line="22"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-go"><span style="font-weight:bold;color:#a71d5d;">var </span><span style="color:#323232;">ErrInvalidID </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> errors.New(</span><span style="color:#183691;">&quot;booking ID is required&quot;</span><span style="color:#323232;">)
+</span><span style="font-weight:bold;color:#a71d5d;">var </span><span style="color:#323232;">ErrHoldExpired </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> errors.New(</span><span style="color:#183691;">&quot;booking hold expired&quot;</span><span style="color:#323232;">)
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">type </span><span style="color:#323232;">DeliveryBooking </span><span style="font-weight:bold;color:#a71d5d;">struct </span><span style="color:#323232;">{
+</span><span style="color:#323232;">    id        </span><span style="font-weight:bold;color:#a71d5d;">string
+</span><span style="color:#323232;">    holdUntil time.Time
+</span><span style="color:#323232;">}
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">func </span><span style="font-weight:bold;color:#795da3;">NewDeliveryBooking</span><span style="color:#323232;">(
+</span><span style="color:#323232;">    id </span><span style="font-weight:bold;color:#a71d5d;">string</span><span style="color:#323232;">, holdUntil, now time.Time,
+</span><span style="color:#323232;">) (DeliveryBooking, </span><span style="font-weight:bold;color:#a71d5d;">error</span><span style="color:#323232;">) {
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">if</span><span style="color:#323232;"> id </span><span style="font-weight:bold;color:#a71d5d;">== </span><span style="color:#183691;">&quot;&quot; </span><span style="color:#323232;">{
+</span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">return</span><span style="color:#323232;"> DeliveryBooking{}, ErrInvalidID
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">if !</span><span style="color:#323232;">now.Before(holdUntil) {
+</span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">return</span><span style="color:#323232;"> DeliveryBooking{}, ErrHoldExpired
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">return</span><span style="color:#323232;"> DeliveryBooking{id: id, holdUntil: holdUntil}, </span><span style="color:#0086b3;">nil
+</span><span style="color:#323232;">}
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">func </span><span style="color:#323232;">(b DeliveryBooking) </span><span style="font-weight:bold;color:#795da3;">ID</span><span style="color:#323232;">() </span><span style="font-weight:bold;color:#a71d5d;">string </span><span style="color:#323232;">{ </span><span style="font-weight:bold;color:#a71d5d;">return</span><span style="color:#323232;"> b.id }
+</span><span style="font-weight:bold;color:#a71d5d;">func </span><span style="color:#323232;">(b DeliveryBooking) </span><span style="font-weight:bold;color:#795da3;">HoldUntil</span><span style="color:#323232;">() time.Time { </span><span style="font-weight:bold;color:#a71d5d;">return</span><span style="color:#323232;"> b.holdUntil }
+</span></code></pre></div></figure>
+<p>The application obtains time through its injected function. The composition root can supply <code>time.Now</code>; a test can supply a fixed instant. The domain imports <code>time</code> for its value type and comparisons, but never asks the environment what time it is.</p>
+<p>That lets a test choose an instant just before the deadline, the exact deadline, and an instant afterward. There is no sleep and no dependence on how quickly a test machine happens to run.</p>
+<p>There is still a business decision to make about time. The handler above checks the hold when it handles the request. If the intended rule is based on when an event was accepted elsewhere, the input and trust assumptions need to express that instead. Injecting a clock makes the choice testable; it does not choose the correct policy.</p>
+<h2><a href="#handler-decorators" aria-hidden="true" class="anchor" id="handler-decorators"></a>Add logging and metrics with decorators</h2>
+<p>A handler that records a booking still needs logging and metrics. Putting that work in every handler body makes ordinary changes noisy. Because the entry point has a consistent type, I can wrap it:</p>
+<figure class="code-listing" id="code-snippet--decorator-chain"><figcaption class="code-toolbar"><span class="code-language">go</span><span class="code-caption">A decorator takes a handler and returns a handler. Applying the list in reverse makes the first listed decorator outermost.</span><span class="code-actions"><a href="#code-snippet--decorator-chain" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--decorator-chain-L1" href="#code-snippet--decorator-chain-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--decorator-chain-L2" href="#code-snippet--decorator-chain-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--decorator-chain-L3" href="#code-snippet--decorator-chain-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--decorator-chain-L4" href="#code-snippet--decorator-chain-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--decorator-chain-L5" href="#code-snippet--decorator-chain-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--decorator-chain-L6" href="#code-snippet--decorator-chain-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--decorator-chain-L7" href="#code-snippet--decorator-chain-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--decorator-chain-L8" href="#code-snippet--decorator-chain-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--decorator-chain-L9" href="#code-snippet--decorator-chain-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--decorator-chain-L10" href="#code-snippet--decorator-chain-L10" aria-label="Link to line 10" data-line="10"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-go"><span style="font-weight:bold;color:#a71d5d;">type </span><span style="color:#323232;">Decorator[I, O any] </span><span style="font-weight:bold;color:#a71d5d;">func</span><span style="color:#323232;">(Handler[I, O]) Handler[I, O]
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">func </span><span style="font-weight:bold;color:#795da3;">ChainDecorators</span><span style="color:#323232;">[I, O any](
+</span><span style="color:#323232;">    handler Handler[I, O], decorators ...Decorator[I, O],
+</span><span style="color:#323232;">) Handler[I, O] {
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">i </span><span style="font-weight:bold;color:#a71d5d;">:= </span><span style="color:#62a35c;">len</span><span style="color:#323232;">(decorators) </span><span style="font-weight:bold;color:#a71d5d;">- </span><span style="color:#0086b3;">1</span><span style="color:#323232;">; i </span><span style="font-weight:bold;color:#a71d5d;">&gt;= </span><span style="color:#0086b3;">0</span><span style="color:#323232;">; i</span><span style="font-weight:bold;color:#a71d5d;">-- </span><span style="color:#323232;">{
+</span><span style="color:#323232;">        handler </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> decorators[i](handler)
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">return</span><span style="color:#323232;"> handler
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<p>At construction, I choose the wrappers and their order:</p>
+<figure class="code-listing" id="code-snippet--decorated-booking-handler"><figcaption class="code-toolbar"><span class="code-language">go</span><span class="code-caption">Application construction. The wrapper implementations are omitted here; each preserves the same Handle contract.</span><span class="code-actions"><a href="#code-snippet--decorated-booking-handler" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--decorated-booking-handler-L1" href="#code-snippet--decorated-booking-handler-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--decorated-booking-handler-L2" href="#code-snippet--decorated-booking-handler-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--decorated-booking-handler-L3" href="#code-snippet--decorated-booking-handler-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--decorated-booking-handler-L4" href="#code-snippet--decorated-booking-handler-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--decorated-booking-handler-L5" href="#code-snippet--decorated-booking-handler-L5" aria-label="Link to line 5" data-line="5"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-go"><span style="color:#323232;">bookDelivery </span><span style="font-weight:bold;color:#a71d5d;">:=</span><span style="color:#323232;"> decorator.ChainDecorators(
+</span><span style="color:#323232;">    command.NewBookDeliveryHandler(repository, time.Now),
+</span><span style="color:#323232;">    decorator.WithLogging[command.BookDelivery, decorator.Void](logger),
+</span><span style="color:#323232;">    decorator.WithMetrics[command.BookDelivery, decorator.Void](observeBooking),
+</span><span style="color:#323232;">)
+</span></code></pre></div></figure>
+<p>A request enters logging, then metrics, then the booking handler. Results return through those wrappers in the opposite order. The operation can be tested with no wrappers, and the composition can be tested separately when order matters.</p>
+<p><a id="figure--fig-go-decorator-order"></a></p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/86ae578345fd3f9313333600f035dc14cc89a39d1680f436cb801437449b70c0/decorator-order.webp?v=86ae578345fd3f93" alt="Decorator construction lists logging first, metrics second, and retry last. The request travels through logging, metrics, retry, and finally the booking handler."><figcaption><span class="figure-number">Figure 3: </span>The talk adds retry inside logging and metrics, so those outer wrappers observe the overall operation. The retry wrapper still requires an established repeat contract.</figcaption></figure>
+<p>Suppose I later add a retry wrapper. Placing it inside the metrics wrapper makes that metric describe one overall invocation, including retries. Placing metrics inside retry makes it describe individual attempts. Either can be useful, but they answer different questions. If I need both, I instrument both explicitly.</p>
+<p>The booking constructor leaves retry out until I've decided how to handle a repeated request, including one that arrives after the hold has expired.</p>
+<h2><a href="#shared-booking-entry-points" aria-hidden="true" class="anchor" id="shared-booking-entry-points"></a>Connect both adapters in the composition root</h2>
+<p>With the operation constructed, the composition root supplies it to both adapters:</p>
+<figure class="code-listing" id="code-snippet--shared-booking-handler"><figcaption class="code-toolbar"><span class="code-language">go</span><span class="code-caption">Illustrative adapter constructors accept the same typed booking handler. HTTP registration and the broker consumer loop are omitted.</span><span class="code-actions"><a href="#code-snippet--shared-booking-handler" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--shared-booking-handler-L1" href="#code-snippet--shared-booking-handler-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--shared-booking-handler-L2" href="#code-snippet--shared-booking-handler-L2" aria-label="Link to line 2" data-line="2"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-go"><span style="color:#323232;">httpAdapter </span><span style="font-weight:bold;color:#a71d5d;">:=</span><span style="color:#323232;"> bookinghttp.New(bookDelivery)
+</span><span style="color:#323232;">brokerAdapter </span><span style="font-weight:bold;color:#a71d5d;">:=</span><span style="color:#323232;"> bookingbroker.New(bookDelivery)
+</span></code></pre></div></figure>
+<p>Each adapter constructor accepts <code>decorator.Handler[command.BookDelivery, decorator.Void]</code>. The HTTP adapter translates its decoded request into <code>command.BookDelivery</code>; the broker adapter translates a booking event into that same command. The repository and clock are already supplied to the shared handler, so the adapters do not need them.</p>
+<p>Consider an in-process test with a fixed clock and a recording repository. Through each adapter, submit a booking whose hold has expired. Both should reject it without a repository call. With a fresh repository for each path, submit a valid booking and check the recorded ID and deadline. That scenario exercises both translations and the shared rule. The adapters can still map the rejection differently: an HTTP response and a broker processing outcome serve different callers.</p>
+<p>Adding the broker path now requires its event mapping and consumer wiring. The domain rule and MongoDB mapping stay where they were. For the existing HTTP endpoint, I also keep tests that check its response contract. Calling the new handler successfully would leave that part unchecked.</p>
+<p>The composition root also creates the database clients and other long-lived resources, passes them to adapters, and coordinates shutdown. A handler does not create a fresh client for every call. Workers need cancellation and a way to finish or abandon in-flight work before their dependencies close. A common <code>Handle</code> method can serve a worker's application operation; scheduling and recovery remain part of the worker's design.</p>
+<h2><a href="#testing-boundaries" aria-hidden="true" class="anchor" id="testing-boundaries"></a>Choose tests that exercise the failure you care about</h2>
+<p>The repository interface gives the booking test a small substitution point. A function type is enough to implement it:</p>
+<figure class="code-listing" id="code-snippet--booking-function-fake"><figcaption class="code-toolbar"><span class="code-language">go</span><span class="code-caption">A function fake used by application tests.</span><span class="code-actions"><a href="#code-snippet--booking-function-fake" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--booking-function-fake-L1" href="#code-snippet--booking-function-fake-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--booking-function-fake-L2" href="#code-snippet--booking-function-fake-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--booking-function-fake-L3" href="#code-snippet--booking-function-fake-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--booking-function-fake-L4" href="#code-snippet--booking-function-fake-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--booking-function-fake-L5" href="#code-snippet--booking-function-fake-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--booking-function-fake-L6" href="#code-snippet--booking-function-fake-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--booking-function-fake-L7" href="#code-snippet--booking-function-fake-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--booking-function-fake-L8" href="#code-snippet--booking-function-fake-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--booking-function-fake-L9" href="#code-snippet--booking-function-fake-L9" aria-label="Link to line 9" data-line="9"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-go"><span style="font-weight:bold;color:#a71d5d;">type </span><span style="color:#323232;">repositoryFunc </span><span style="font-weight:bold;color:#a71d5d;">func</span><span style="color:#323232;">(
+</span><span style="color:#323232;">    context.Context, booking.DeliveryBooking,
+</span><span style="color:#323232;">) </span><span style="font-weight:bold;color:#a71d5d;">error
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">func </span><span style="color:#323232;">(f repositoryFunc) </span><span style="font-weight:bold;color:#795da3;">RecordDeliveryBooking</span><span style="color:#323232;">(
+</span><span style="color:#323232;">    ctx context.Context, b booking.DeliveryBooking,
+</span><span style="color:#323232;">) </span><span style="font-weight:bold;color:#a71d5d;">error </span><span style="color:#323232;">{
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">return </span><span style="color:#323232;">f(ctx, b)
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<p>The test can choose a storage error without starting MongoDB:</p>
+<figure class="code-listing" id="code-snippet--booking-failure-test"><figcaption class="code-toolbar"><span class="code-language">go</span><span class="code-caption">The handler must preserve a storage failure for the caller to classify.</span><span class="code-actions"><a href="#code-snippet--booking-failure-test" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--booking-failure-test-L1" href="#code-snippet--booking-failure-test-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--booking-failure-test-L2" href="#code-snippet--booking-failure-test-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--booking-failure-test-L3" href="#code-snippet--booking-failure-test-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--booking-failure-test-L4" href="#code-snippet--booking-failure-test-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--booking-failure-test-L5" href="#code-snippet--booking-failure-test-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--booking-failure-test-L6" href="#code-snippet--booking-failure-test-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--booking-failure-test-L7" href="#code-snippet--booking-failure-test-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--booking-failure-test-L8" href="#code-snippet--booking-failure-test-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--booking-failure-test-L9" href="#code-snippet--booking-failure-test-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--booking-failure-test-L10" href="#code-snippet--booking-failure-test-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-snippet--booking-failure-test-L11" href="#code-snippet--booking-failure-test-L11" aria-label="Link to line 11" data-line="11"></a></div><div class="code-line-reference" style="--line-offset:11"><a id="code-snippet--booking-failure-test-L12" href="#code-snippet--booking-failure-test-L12" aria-label="Link to line 12" data-line="12"></a></div><div class="code-line-reference" style="--line-offset:12"><a id="code-snippet--booking-failure-test-L13" href="#code-snippet--booking-failure-test-L13" aria-label="Link to line 13" data-line="13"></a></div><div class="code-line-reference" style="--line-offset:13"><a id="code-snippet--booking-failure-test-L14" href="#code-snippet--booking-failure-test-L14" aria-label="Link to line 14" data-line="14"></a></div><div class="code-line-reference" style="--line-offset:14"><a id="code-snippet--booking-failure-test-L15" href="#code-snippet--booking-failure-test-L15" aria-label="Link to line 15" data-line="15"></a></div><div class="code-line-reference" style="--line-offset:15"><a id="code-snippet--booking-failure-test-L16" href="#code-snippet--booking-failure-test-L16" aria-label="Link to line 16" data-line="16"></a></div><div class="code-line-reference" style="--line-offset:16"><a id="code-snippet--booking-failure-test-L17" href="#code-snippet--booking-failure-test-L17" aria-label="Link to line 17" data-line="17"></a></div><div class="code-line-reference" style="--line-offset:17"><a id="code-snippet--booking-failure-test-L18" href="#code-snippet--booking-failure-test-L18" aria-label="Link to line 18" data-line="18"></a></div><div class="code-line-reference" style="--line-offset:18"><a id="code-snippet--booking-failure-test-L19" href="#code-snippet--booking-failure-test-L19" aria-label="Link to line 19" data-line="19"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-go"><span style="font-weight:bold;color:#a71d5d;">func </span><span style="font-weight:bold;color:#795da3;">TestBookDeliveryPreservesStorageFailure</span><span style="color:#323232;">(t </span><span style="font-weight:bold;color:#a71d5d;">*</span><span style="color:#323232;">testing.T) {
+</span><span style="color:#323232;">    unavailable </span><span style="font-weight:bold;color:#a71d5d;">:=</span><span style="color:#323232;"> errors.New(</span><span style="color:#183691;">&quot;storage unavailable&quot;</span><span style="color:#323232;">)
+</span><span style="color:#323232;">    now </span><span style="font-weight:bold;color:#a71d5d;">:=</span><span style="color:#323232;"> time.Date(</span><span style="color:#0086b3;">2026</span><span style="color:#323232;">, </span><span style="color:#0086b3;">10</span><span style="color:#323232;">, </span><span style="color:#0086b3;">31</span><span style="color:#323232;">, </span><span style="color:#0086b3;">10</span><span style="color:#323232;">, </span><span style="color:#0086b3;">0</span><span style="color:#323232;">, </span><span style="color:#0086b3;">0</span><span style="color:#323232;">, </span><span style="color:#0086b3;">0</span><span style="color:#323232;">, time.UTC)
+</span><span style="color:#323232;">    repository </span><span style="font-weight:bold;color:#a71d5d;">:= </span><span style="color:#323232;">repositoryFunc(</span><span style="font-weight:bold;color:#a71d5d;">func</span><span style="color:#323232;">(
+</span><span style="color:#323232;">        context.Context, booking.DeliveryBooking,
+</span><span style="color:#323232;">    ) </span><span style="font-weight:bold;color:#a71d5d;">error</span><span style="color:#323232;"> {
+</span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">return</span><span style="color:#323232;"> unavailable
+</span><span style="color:#323232;">    })
+</span><span style="color:#323232;">    handler </span><span style="font-weight:bold;color:#a71d5d;">:=</span><span style="color:#323232;"> command.NewBookDeliveryHandler(
+</span><span style="color:#323232;">        repository, </span><span style="font-weight:bold;color:#a71d5d;">func</span><span style="color:#323232;">() time.Time { </span><span style="font-weight:bold;color:#a71d5d;">return</span><span style="color:#323232;"> now },
+</span><span style="color:#323232;">    )
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">    _, err </span><span style="font-weight:bold;color:#a71d5d;">:=</span><span style="color:#323232;"> handler.Handle(context.Background(), command.BookDelivery{
+</span><span style="color:#323232;">        ID: </span><span style="color:#183691;">&quot;booking-42&quot;</span><span style="color:#323232;">, HoldUntil: now.Add(time.Minute),
+</span><span style="color:#323232;">    })
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">if !</span><span style="color:#323232;">errors.Is(err, unavailable) {
+</span><span style="color:#323232;">        t.Fatalf(</span><span style="color:#183691;">&quot;got </span><span style="color:#0086b3;">%v</span><span style="color:#183691;">, want storage failure&quot;</span><span style="color:#323232;">, err)
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<p>I would also check that an expired hold never reaches the repository, and that a valid command records the expected domain value. These tests run real domain and application code. Only the persistence dependency is replaced.</p>
+<p>They say nothing about whether the MongoDB adapter maps the ID to the correct field. For that, I need the real adapter and a real database. I use different test scopes to exercise different failure modes:</p>
+<p><a id="table--table-service-test-scopes"></a></p>
+<div class="table-caption">
+  <span class="table-number"><a href="#table--table-service-test-scopes">Table 1</a>:</span>
+  The test levels I use. The names describe substitution points in this approach; naming conventions differ between teams.
+</div>
+<table>
+<tr>
+<th>Scope</th>
+<th>What runs for real</th>
+<th>Booking failure it can expose</th>
+</tr>
+<tr>
+<td>Domain unit</td>
+<td>Booking values and rules</td>
+<td>A hold is accepted at its expiry instant</td>
+</tr>
+<tr>
+<td>Use case</td>
+<td>Domain and handler; function fake at the repository port</td>
+<td>A storage failure is swallowed or invalid input reaches persistence</td>
+</tr>
+<tr>
+<td>Adapter integration</td>
+<td>One adapter and its backing dependency</td>
+<td>The stored representation cannot be read back correctly</td>
+</tr>
+<tr>
+<td>Component, in process</td>
+<td>Service composition with selected dependencies substituted</td>
+<td>Wiring supplies the wrong implementation or wrappers run in the wrong order</td>
+</tr>
+<tr>
+<td>Component, out of process</td>
+<td>Built service with provisioned dependencies</td>
+<td>Configuration, startup, or the external request contract is wrong</td>
+</tr>
+<tr>
+<td>End to end</td>
+<td>Collaborating services</td>
+<td>A neighboring consumer interprets the booking differently</td>
+</tr>
+</table>
+<p>These are not six suites I generate for every handler. I choose the cheapest scope that actually exercises the risk. Index initialization can be checked by a focused integration test if that test runs the initializer; it does not inherently require launching the entire service.</p>
+<p><a id="figure--fig-go-test-boundaries"></a></p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/8cb40315fdc2f46e24dd490e7fa4681078407aa0fd6908b05fe22d27a83dadea/test-boundaries.webp?v=8cb40315fdc2f46e" alt="A testing matrix shows domain unit tests, application use-case tests, adapter integration tests, component tests in and out of process, and end-to-end tests, with real and substituted parts marked."><figcaption><span class="figure-number">Figure 4: </span>The solid areas show real code or dependencies; dashed areas show substitutes. Here, ports names the transport-adapter packages, corresponding to adapters/http in the example layout. The core interfaces remain application-owned.</figcaption></figure>
+<p>Testcontainers lets the test process provision dependencies such as MongoDB or a broker.<sup class="footnote-ref"><a href="#fn-fn:3">fn:3</a></sup> The harness still needs isolated state and reliable cleanup. Running a real database does not make tests parallel-safe if they all write to the same collection with the same identities.</p>
+<p>As the scope widens, the booking behavior can stay recognizable. I can exercise a repository contract against a fake and a real implementation, then run a relevant booking scenario through the built service. That gives the fake something concrete to stay compatible with. The fast test remains useful without pretending it covers the driver or deployment packaging.</p>
+<p>In <span id="bln-ref-1" class="document-reference"><a href="https://sekaiser.github.io/notes/ci-cd-across-team-boundaries.html">CI/CD Across Team Boundaries</a></span>, I discuss the next boundary: a change that only becomes meaningful when several teams' services interact. The local service tests establish their own claims; a cross-service scenario checks the collaboration those tests cannot see.</p>
+<h2><a href="#delivery-and-retries" aria-hidden="true" class="anchor" id="delivery-and-retries"></a>Decide when a booking can be retried</h2>
+<p>A broker consumer adds another reason to distinguish a handler result from its delivery contract. Consider this sequence:</p>
+<figure class="code-listing" id="org-example-block--booking-redelivery-window"><figcaption class="code-toolbar"><span class="code-language">Text</span><span class="code-caption">An external side effect and a broker offset commit can be separated by a crash.</span><span class="code-actions"><a href="#org-example-block--booking-redelivery-window" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="org-example-block--booking-redelivery-window-L1" href="#org-example-block--booking-redelivery-window-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="org-example-block--booking-redelivery-window-L2" href="#org-example-block--booking-redelivery-window-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="org-example-block--booking-redelivery-window-L3" href="#org-example-block--booking-redelivery-window-L3" aria-label="Link to line 3" data-line="3"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-text"><span style="color:#323232;">Receive booking -&gt; record booking -&gt; crash -&gt; commit offset never happens
+</span><span style="color:#323232;">                                   |
+</span><span style="color:#323232;">                                   +-&gt; recovery may deliver the booking again
+</span></code></pre></div></figure>
+<p>The application can return an error or a successful result. The surrounding consumer loop decides how that result affects retries and offset commits. A callback returning <code>nil</code> is not itself a broker acknowledgement. Recovery depends on how processing and offset persistence are coordinated.<sup class="footnote-ref"><a href="#fn-fn:4">fn:4</a></sup></p>
+<p>Dropping malformed input, quarantining it, and retrying it indefinitely are different operational policies. A permanent booking rejection is also different from losing the connection to storage. I want the adapter's error mapping to state which outcome it chooses, with tests that exercise the consumer loop where necessary.</p>
+<p>A database write can succeed while its acknowledgement is lost. The caller cannot tell whether another attempt will create a duplicate. The expiry rule makes the ambiguity more apparent: a first attempt might succeed before the deadline, then a retry after the deadline fails in the domain constructor before reaching storage.</p>
+<p>Suppose we decide that an identical retry of an accepted booking should return the recorded success, even after the hold expires. A request using that identity with different input should fail as a conflict. A genuinely new booking must still pass the expiry check. This is one possible extension to the example's business contract.</p>
+<p>The handler shown above does not implement that extension. It would need to recognize prior acceptance before applying first-attempt validation again. The persistence contract would also need to distinguish an identical repeat from a conflicting request and coordinate competing submissions atomically. An unprotected lookup followed by an insert would leave a race between callers. A stable ID by itself does not specify any of these outcomes.</p>
+<p>I need to agree on those semantics with the people who own booking behavior, then test them against the repository implementation. The signature of <code>RecordDeliveryBooking</code> says little about duplicates or concurrent calls. Until the contract is agreed and implemented, I keep automatic retries disabled. The extraction should preserve existing behavior; changing its repeat semantics deserves a separate decision and tests.</p>
+<p>Once the operation is safe to repeat under the agreed conditions, the consumer can retry eligible failures with a bounded policy. If recording the booking must also publish an event atomically from the application's perspective, that creates another consistency problem to design for, often with an outbox or another explicit coordination mechanism.</p>
+<p>My <span id="bln-ref-2" class="document-reference"><a href="https://sekaiser.github.io/notes/backpressure-in-a-telemetry-pipeline.html">backpressure article</a></span> makes a related distinction between a required event path and a best-effort cache update. An optional projection can sometimes discard work. A booking acceptance path needs its own answer about which work may be lost and which must survive recovery.</p>
+<h2><a href="#executable-architecture" aria-hidden="true" class="anchor" id="executable-architecture"></a>Check architectural boundaries in the build</h2>
+<p>Once the booking handler exists, I want a build to tell me when application code imports MongoDB directly. Otherwise I am relying on every reviewer remembering the original extraction.</p>
+<p>A service-specific analyzer can use Go's analysis API to inspect package imports, struct tags, and selected calls.<sup class="footnote-ref"><a href="#fn-fn:5">fn:5</a></sup> In my arrangement, the domain cannot import application or adapter packages, declare serialization tags, or call <code>time.Now</code>. Application code cannot import concrete adapters. The composition root is where those implementations meet.</p>
+<p>The details of the check matter. An import alias must not hide a forbidden dependency. Checking a call's resolved object is stronger than searching source text for the spelling <code>time.Now()</code>. I also need to decide which files the rule covers: production code, generated code, and test harnesses have different roles. Those choices should be visible in the analyzer and its tests.</p>
+<p>A build target can run a project-specific analyzer through <code>go vet</code>:<sup class="footnote-ref"><a href="#fn-fn:6">fn:6</a></sup></p>
+<figure class="code-listing" id="code-snippet--architecture-check-target"><figcaption class="code-toolbar"><span class="code-language">makefile</span><span class="code-caption">An illustrative Make target. The service supplies its own archvet tool and rule tests.</span><span class="code-actions"><a href="#code-snippet--architecture-check-target" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--architecture-check-target-L1" href="#code-snippet--architecture-check-target-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--architecture-check-target-L2" href="#code-snippet--architecture-check-target-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--architecture-check-target-L3" href="#code-snippet--architecture-check-target-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--architecture-check-target-L4" href="#code-snippet--architecture-check-target-L4" aria-label="Link to line 4" data-line="4"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-makefile"><span style="font-weight:bold;color:#795da3;">lint-architecture</span><span style="font-weight:bold;color:#a71d5d;">:
+</span><span style="color:#323232;">	mkdir -p .bin
+</span><span style="color:#323232;">	go build -o .bin/archvet ./tools/archvet
+</span><span style="color:#323232;">	go vet -vettool</span><span style="font-weight:bold;color:#a71d5d;">=$(</span><span style="color:#323232;">CURDIR</span><span style="font-weight:bold;color:#a71d5d;">)</span><span style="color:#323232;">/.bin/archvet ./internal/...
+</span></code></pre></div></figure>
+<p>I test the analyzer against deliberately invalid packages and examples that should remain valid. A changed package path or a rule that reports every harmless import can make a check ineffective just as easily as a missing rule can.</p>
+<p>This is the part of evolutionary architecture I find practical: identify a property worth preserving and give it repeatable feedback as the system changes.<sup class="footnote-ref"><a href="#fn-fn:7">fn:7</a></sup> An import rule covers a particular dependency decision. It cannot determine whether <code>RecordDeliveryBooking</code> represents the right business operation, whether the fake models its contract correctly, or whether the delivery policy is acceptable.</p>
+<p>I still want the diagram, too. Generating a component diagram from the composed application avoids maintaining a second handwritten inventory of its wiring. After changing the composition, I regenerate it and review the diff. Its scope depends on what the generator discovers; an object graph does not explain every dynamic runtime interaction.</p>
+<h2><a href="#delegating-changes" aria-hidden="true" class="anchor" id="delegating-changes"></a>Prepare the context for an agent's change</h2>
+<p>I can now describe a bounded task to a coding agent:</p>
+<blockquote>
+<p>Extract booking orchestration from the HTTP endpoint into an application handler that another adapter can call. Preserve the existing HTTP behavior and hold-expiry rule. Keep database details in the adapter. Report any unclear repeat behavior before changing it.</p>
+</blockquote>
+<p>The agent still needs to find the current endpoint and its tests, follow its persistence dependency, and inspect the composition that connects them. The architecture check and its baseline explain which dependencies the change must preserve. A similar handler elsewhere in the repository can help with the extraction, provided its business policy is not copied along with its structure.</p>
+<p>I use <em>agentic enrichment</em> to mean gathering relevant repository knowledge around a change. For the booking extraction, that means following the endpoint to its dependencies and finding the test that states what happens at expiry. The agent can read the import rule when deciding where to put the extracted code. Selecting and retrieving information as work progresses is also part of the context-engineering approach described by Anthropic.<sup class="footnote-ref"><a href="#fn-fn:8">fn:8</a></sup></p>
+<p>I want to know where the agent's conclusions came from. Tooling can inspect an import, while a decision record may explain why that dependency was forbidden. A test gives evidence about the scenario it exercises. If the agent suggests that repeated bookings should be harmless, it has proposed a policy. Somebody still needs to accept that policy before it becomes part of the implementation.</p>
+<p>If a port or its callers change, an earlier summary may no longer describe the operation. I want the context to identify the repository revision and point to the relevant files and checks, so the agent can inspect them again when the code changes. A generated dependency graph helps locate code; its arrows cannot explain the meaning of an accepted booking.</p>
+<p>In my experimental JAMES project, an architecture profile describes roles and their path bindings, along with conventions such as port ownership and decorator order. The profile helps an agent relate an application handler to its place in the repository. A declared rule only becomes enforced when a supported validator executes it and the workflow uses its result. You can start with repository instructions and existing build targets; a separate orchestration tool is optional.</p>
+<h2><a href="#reviewing-agent-changes" aria-hidden="true" class="anchor" id="reviewing-agent-changes"></a>Review the change and the evidence</h2>
+<p>For the booking extraction, I first ask the agent to identify the behavior already covered and the cases the change could disturb. Before moving code, I temporarily let an expired hold through and confirm that the relevant test fails. I restore the implementation before continuing with the extraction. That tells me the test detects this particular mistake; other faults still need their own checks.</p>
+<p>During the move, suppose the agent puts a MongoDB call in the application handler. The import analyzer should reject it. The agent can repair the dependency by putting the contract beside its consumer and leaving the concrete adapter outside. That repair still needs the behavior tests: correct imports would allow an implementation that quietly discards a storage error.</p>
+<p>For a move confined to orchestration, I start with the booking rule and handler tests. Changed mappings need adapter tests too. If the diff touches wiring or startup, I include the corresponding composition or built-service checks. The test scopes described earlier help me choose which parts must run for real.</p>
+<p>The agent's report should let a reviewer follow a claim to the check that supports it. If it says HTTP behavior is unchanged, I want the relevant scenario and result. Commands and their results belong with that report, including anything that could not run. I also want the gaps stated plainly: a function-fake test gives me no evidence about a MongoDB index or a consumer's offset handling.</p>
+<p>Tests and rules can need changes too, and I review those changes explicitly. A failing check should send the agent back to investigate; deleting an assertion or broadening the baseline needs a justification of its own. When the same agent writes the implementation and its tests, they can share the same mistaken interpretation. I compare the change with existing characterization tests and the agreed requirement, and keep the analyzer's own fixtures under test.</p>
+<p><a id="figure--fig-go-change-loop"></a></p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/15e818c36df025e8635cd451dd6549ae0b5b1e84296151952d8bae39cfad417e/change-loop.webp?v=15e818c36df025e8" alt="An evolution loop proceeds through characterization, moving behind a port, verification, and recording the baseline. The accompanying text keeps business and boundary decisions in review."><figcaption><span class="figure-number">Figure 5: </span>Characterize the behavior, move orchestration behind the port, verify the new wiring, then remove resolved baseline entries. Review still decides whether the boundary makes sense.</figcaption></figure>
+<p>The extraction is finished when the protected booking behavior still holds, the consumer owns its repository contract, the application no longer imports its adapter, and the wiring is checked at an appropriate scope. Any resolved baseline entries leave with the change.</p>
+<p>For the next caller, I can concentrate on its request mapping and delivery behavior. The booking operation remains shared. If that caller needs a different answer to the retry-after-expiry question, we can discuss the affected application and persistence contracts before changing them.</p>
+<h2><a href="#full-presentation" aria-hidden="true" class="anchor" id="full-presentation"></a>The full presentation</h2>
+<p>The accompanying talk, <em>Architecture you can run</em>, follows the approach through its diagrams and code examples. Use the slide controls or arrow keys to move through it.</p>
+<figure class="notebook-presentation">
+  <iframe src="https://sekaiser.github.io/presentations/go-microservices.html" title="Architecture you can run: the full presentation" width="1280" height="800" loading="lazy" sandbox="allow-scripts allow-downloads allow-popups" allow="fullscreen *" allowfullscreen style="display:block;width:100%;height:auto;aspect-ratio:16/10;min-height:240px;border:0;">
+  </iframe>
+  <figcaption><a href="https://sekaiser.github.io/presentations/go-microservices.html" target="_blank" rel="noopener">Open the presentation in a new tab</a> for a larger view, especially on a phone.</figcaption>
+</figure>
+<h2><a href="#references" aria-hidden="true" class="anchor" id="references"></a>References</h2>
+<section class="footnote-definition" id="fn-fn:1">
+<p><span class="footnote-label">[fn:1]</span> The Go team. <a href="https://go.dev/wiki/CodeReviewComments#interfaces" target="_blank" rel="noopener">Go Code Review Comments: Interfaces</a>. Guidance on placing interfaces in the package that consumes them.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:2">
+<p><span class="footnote-label">[fn:2]</span> Alistair Cockburn. <a href="https://alistair.cockburn.us/hexagonal-architecture" target="_blank" rel="noopener">Hexagonal architecture, the original article</a>. Ports and adapters and testing an application independently of its eventual UI and database.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:3">
+<p><span class="footnote-label">[fn:3]</span> Testcontainers. <a href="https://golang.testcontainers.org/" target="_blank" rel="noopener">Testcontainers for Go</a>. Provisioning containerized dependencies from Go tests.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:4">
+<p><span class="footnote-label">[fn:4]</span> Apache Kafka. <a href="https://kafka.apache.org/40/design/design/#semantics" target="_blank" rel="noopener">Message delivery semantics</a>. Processing, offset persistence, and the failure window when writing to an external system.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:5">
+<p><span class="footnote-label">[fn:5]</span> Go tools. <a href="https://pkg.go.dev/golang.org/x/tools/go/analysis" target="_blank" rel="noopener">The analysis package</a>. Analyzer contracts, package information, and diagnostics. Its <a href="https://pkg.go.dev/golang.org/x/tools/go/analysis/analysistest" target="_blank" rel="noopener">analysistest package</a> supports fixtures with expected diagnostics.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:6">
+<p><span class="footnote-label">[fn:6]</span> The Go team. <a href="https://pkg.go.dev/cmd/vet" target="_blank" rel="noopener">The vet command</a>. Running additional analyses through a custom vet tool.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:7">
+<p><span class="footnote-label">[fn:7]</span> Neal Ford, Rebecca Parsons, and Patrick Kua. <a href="https://evolutionaryarchitecture.com/" target="_blank" rel="noopener">Building Evolutionary Architectures</a>. Incremental architectural change and fitness functions.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:8">
+<p><span class="footnote-label">[fn:8]</span> Anthropic. <a href="https://www.anthropic.com/research/effective-context-engineering-for-ai-agents" target="_blank" rel="noopener">Effective context engineering for AI agents</a>. Selecting relevant information and retrieving additional context as an agent works.</p>
+</section>
+</div>
+  </div>
+  <footer class="study-end">
+    
+    
+  
+  
+  
+  
+  
+
+
+    
+    <a class="study-return" href="https://sekaiser.github.io/notes.html">Return to the notebook</a>
+  </footer>
+</article>
+
+        </main>
+
+        
+            <footer class="site-footer">
+  <div class="footer-colophon">
+    <a class="footer-home" href="https://sekaiser.github.io/">
+      <span class="footer-bookplate" aria-hidden="true">sk.</span>
+      <span class="footer-name">Sebastian Kaiser</span>
+    </a>
+    <p>A personal notebook. Built with Berlin.</p>
+  </div>
+  <nav aria-label="Elsewhere">
+    
+      <a class="footer-icon" href="https://github.com/sekaiser" aria-label="GitHub" title="GitHub" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M12 .5a12 12 0 0 0-3.793 23.385c.6.111.82-.261.82-.577 0-.285-.01-1.04-.016-2.04-3.338.725-4.043-1.61-4.043-1.61-.546-1.386-1.333-1.755-1.333-1.755-1.09-.745.083-.73.083-.73 1.205.085 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.419-1.305.762-1.605-2.665-.303-5.467-1.333-5.467-5.931 0-1.31.469-2.381 1.236-3.221-.124-.303-.536-1.524.117-3.176 0 0 1.008-.323 3.301 1.23a11.52 11.52 0 0 1 6.006 0c2.291-1.553 3.297-1.23 3.297-1.23.655 1.652.243 2.873.12 3.176.77.84 1.235 1.911 1.235 3.221 0 4.61-2.807 5.625-5.479 5.922.43.372.823 1.102.823 2.222 0 1.606-.015 2.902-.015 3.296 0 .319.216.694.825.576A12 12 0 0 0 12 .5Z"/>
+        </svg>
+      </a>
+    
+    
+      <a class="footer-icon" href="https://www.linkedin.com/in/sekaiser/" aria-label="LinkedIn" title="LinkedIn" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.049c.476-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286ZM5.337 7.433a2.062 2.062 0 1 1 0-4.124 2.062 2.062 0 0 1 0 4.124ZM7.119 20.452H3.555V9h3.564v11.452ZM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0Z"/>
+        </svg>
+      </a>
+    
+    <a class="footer-icon" href="#main" aria-label="Back to top" title="Back to top">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <path d="M5 4h14M6 13l6-6 6 6M12 7v13"/>
+      </svg>
+    </a>
+  </nav>
+</footer>
+
+        
+
+  </div>
+</body>
+</html>
