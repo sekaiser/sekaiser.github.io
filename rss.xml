@@ -2,14 +2,36 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/"><channel>
 <title>Blog | Sebastian Kaiser</title>
 <link>https://sekaiser.github.io/</link>
-<description>Notes on all things software engineering</description>
+<description>An engineering notebook about software, systems, and the people who build and depend on them.</description>
 <atom:link href="https://sekaiser.github.io/rss.xml" rel="self" type="application/rss+xml"/>
+<item>
+<title>Keeping current data useful</title>
+<link>https://sekaiser.github.io/notes/keeping-current-data-useful.html</link>
+<guid isPermaLink="false">urn:berlin:rss:e23b42aeee8ddab88ad7f7ae2c1f0bcd5d79e1f01387e8c4f30eb44e8fcd3ccd</guid>
+<pubDate>Mon, 02 Nov 2026 00:00:00 GMT</pubDate>
+<description>A reading path through current-state caches, overload and read visibility, starting with what people need from the data.</description>
+<dc:creator>Sebastian Kaiser</dc:creator>
+<category>backpressure</category>
+<category>system-design</category>
+<category>telemetry</category>
+</item>
+<item>
+<title>From a service change to a shared release</title>
+<link>https://sekaiser.github.io/notes/from-a-service-change-to-a-shared-release.html</link>
+<guid isPermaLink="false">urn:berlin:rss:a0567be947236d38411c7023f3cdeb846cebf6008ef78cd9975356facd2ca21b</guid>
+<pubDate>Mon, 02 Nov 2026 00:00:00 GMT</pubDate>
+<description>A reading path from understandable Go services and agent-assisted changes to the evidence teams need for a shared release.</description>
+<dc:creator>Sebastian Kaiser</dc:creator>
+<category>architecture</category>
+<category>software-delivery</category>
+<category>testing</category>
+</item>
 <item>
 <title>How I structure Go microservices for change</title>
 <link>https://sekaiser.github.io/notes/go-microservices-for-change.html</link>
 <guid isPermaLink="false">urn:berlin:rss:e6dcbb7f4bd2428a9a98b9d1251b8fc4dc61636df2a5441d5b59e5b24493cbb9</guid>
 <pubDate>Sat, 31 Oct 2026 00:00:00 GMT</pubDate>
-<description>Evolving a Go service through consumer-owned ports, composable handlers, and executable checks, with repository context and reviewable evidence for agent-assisted changes.</description>
+<description>Keeping Go services understandable and testable, so another engineer can change them safely and review work delegated to a coding agent.</description>
 <dc:creator>Sebastian Kaiser</dc:creator>
 <category>architecture</category>
 <category>go</category>
@@ -31,7 +53,7 @@
 <link>https://sekaiser.github.io/notes/fast-writes-fresh-reads.html</link>
 <guid isPermaLink="false">urn:berlin:rss:d373db2ece53af1fab6b09603cde3f587d7584931a19518f0600469d205ef99c</guid>
 <pubDate>Sat, 24 Oct 2026 00:00:00 GMT</pubDate>
-<description>Where should the work happen? A practical guide to background indexing in Go and Rust.</description>
+<description>Why an accepted write can still leave a dashboard behind, explored through a small journal design in Go and Rust.</description>
 <dc:creator>Sebastian Kaiser</dc:creator>
 <category>backpressure</category>
 <category>concurrency</category>
@@ -42,7 +64,7 @@
 <link>https://sekaiser.github.io/notes/backpressure-in-a-telemetry-pipeline.html</link>
 <guid isPermaLink="false">urn:berlin:rss:283ee638244853675609d9779ca98473446f3e972da78712f0825d7f43ba2ff0</guid>
 <pubDate>Tue, 20 Oct 2026 00:00:00 GMT</pubDate>
-<description>A bounded, coalescing write path for device telemetry, and the ordering and recovery guarantees a buffer cannot provide on its own.</description>
+<description>Keeping cache work bounded without hiding what readers lose when telemetry updates are discarded or arrive late.</description>
 <dc:creator>Sebastian Kaiser</dc:creator>
 <category>backpressure</category>
 <category>concurrency</category>
@@ -53,7 +75,7 @@
 <link>https://sekaiser.github.io/notes/from-time-series-to-state.html</link>
 <guid isPermaLink="false">urn:berlin:rss:ac84abd5c1ebcc8576a28d3b78fe1b26e3043d3d5b7b0e02fd904a180818e956</guid>
 <pubDate>Sat, 17 Oct 2026 00:00:00 GMT</pubDate>
-<description>A design for serving current device readings without reconstructing them from history on every request.</description>
+<description>Serving current device readings without reconstructing them from history, while keeping the age of each observation visible.</description>
 <dc:creator>Sebastian Kaiser</dc:creator>
 <category>caching</category>
 <category>performance</category>
@@ -64,7 +86,7 @@
 <link>https://sekaiser.github.io/notes/ci-cd-across-team-boundaries.html</link>
 <guid isPermaLink="false">urn:berlin:rss:29ce98c0cbceb192b42d44f471a34601024cd3128b793982388e29ac4f560046</guid>
 <pubDate>Sat, 03 Oct 2026 00:00:00 GMT</pubDate>
-<description>A delivery design combining reusable container workflows, service-owned checks, and deployment decisions based on tested service combinations.</description>
+<description>How teams can check a shared customer journey while keeping control of their services, and understand when passing tests support a release decision.</description>
 <dc:creator>Sebastian Kaiser</dc:creator>
 <category>ci-cd</category>
 <category>software-delivery</category>
@@ -97,7 +119,7 @@
 <link>https://sekaiser.github.io/notes/processing-json-with-rust.html</link>
 <guid isPermaLink="false">urn:berlin:rss:9da5e44d49fcb875dc7f6b47fa2f1e9de051f532dc8797f49a52e1aeb774149c</guid>
 <pubDate>Thu, 25 May 2023 00:00:00 GMT</pubDate>
-<description>A practical Rust exercise: navigate nested Olympic results with serde_json, count medals, and find the five leading countries. Includes the code and a worked medal-pipeline example.</description>
+<description>A Rust learning exercise with nested Olympic JSON: read country fields, count medals and rank results, with a worked example to follow.</description>
 <dc:creator>Sebastian Kaiser</dc:creator>
 <category>rust</category>
 <category>serde-json</category>

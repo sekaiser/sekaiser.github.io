@@ -17,7 +17,7 @@
 
   
 
-  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/project.css?v=33d3a7ca518ed352">
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/project.css?v=848d148718e48ebe">
   <script src="https://sekaiser.github.io/static/js/main.js?v=7ffe88eb20e1b177"></script>
 
   
@@ -29,29 +29,52 @@
   
   
   
-  
 
 <title>CI&#x2F;CD Across Team Boundaries | Sebastian Kaiser</title>
-<meta name="description" content="A delivery design combining reusable container workflows, service-owned checks, and deployment decisions based on tested service combinations.">
+<meta name="description" content="How teams can check a shared customer journey while keeping control of their services, and understand when passing tests support a release decision.">
 <meta property="og:title" content="CI&#x2F;CD Across Team Boundaries | Sebastian Kaiser">
-<meta property="og:description" content="A delivery design combining reusable container workflows, service-owned checks, and deployment decisions based on tested service combinations.">
+<meta property="og:description" content="How teams can check a shared customer journey while keeping control of their services, and understand when passing tests support a release decision.">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Sebastian Kaiser — engineering notebook">
-<meta name="twitter:card" content="summary">
 
+  
+  
+  
+  
   
   
   <link rel="canonical" href="https://sekaiser.github.io/notes/ci-cd-across-team-boundaries.html">
   <meta property="og:url" content="https:&#x2F;&#x2F;sekaiser.github.io&#x2F;notes&#x2F;ci-cd-across-team-boundaries.html">
-  <meta property="og:image" content="https://sekaiser.github.io/static/pics/study/engineering-desk.png?v=478d3aa3a9ffa967">
-  <meta property="og:image:type" content="image/png">
-  <meta property="og:image:width" content="1254">
-  <meta property="og:image:height" content="1254">
-  <meta property="og:image:alt" content="An illustrated desk with a notebook, computer, and reading lamp.">
+
+
+
+
+  
+  
+    
+  
+  
+    
+    
+    
+    
+    
+  
+
+
+  <meta property="og:image" content="https://sekaiser.github.io/attachments/3e3d439cbbe5a549eda30bb2497a87dd184d02bbe27e740e60b5678fffa1f472/container-delivery-pipeline.webp?v=3e3d439cbbe5a549">
+  <meta property="og:image:type" content="image&#x2F;webp">
+  <meta property="og:image:width" content="768">
+  <meta property="og:image:height" content="512">
+  <meta property="og:image:alt" content="Build, check and promote workstations pass matching sealed container artifacts along a shared delivery pipeline.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://sekaiser.github.io/attachments/3e3d439cbbe5a549eda30bb2497a87dd184d02bbe27e740e60b5678fffa1f472/container-delivery-pipeline.webp?v=3e3d439cbbe5a549">
+  <meta name="twitter:image:alt" content="Build, check and promote workstations pass matching sealed container artifacts along a shared delivery pipeline.">
+
 
 
   <meta property="article:published_time" content="2026-10-03">
-  
+  <meta property="article:modified_time" content="2026-11-02">
 
 
 
@@ -217,7 +240,7 @@
         <div class="study-metadata">
           <dl class="study-dates">
             <div><dt>Published</dt><dd><time datetime="2026-10-03">03 Oct 2026</time></dd></div>
-            
+            <div><dt>Updated</dt><dd><time datetime="2026-11-02">02 Nov 2026</time></dd></div>
           </dl>
           <nav class="study-topics" aria-label="Article topics">
 
@@ -277,11 +300,12 @@
 <div class="abstract">
 <p>An order API can pass every test while a downstream consumer drops the customer's
 delivery choice. When several teams own the path from request to result,
-their pipelines need a way to test that path together. An illustrative
-express-order change shows how shared container-delivery jobs and a small,
-scenario-based test setup can support that work, while teams keep their own
-build tools and checks. A passing result is useful for deployment only while it
-still describes the combination being deployed.</p>
+they need a way to check that the customer receives what was agreed.</p>
+<p>An illustrative express-order change shows how shared container-delivery jobs
+and a small, scenario-based test setup can help teams investigate failures
+together, while they keep their own build tools and checks. A passing result is
+useful for deployment only while it still describes the combination being
+deployed.</p>
 </div>
 <div class="ox-hugo-toc toc has-section-numbers">
 <div class="heading">Table of Contents</div>
@@ -371,7 +395,8 @@ every service would also mean maintaining a second implementation of much of
 the system.</p>
 <p>At the other extreme, starting the entire platform for each change brings in
 services that have nothing to do with the order. A shared environment avoids
-some setup work, but other teams can change it underneath the test.</p>
+some setup work, but deployments for other work can change its conditions
+while a test is running.</p>
 <p>When cross-service changes are rare, a few hand-written journey tests may be
 enough. A maintained testbench becomes worthwhile when teams repeatedly
 reconstruct the same setup.</p>
@@ -437,9 +462,9 @@ identity. The record needs to describe what actually ran, not merely what a job
 intended to install. Otherwise, the next team cannot tell whether the result
 applies to its proposed deployment.</p>
 <h3><a href="#if-deployment-approval-uses-a-shared-target" aria-hidden="true" class="anchor" id="if-deployment-approval-uses-a-shared-target"></a><span class="section-num">6.1</span> If deployment approval uses a shared target</h3>
-<p>An isolated slice makes that easier. On a shared target, another team might
-replace the consumer halfway through the test. Passing assertions would then
-leave us uncertain about which combination worked.</p>
+<p>An isolated slice makes that easier. On a shared target, a consumer deployment
+may overlap the test. Both teams may be doing reasonable work, while the
+passing assertions leave them uncertain about which combination worked.</p>
 <p>If the result will support deployment approval, the platform needs to prevent
 competing changes for the duration of the run and invalidate the result if
 relevant deployments or settings change. That control must work across
@@ -454,10 +479,11 @@ the necessary dependencies can be recreated.</p>
 spex can supply JUnit results for CI [8]. Deployment jobs need to verify where
 a report came from rather than trust an arbitrary file claiming success.
 Captured diagnostics must also leave out credentials.</p>
-<p>The reports should help the engineer follow a failure. Did the API reject the
-request? Did the event lose the field? Did the consumer fail to update the query?
-A wrong endpoint or unavailable broker needs a different fix. The testbench is
-only useful if it makes those distinctions easier to investigate.</p>
+<p>I want the reports to give both teams enough context to investigate the same
+failure. Did the API reject the request? Did the event lose the field? Did the
+consumer fail to update the query? A wrong endpoint or unavailable broker needs
+a different fix. The report should help them locate the break in the journey
+before deciding where a change belongs.</p>
 <h2><a href="#deploy-the-combination-that-was-checked" aria-hidden="true" class="anchor" id="deploy-the-combination-that-was-checked"></a><span class="section-num">7</span> Deploy the combination that was checked</h2>
 <p>Now suppose the API image stays unchanged, but another team releases a new
 consumer. The earlier passing test no longer answers the same question.</p>
@@ -575,6 +601,14 @@ testbench before adding more scenarios.</p>
       
     </li>
     
+    
+    
+    <li class="backlink-source">
+      <a class="backlink-title" href="https://sekaiser.github.io/notes/from-a-service-change-to-a-shared-release.html#bln-ref-3">From a service change to a shared release</a>
+      <blockquote>CI&#x2F;CD Across Team Boundaries uses a different example: preserving an express-delivery choice from an order request through an event and into the customer&#x27;s view. Each service can pass its own checks while that shared behavior is still wrong.</blockquote>
+      
+    </li>
+    
   </ul>
 </section>
 
@@ -585,6 +619,9 @@ testbench before adding more scenarios.</p>
   
   
 
+  
+    <p class="study-feedback">If something here seems wrong or hard to follow, <a href="https://sekaiser.github.io/about.html#get-in-touch">get in touch</a>.</p>
+  
 
     
     <a class="study-return" href="https://sekaiser.github.io/notes.html">Return to the notebook</a>

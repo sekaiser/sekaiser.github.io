@@ -17,7 +17,7 @@
 
   
 
-  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/project.css?v=33d3a7ca518ed352">
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/project.css?v=848d148718e48ebe">
   <script src="https://sekaiser.github.io/static/js/main.js?v=7ffe88eb20e1b177"></script>
 
   
@@ -29,29 +29,52 @@
   
   
   
-  
 
 <title>How I structure Go microservices for change | Sebastian Kaiser</title>
-<meta name="description" content="Evolving a Go service through consumer-owned ports, composable handlers, and executable checks, with repository context and reviewable evidence for agent-assisted changes.">
+<meta name="description" content="Keeping Go services understandable and testable, so another engineer can change them safely and review work delegated to a coding agent.">
 <meta property="og:title" content="How I structure Go microservices for change | Sebastian Kaiser">
-<meta property="og:description" content="Evolving a Go service through consumer-owned ports, composable handlers, and executable checks, with repository context and reviewable evidence for agent-assisted changes.">
+<meta property="og:description" content="Keeping Go services understandable and testable, so another engineer can change them safely and review work delegated to a coding agent.">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Sebastian Kaiser — engineering notebook">
-<meta name="twitter:card" content="summary">
 
+  
+  
+  
+  
   
   
   <link rel="canonical" href="https://sekaiser.github.io/notes/go-microservices-for-change.html">
   <meta property="og:url" content="https:&#x2F;&#x2F;sekaiser.github.io&#x2F;notes&#x2F;go-microservices-for-change.html">
-  <meta property="og:image" content="https://sekaiser.github.io/static/pics/study/engineering-desk.png?v=478d3aa3a9ffa967">
-  <meta property="og:image:type" content="image/png">
-  <meta property="og:image:width" content="1254">
-  <meta property="og:image:height" content="1254">
-  <meta property="og:image:alt" content="An illustrated desk with a notebook, computer, and reading lamp.">
+
+
+
+
+  
+  
+    
+  
+  
+    
+    
+    
+    
+    
+  
+
+
+  <meta property="og:image" content="https://sekaiser.github.io/attachments/ffcb606e49accc0ffc9ba5746bb326f8857b3ef773f2526ff6c0e6b9a9174b1e/hexagonal-service-workbench.webp?v=ffcb606e49accc0f">
+  <meta property="og:image:type" content="image&#x2F;webp">
+  <meta property="og:image:width" content="768">
+  <meta property="og:image:height" content="512">
+  <meta property="og:image:alt" content="An articulated tool fits an outer adapter onto a hexagonal mechanism shared by an envelope tray and a card queue.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://sekaiser.github.io/attachments/ffcb606e49accc0ffc9ba5746bb326f8857b3ef773f2526ff6c0e6b9a9174b1e/hexagonal-service-workbench.webp?v=ffcb606e49accc0f">
+  <meta name="twitter:image:alt" content="An articulated tool fits an outer adapter onto a hexagonal mechanism shared by an envelope tray and a card queue.">
+
 
 
   <meta property="article:published_time" content="2026-10-31">
-  
+  <meta property="article:modified_time" content="2026-11-02">
 
 
 
@@ -217,7 +240,7 @@
         <div class="study-metadata">
           <dl class="study-dates">
             <div><dt>Published</dt><dd><time datetime="2026-10-31">31 Oct 2026</time></dd></div>
-            
+            <div><dt>Updated</dt><dd><time datetime="2026-11-02">02 Nov 2026</time></dd></div>
           </dl>
           <nav class="study-topics" aria-label="Article topics">
 
@@ -275,7 +298,7 @@
     </aside>
     <div class="document-body study-prose"><div class="frontmatter">
 <div class="abstract">
-<p>When I return to a Go service after a few months, I want to find the behavior I need to change without first reconstructing the whole application. I want to understand which dependencies it uses, test the change locally, and know whether I have crossed a boundary the service was meant to preserve.</p>
+<p>When someone needs to change a service I’ve worked on, I want them to be able to find the relevant behavior and test their change locally. That includes me after a few months away. The service should give us enough context to understand its dependencies and the boundaries a change needs to preserve.</p>
 <p>Hexagonal architecture gives me useful places to put those boundaries. Small interfaces keep the dependencies understandable. A common handler shape makes recurring work composable. Tests and architecture checks help keep those decisions in place as the service changes.</p>
 <p>That structure matters when I delegate a change, too. A coding agent can work from the booking contract and the checks around it. I want its result to come with evidence I can inspect, and its unanswered business questions to remain visible.</p>
 </div>
@@ -306,8 +329,8 @@
 <p>I want both entry points to use the same booking behavior. Copying the validation into the consumer would give me two places to update the next time the rule changes. Calling the HTTP endpoint from the consumer would make an internal operation depend on transport details it does not need.</p>
 <p>That gives the first extraction a specific purpose: move booking orchestration behind a callable application boundary. The HTTP endpoint keeps decoding requests and mapping results to responses. The broker consumer gets its own translation and delivery policy. Both call the booking operation.</p>
 <p>Before moving the code, I write down what the existing endpoint actually does. What counts as an expired hold? Which failure does the caller see when storage is unavailable? What happens if the same booking arrives again? If the answers are unclear, moving code is premature. A cleaner package layout would leave the uncertainty intact.</p>
-<p>I also establish a dependency check early: application code may not import a database adapter. Otherwise the extracted handler can grow a direct MongoDB dependency during the next change, and I am back to explaining the same boundary in reviews.</p>
-<p>An existing service will probably violate some of the intended rules already. I use a baseline to record the accepted findings, refuse new ones, and remove entries as their violations are fixed. The identity of each finding matters. Keeping the total number unchanged would still allow a new violation to replace an old one.</p>
+<p>I also establish a dependency check early: application code may not import a database adapter. Otherwise the extracted handler can grow a direct MongoDB dependency during the next change. The check gives the person making that change feedback about the boundary before it becomes a review comment.</p>
+<p>An existing service may not follow boundaries that I am only now introducing. I use a baseline to record the accepted findings, refuse new ones, and remove entries as their violations are fixed. That lets us preserve the new boundary without making every change depend on a service-wide rewrite. The identity of each finding matters. Keeping the total number unchanged would still allow a new violation to replace an old one.</p>
 <p>For example, these are two different findings under the same dependency rule:</p>
 <figure class="code-listing" id="org-example-block--architecture-baseline-example"><figcaption class="code-toolbar"><span class="code-language">Text</span><span class="code-caption">Illustrative finding labels for an application package importing its database adapter.</span><span class="code-actions"><a href="#org-example-block--architecture-baseline-example" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="org-example-block--architecture-baseline-example-L1" href="#org-example-block--architecture-baseline-example-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="org-example-block--architecture-baseline-example-L2" href="#org-example-block--architecture-baseline-example-L2" aria-label="Link to line 2" data-line="2"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-text"><span style="color:#323232;">existing: app/command/legacy.go        -&gt; adapters/mongodb
 </span><span style="color:#323232;">new:      app/command/book_delivery.go -&gt; adapters/mongodb
@@ -584,7 +607,7 @@
 <p>The <a href="#time-as-input">domain constructor</a> rejects a hold at its deadline. Keep that decision in <code>booking.NewDeliveryBooking</code>. The application handler should supply the time value and call the repository port. Preserve the HTTP adapter's error mapping. Identical retries after expiry remain an open policy decision.</p>
 </blockquote>
 <p>In the repository, I would attach the inspected revision and links to the constructor and the existing HTTP test. The agent then has a reason to preserve the clock input as it moves the orchestration, and a specific policy question to leave open during the extraction.</p>
-<p>I want to know where the agent's conclusions came from. Tooling can inspect an import, while a decision record may explain why that dependency was forbidden. A test gives evidence about the scenario it exercises. If the agent suggests that repeated bookings should be harmless, it has proposed a policy. Somebody still needs to accept that policy before it becomes part of the implementation.</p>
+<p>I want to know where the agent's conclusions came from. Tooling can inspect an import, while a decision record may explain why that dependency was forbidden. A test gives evidence about the scenario it exercises. If the agent suggests that repeated bookings should be harmless, it has proposed a policy. Before that becomes implementation, I need agreement from the people responsible for booking behavior.</p>
 <p>If a port or its callers change, an earlier summary may no longer describe the operation. I want the context to identify the repository revision and point to the relevant files and checks, so the agent can inspect them again when the code changes. A generated dependency graph helps locate code; its arrows cannot explain the meaning of an accepted booking.</p>
 <p>In my experimental JAMES project, an architecture profile describes roles and their path bindings, along with conventions such as port ownership and decorator order. The profile helps an agent relate an application handler to its place in the repository. A declared rule only becomes enforced when a supported validator executes it and the workflow uses its result. You can start with repository instructions and existing build targets; a separate orchestration tool is optional.</p>
 <h2><a href="#reviewing-agent-changes" aria-hidden="true" class="anchor" id="reviewing-agent-changes"></a>Review the change and the evidence</h2>
@@ -635,7 +658,33 @@
 </div>
   </div>
   <footer class="study-end">
+    <section class="article-backlinks" aria-labelledby="backlinks-title">
+  <h2 id="backlinks-title">Referenced in</h2>
+  <ul class="backlink-sources">
     
+    
+    
+    <li class="backlink-source">
+      <a class="backlink-title" href="https://sekaiser.github.io/notes/from-a-service-change-to-a-shared-release.html#bln-ref-1">From a service change to a shared release</a>
+      <blockquote>How I structure Go microservices for change starts with a booking operation that an HTTP endpoint and a broker consumer both need to call. Extracting that operation gives the application boundary a purpose: preserve shared behavior while each adapter handles its own protocol.</blockquote>
+      
+      <details class="backlink-more">
+        <summary>1 more passage</summary>
+        <ul class="backlink-passages">
+          
+          <li>
+            <a href="https://sekaiser.github.io/notes/from-a-service-change-to-a-shared-release.html#bln-ref-2">Passage 2<span class="backlink-context"> in From a service change to a shared release</span></a>
+            <blockquote>The later sections of the Go article follow the same extraction as an agent-assisted task. The useful context includes the existing behavior, the dependency rule and the checks that can detect a mistake. It also identifies the unanswered policy question, so the agent can leave th</blockquote>
+          </li>
+          
+        </ul>
+      </details>
+      
+    </li>
+    
+  </ul>
+</section>
+
     
   
   
@@ -643,6 +692,9 @@
   
   
 
+  
+    <p class="study-feedback">If something here seems wrong or hard to follow, <a href="https://sekaiser.github.io/about.html#get-in-touch">get in touch</a>.</p>
+  
 
     
     <a class="study-return" href="https://sekaiser.github.io/notes.html">Return to the notebook</a>

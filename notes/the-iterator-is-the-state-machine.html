@@ -17,7 +17,7 @@
 
   
 
-  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/project.css?v=33d3a7ca518ed352">
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/project.css?v=848d148718e48ebe">
   <script src="https://sekaiser.github.io/static/js/main.js?v=7ffe88eb20e1b177"></script>
 
   
@@ -29,7 +29,6 @@
   
   
   
-  
 
 <title>The Iterator Is the State Machine | Sebastian Kaiser</title>
 <meta name="description" content="How Rust&#x27;s Iterator trait supports lazy composition, and what a comparison with C++ ranges tells us about ownership checks and optimization.">
@@ -37,21 +36,33 @@
 <meta property="og:description" content="How Rust&#x27;s Iterator trait supports lazy composition, and what a comparison with C++ ranges tells us about ownership checks and optimization.">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Sebastian Kaiser — engineering notebook">
-<meta name="twitter:card" content="summary">
 
+  
+  
+  
+  
   
   
   <link rel="canonical" href="https://sekaiser.github.io/notes/the-iterator-is-the-state-machine.html">
   <meta property="og:url" content="https:&#x2F;&#x2F;sekaiser.github.io&#x2F;notes&#x2F;the-iterator-is-the-state-machine.html">
+
+
+
+
+
   <meta property="og:image" content="https://sekaiser.github.io/static/pics/study/engineering-desk.png?v=478d3aa3a9ffa967">
-  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:type" content="image&#x2F;png">
   <meta property="og:image:width" content="1254">
   <meta property="og:image:height" content="1254">
   <meta property="og:image:alt" content="An illustrated desk with a notebook, computer, and reading lamp.">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:image" content="https://sekaiser.github.io/static/pics/study/engineering-desk.png?v=478d3aa3a9ffa967">
+  <meta name="twitter:image:alt" content="An illustrated desk with a notebook, computer, and reading lamp.">
+
 
 
   <meta property="article:published_time" content="2026-10-26">
-  
+  <meta property="article:modified_time" content="2026-11-02">
 
 
 
@@ -217,7 +228,7 @@
         <div class="study-metadata">
           <dl class="study-dates">
             <div><dt>Published</dt><dd><time datetime="2026-10-26">26 Oct 2026</time></dd></div>
-            
+            <div><dt>Updated</dt><dd><time datetime="2026-11-02">02 Nov 2026</time></dd></div>
           </dl>
           <nav class="study-topics" aria-label="Article topics">
 
@@ -307,6 +318,7 @@
 <!--endtoc-->
 </div>
 <p>I'll assume you can follow a <code>for</code> loop and have met <code>map</code> or <code>filter</code> in some language. You don't need to know Rust's trait system yet. The examples use Rust 2021 or later.</p>
+<p>If you prefer to start with a data-processing task, <span id="bln-ref-1" class="document-reference"><a href="https://sekaiser.github.io/notes/processing-json-with-rust.html">Processing JSON with Rust</a></span> follows nested Olympic records into a medal ranking. The iterator discussion here takes a closer look at the state and borrowing behind those kinds of chains.</p>
 <h2><a href="#where-the-index-lives" aria-hidden="true" class="anchor" id="where-the-index-lives"></a>How Rust iterators work</h2>
 <p>Here are four values, printed with their positions:</p>
 <figure class="code-listing" id="code-snippet--numbered-values"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">enumerate() adds a position to each value.</span><span class="code-actions"><a href="#code-snippet--numbered-values" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--numbered-values-L1" href="#code-snippet--numbered-values-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--numbered-values-L2" href="#code-snippet--numbered-values-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--numbered-values-L3" href="#code-snippet--numbered-values-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--numbered-values-L4" href="#code-snippet--numbered-values-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--numbered-values-L5" href="#code-snippet--numbered-values-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--numbered-values-L6" href="#code-snippet--numbered-values-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--numbered-values-L7" href="#code-snippet--numbered-values-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--numbered-values-L8" href="#code-snippet--numbered-values-L8" aria-label="Link to line 8" data-line="8"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">main</span><span style="color:#323232;">() {
@@ -654,7 +666,7 @@
 <p>Inlining and loop optimization can make the generated code resemble the handwritten version. Whether they do so for a particular program depends on the compiler, target, optimization settings, and surrounding code. We would have to inspect that output and benchmark representative inputs to make a performance claim.<sup class="footnote-ref"><a href="#fn-fn:19">fn:19</a></sup></p>
 <p>There is another wrinkle in our request-by-request picture. The standard library can implement a consumer such as <code>fold()</code> by passing the whole accumulation through the adapters. Its <code>Enumerate</code> implementation has specialized <code>fold()</code> and <code>try_fold()</code> methods, so consuming a chain need not literally become a tower of <code>next()</code> calls. The pull model explains the sequence's behavior; optimized bulk operations can implement it differently.<sup class="footnote-ref"><a href="#fn-fn:4">fn:4</a></sup></p>
 <p>Some costs are visible without a benchmark. Our simple adapter chain doesn't require an intermediate collection at every step. It uses concrete types instead of a required virtual call at every boundary. Neither fact makes the predicate free, guarantees vectorization, or eliminates allocation in user-supplied code.</p>
-<p>In <span id="bln-ref-1" class="document-reference"><a href="https://sekaiser.github.io/notes/fast-writes-fresh-reads.html">Fast Writes, Fresh Reads</a></span>, moving work into a background thread introduced replay and coordination costs. Here, calling <code>filter()</code> doesn't start a worker at all. The caller runs the predicate as it consumes the iterator. A fluent chain of methods doesn't, by itself, tell us where computation runs.</p>
+<p>In <span id="bln-ref-2" class="document-reference"><a href="https://sekaiser.github.io/notes/fast-writes-fresh-reads.html">Fast Writes, Fresh Reads</a></span>, moving work into a background thread introduced replay and coordination costs. Here, calling <code>filter()</code> doesn't start a worker at all. The caller runs the predicate as it consumes the iterator. A fluent chain of methods doesn't, by itself, tell us where computation runs.</p>
 <h2><a href="#when-the-source-is-not-ready" aria-hidden="true" class="anchor" id="when-the-source-is-not-ready"></a>Asynchronous iteration and coroutines</h2>
 <p>The telemetry example starts with a slice already in memory. A live connection has another possibility: there is no new reading yet, but more may arrive.</p>
 <p>An ordinary iterator can block inside <code>next()</code> until data arrives. Its interface doesn't say whether a call will return quickly. What it lacks is a way to return "not ready" together with an asynchronous wakeup arrangement.</p>
@@ -686,7 +698,7 @@
 <p>Rust's <code>async</code> computations use the <code>Future</code> protocol. The compiler represents their progress in a generated state machine, retaining what is needed across an <code>await</code>.<sup class="footnote-ref"><a href="#fn-fn:22">fn:22</a></sup><sup>, </sup><sup class="footnote-ref"><a href="#fn-fn:23">fn:23</a></sup></p>
 <p>A <em>coroutine</em> lets a function suspend and later resume from where it stopped. A synchronous generator uses that ability to yield values one at a time, with its consumer requesting each resumption.<sup class="footnote-ref"><a href="#fn-fn:24">fn:24</a></sup></p>
 <p>When producing a value involves nested loops and several yield points, that can be easier to follow than a hand-written state machine. Our numbering adapter needed only a source and a counter; more complicated control flow can justify the extra mechanism.</p>
-<p>There is also a boundary between local demand and system backpressure. A caller can stop pulling this iterator while a device, broker, or network buffer keeps receiving data. The capacity, loss, and admission policies from <span id="bln-ref-2" class="document-reference"><a href="https://sekaiser.github.io/notes/backpressure-in-a-telemetry-pipeline.html">Backpressure in a Telemetry Pipeline</a></span> still need to exist outside the iterator. A <code>take()</code> at the end of a chain doesn't bound every queue upstream.</p>
+<p>There is also a boundary between local demand and system backpressure. A caller can stop pulling this iterator while a device, broker, or network buffer keeps receiving data. The capacity, loss, and admission policies from <span id="bln-ref-3" class="document-reference"><a href="https://sekaiser.github.io/notes/backpressure-in-a-telemetry-pipeline.html">Backpressure in a Telemetry Pipeline</a></span> still need to exist outside the iterator. A <code>take()</code> at the end of a chain doesn't bound every queue upstream.</p>
 <h2><a href="#the-cpp-comparison" aria-hidden="true" class="anchor" id="the-cpp-comparison"></a>Iterator composition in C++</h2>
 <p>C++ ranges let us build a similar lazy pipeline, so they give us a way to ask which parts of the design are specific to Rust. C++23 provides enumeration directly:<sup class="footnote-ref"><a href="#fn-fn:25">fn:25</a></sup></p>
 <figure class="code-listing" id="code-snippet--cpp-enumeration"><figcaption class="code-toolbar"><span class="code-language">cpp</span><span class="code-caption">C++23's standard enumeration view needs no custom coroutine generator.</span><span class="code-actions"><a href="#code-snippet--cpp-enumeration" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--cpp-enumeration-L1" href="#code-snippet--cpp-enumeration-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--cpp-enumeration-L2" href="#code-snippet--cpp-enumeration-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--cpp-enumeration-L3" href="#code-snippet--cpp-enumeration-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--cpp-enumeration-L4" href="#code-snippet--cpp-enumeration-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--cpp-enumeration-L5" href="#code-snippet--cpp-enumeration-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--cpp-enumeration-L6" href="#code-snippet--cpp-enumeration-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--cpp-enumeration-L7" href="#code-snippet--cpp-enumeration-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--cpp-enumeration-L8" href="#code-snippet--cpp-enumeration-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--cpp-enumeration-L9" href="#code-snippet--cpp-enumeration-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--cpp-enumeration-L10" href="#code-snippet--cpp-enumeration-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-snippet--cpp-enumeration-L11" href="#code-snippet--cpp-enumeration-L11" aria-label="Link to line 11" data-line="11"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-cpp"><span style="font-weight:bold;color:#a71d5d;">#include </span><span style="color:#183691;">&lt;array&gt;
@@ -787,7 +799,21 @@
 </div>
   </div>
   <footer class="study-end">
+    <section class="article-backlinks" aria-labelledby="backlinks-title">
+  <h2 id="backlinks-title">Referenced in</h2>
+  <ul class="backlink-sources">
     
+    
+    
+    <li class="backlink-source">
+      <a class="backlink-title" href="https://sekaiser.github.io/notes/processing-json-with-rust.html#bln-ref-1">Processing JSON with Rust</a>
+      <blockquote>If the iterator chain is the part you want to understand better, The Iterator Is the State Machine follows how adapters keep state and borrow data. It works through a separate telemetry example.</blockquote>
+      
+    </li>
+    
+  </ul>
+</section>
+
     
   
   
@@ -795,6 +821,9 @@
   
   
 
+  
+    <p class="study-feedback">If something here seems wrong or hard to follow, <a href="https://sekaiser.github.io/about.html#get-in-touch">get in touch</a>.</p>
+  
 
     
     <a class="study-return" href="https://sekaiser.github.io/notes.html">Return to the notebook</a>
