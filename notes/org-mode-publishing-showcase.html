@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="https://sekaiser.github.io/static/favicon.svg?v=d722fec0e0cca8eb" type="image/svg+xml">
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/vendor.css?v=cf6814bed6634e0a" type="text/css" media="screen" />
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/notebook.css?v=ba72a2ed5e79b2f0">
+  
+  
+  <script src="https://sekaiser.github.io/static/js/study.js?v=097960b1aa1fd3bf" defer></script>
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/article.css?v=b2fe45bcd621acd3">
+  
+
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/project.css?v=8bb1ebecdc8b92d7">
+  <script src="https://sekaiser.github.io/static/js/main.js?v=7ffe88eb20e1b177"></script>
+
+  
+  
+
+
+
+
+  
+  
+  
+  
+
+<title>Org-mode publishing showcase | Sebastian Kaiser</title>
+<meta name="description" content="What survives the journey from an Emacs buffer to a web page? Inspect headings, tables, task states, and source code in this working Org-mode publishing fixture.">
+<meta property="og:title" content="Org-mode publishing showcase | Sebastian Kaiser">
+<meta property="og:description" content="What survives the journey from an Emacs buffer to a web page? Inspect headings, tables, task states, and source code in this working Org-mode publishing fixture.">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Sebastian Kaiser — engineering notebook">
+<meta name="twitter:card" content="summary">
+
+  
+  
+  <link rel="canonical" href="https://sekaiser.github.io/notes/org-mode-publishing-showcase.html">
+  <meta property="og:url" content="https:&#x2F;&#x2F;sekaiser.github.io&#x2F;notes&#x2F;org-mode-publishing-showcase.html">
+  <meta property="og:image" content="https://sekaiser.github.io/static/pics/study/engineering-desk.png?v=478d3aa3a9ffa967">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1254">
+  <meta property="og:image:height" content="1254">
+  <meta property="og:image:alt" content="An illustrated desk with a notebook, computer, and reading lamp.">
+
+
+  <meta property="article:published_time" content="2023-05-25">
+  
+
+<link rel="me" href="https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;sekaiser&#x2F;">
+
+  
+</head>
+<body>
+  
+<div class="margin-sketches" aria-hidden="true">
+  <svg class="margin-sketch-definitions" width="0" height="0" focusable="false">
+    <defs>
+      <symbol id="margin-branches" viewBox="0 0 88 270">
+        <path d="M44 34 C44 67 18 60 18 96 M44 34 C44 67 70 60 70 96 M18 112 C18 153 44 145 44 177 M70 112 C70 153 44 145 44 177 M44 193 L44 230"/>
+        <circle cx="44" cy="26" r="8" class="sketch-node"/>
+        <rect x="10" y="96" width="16" height="16" rx="3"/>
+        <rect x="62" y="96" width="16" height="16" rx="3"/>
+        <circle cx="44" cy="185" r="8" class="sketch-node"/>
+        <path d="M36 238 L44 230 L52 238 L44 246 Z" class="sketch-accent"/>
+      </symbol>
+      <symbol id="margin-pages" viewBox="0 0 88 270">
+        <path d="M29 27 L62 30 L59 76 L26 73 Z M22 34 L55 37 L52 83 L19 80 Z"/>
+        <path d="M30 47 L46 49 M29 55 L43 57 M29 63 L38 64"/>
+        <path d="M38 93 C37 126 69 112 67 145 C65 167 30 153 29 183" stroke-dasharray="2 7"/>
+        <circle cx="29" cy="191" r="8" class="sketch-node"/>
+        <path d="M36 195 L62 216 M62 210 L68 216 L62 222 L56 216 Z" class="sketch-accent"/>
+        <circle cx="13" cy="130" r="3"/>
+      </symbol>
+      <symbol id="margin-orbit" viewBox="0 0 88 270">
+        <ellipse cx="44" cy="72" rx="31" ry="39"/>
+        <ellipse cx="44" cy="72" rx="17" ry="39" transform="rotate(28 44 72)"/>
+        <circle cx="44" cy="72" r="6" class="sketch-node"/>
+        <circle cx="71" cy="52" r="4" class="sketch-accent"/>
+        <path d="M44 121 L44 164 M30 182 L44 164 L58 182 Z M44 183 L44 212" stroke-dasharray="3 6"/>
+        <path d="M35 230 Q44 215 53 230 Q44 244 35 230 Z"/>
+      </symbol>
+      <symbol id="margin-stack" viewBox="0 0 88 270">
+        <path d="M10 54 L44 36 L78 54 L44 72 Z M10 70 L44 88 L78 70 M10 86 L44 104 L78 86"/>
+        <path d="M44 116 L44 150 M20 168 L44 150 L68 168 M20 168 L20 193 M68 168 L68 193"/>
+        <rect x="12" y="194" width="16" height="16" rx="3"/>
+        <circle cx="68" cy="202" r="8" class="sketch-node"/>
+        <path d="M37 239 L51 239 M44 232 L44 246" class="sketch-accent"/>
+      </symbol>
+      <symbol id="margin-signal" viewBox="0 0 88 270">
+        <path d="M12 58 L26 58 L26 36 L42 36 L42 80 L58 80 L58 58 L76 58"/>
+        <path d="M12 114 Q27 85 44 114 T76 114"/>
+        <path d="M12 153 L76 153" stroke-dasharray="2 7"/>
+        <circle cx="26" cy="153" r="4" class="sketch-node"/>
+        <circle cx="62" cy="153" r="4" class="sketch-accent"/>
+        <path d="M23 202 L44 182 L65 202 L44 222 Z M23 202 L65 202"/>
+      </symbol>
+      <symbol id="margin-network" viewBox="0 0 88 270">
+        <path d="M19 45 L68 66 L36 108 L19 45 M36 108 L70 155 L18 179 L36 108 M18 179 L48 226 L70 155"/>
+        <circle cx="19" cy="45" r="6" class="sketch-node"/>
+        <circle cx="68" cy="66" r="5"/>
+        <circle cx="36" cy="108" r="8" class="sketch-node"/>
+        <circle cx="70" cy="155" r="5"/>
+        <circle cx="18" cy="179" r="6"/>
+        <circle cx="48" cy="226" r="6" class="sketch-accent"/>
+      </symbol>
+    </defs>
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:0" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:1" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:2" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-stack" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:3" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-signal" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:4" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:5" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:6" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:7" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:0" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:1" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:2" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-signal" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:3" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:4" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:5" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-stack" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:6" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:7" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+</div>
+
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div id="root" class="site-shell">
+        
+<header class="study-masthead">
+  <a class="study-signature" href="https://sekaiser.github.io/">
+    <span class="study-bookmark" aria-hidden="true">sk.</span>
+    <span class="study-identity"><span class="study-name">Sebastian <em>Kaiser</em></span><small>A personal engineering notebook</small></span>
+  </a>
+  <nav aria-label="Main navigation">
+    <a href="https://sekaiser.github.io/notes.html" aria-current="true">Notes</a>
+    <a href="https://sekaiser.github.io/feed.html">Reading</a>
+    <a href="https://sekaiser.github.io/about.html">About</a>
+    <a href="https://sekaiser.github.io/search.html">Search</a>
+  </nav>
+</header>
+
+
+
+        <main id="main" tabindex="-1">
+           
+
+          
+<article class="study-page">
+  <header class="study-opening">
+    <div class="study-heading">
+      <div class="study-title">
+        <p class="study-context"><a href="https://sekaiser.github.io/notes.html">The notebook</a>
+  
+    <span aria-hidden="true"> / </span>Writing with Org-mode
+  
+</p>
+        <h1>
+  
+    Org-mode publishing showcase
+  
+</h1>
+        <div class="study-metadata">
+          <dl class="study-dates">
+            <div><dt>Published</dt><dd><time datetime="2023-05-25">25 May 2023</time></dd></div>
+            
+          </dl>
+          <nav class="study-topics" aria-label="Article topics">
+<a class="paper-tag" data-tag="org-mode" href="https://sekaiser.github.io/tags/org-mode.html"><span>org-mode</span></a>
+
+<a class="paper-tag" data-tag="emacs" href="https://sekaiser.github.io/tags/emacs.html"><span>emacs</span></a>
+
+<a class="paper-tag" data-tag="publishing" href="https://sekaiser.github.io/tags/publishing.html"><span>publishing</span></a>
+</nav>
+        </div>
+      </div>
+      <div class="study-introduction"></div>
+    </div>
+  </header>
+  <div class="study-layout">
+    <aside class="study-margin" aria-label="Article navigation and reading notes">
+      <div class="study-margin-content">
+        <details class="study-contents" hidden>
+          <summary>On this page</summary>
+          <nav aria-label="On this page"></nav>
+        </details>
+        
+  
+
+      </div>
+    </aside>
+    <div class="document-body study-prose"><div class="frontmatter">
+<div class="abstract">
+<p>I write in Emacs Org-mode. This page is where I check what happens to that
+writing on its way to the web: Org source is exported by ox-hugo to Markdown,
+then parsed and rendered by Berlin.</p>
+<p>It is both a public example and a publishing fixture. The deliberately deep
+headings, task states, tables, and code blocks give me a varied document to
+inspect when I change the pipeline. This is not a claim of complete Org-mode
+support; it is a place to make the current behavior visible.</p>
+</div>
+<div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a href="#what-to-look-for">What to look for</a></li>
+<li><a href="#this-is-an-example-headline">This is an example headline</a></li>
+<li><a href="#another-headline">Another headline</a></li>
+<li><a href="#basic-markup">Basic markup</a></li>
+<li><a href="#showing-and-hiding-headlines">Showing and hiding headlines</a></li>
+<li><a href="#tables">Tables</a></li>
+<li><a href="#org-mode-links">Org-mode links</a></li>
+<li><a href="#various-things-you-can-add-in-headers">Various things you can add in headers</a></li>
+<li><a href="#the-todo-planner-payoff">The TODO-planner payoff</a></li>
+<li><a href="#exporting-an-org-mode-buffer">Exporting an org-mode buffer</a></li>
+<li><a href="#further-authoring-features-and-source-blocks">Further authoring features and source blocks</a></li>
+</ul>
+</div>
+<!--endtoc-->
+</div>
+<h2><a href="#what-to-look-for" aria-hidden="true" class="anchor" id="what-to-look-for"></a>What to look for</h2>
+<ul>
+<li><strong>Structure:</strong> nested headings and lists should remain understandable outside
+Emacs, including where the exporter turns deep outlines into lists.</li>
+<li><strong>Inline content:</strong> emphasis, verbatim text, and links should preserve their
+meaning and remain readable.</li>
+<li><strong>Tables and tasks:</strong> compare the table layout, checkboxes, task labels, tags,
+and priority markers in the examples below.</li>
+<li><strong>Code and stored results:</strong> source blocks should be readable as listings.
+Publishing does not execute them; any displayed results are already present
+in the Org source.</li>
+</ul>
+<p>Folding, agenda views, capture commands, and keyboard shortcuts belong to the
+Emacs authoring experience. Describing them here does not make them interactive
+features of this static page. Some export-specific material, such as LaTeX,
+may need additional handling rather than appearing exactly as it does in Emacs.</p>
+<p>The examples below were retained from an introductory document described as
+the example file for a Denver Emacs Org-mode talk. They remain useful as a
+varied publishing fixture; the talk-oriented examples are not a description of
+my personal setup.</p>
+<p>For these publishing features in a regular article, see
+<span id="bln-ref-1" class="document-reference"><a href="https://sekaiser.github.io/notes/processing-json-with-rust.html">Processing JSON with Rust</a></span>.
+That link also exercises the resolution of an Org ID into a published page.</p>
+<h2><a href="#this-is-an-example-headline" aria-hidden="true" class="anchor" id="this-is-an-example-headline"></a>This is an example headline</h2>
+<p>Text can be put into the headline. You can create another headline at the same
+level with another * character</p>
+<h2><a href="#another-headline" aria-hidden="true" class="anchor" id="another-headline"></a>Another headline</h2>
+<p>Nesting headlines is as easy as adding another star.</p>
+<h3><a href="#nested-headline" aria-hidden="true" class="anchor" id="nested-headline"></a>Nested headline</h3>
+<h3><a href="#another-nested-headline" aria-hidden="true" class="anchor" id="another-nested-headline"></a>Another nested headline</h3>
+<h4><a href="#deeper" aria-hidden="true" class="anchor" id="deeper"></a>Deeper</h4>
+<h3><a href="#another-headline-1" aria-hidden="true" class="anchor" id="another-headline-1"></a>Another headline</h3>
+<!--list-separator-->
+<ul>
+<li><p>Deeper...</p>
+ <!--list-separator-->
+<ul>
+<li>Deeper.....</li>
+</ul>
+</li>
+</ul>
+<h2><a href="#basic-markup" aria-hidden="true" class="anchor" id="basic-markup"></a>Basic markup</h2>
+<p>You can really go as deep as you want. This is the general building block for
+org-mode navigation.</p>
+<p>Next, let's talk about some markup</p>
+<ul>
+<li><span class="underline">underscores let you underline things</span></li>
+<li><strong>stars add emphasis</strong></li>
+<li><em>slashes are italics</em></li>
+<li><del>pluses are strikethrough</del></li>
+<li><code>equal signs are verbatim text</code></li>
+<li><code>tildes can also be used</code></li>
+</ul>
+<p>You can generate lists with the <code>-</code> character (seen above), or create numbered
+ones:</p>
+<ol>
+<li>Number one thing</li>
+<li>Number two thing</li>
+<li>Number three</li>
+</ol>
+<h2><a href="#showing-and-hiding-headlines" aria-hidden="true" class="anchor" id="showing-and-hiding-headlines"></a>Showing and hiding headlines</h2>
+<p>You can hide the contents of a headline by putting the point (cursor) or it and
+hitting <code>TAB</code>.</p>
+<p>You can also toggle hiding and showing of <strong>all</strong> headlines with <code>SHIFT-TAB</code>.</p>
+<h2><a href="#tables" aria-hidden="true" class="anchor" id="tables"></a>Tables</h2>
+<p>Auto expanding tables are one of the coolest features of org-mode, because
+tables in Markdown just plain suck. In order to create a new table, you can
+start typing it manually, or press <code>C-c |</code>, which will prompt for the table's
+dimensions.</p>
+<table>
+<tr>
+<th>First Name</th>
+<th>Last Name</th>
+<th>Years using Emacs</th>
+</tr>
+<tr>
+<td>Lee</td>
+<td>Hinman</td>
+<td>5</td>
+</tr>
+<tr>
+<td>Mike</td>
+<td>Hunsinger</td>
+<td>2</td>
+</tr>
+<tr>
+<td>Daniel</td>
+<td>Glauser</td>
+<td>4</td>
+</tr>
+<tr>
+<td>Really-long-first-name-guy</td>
+<td>long-last-name-pers</td>
+<td>1</td>
+</tr>
+</table>
+<h2><a href="#org-mode-links" aria-hidden="true" class="anchor" id="org-mode-links"></a>Org-mode links</h2>
+<p>:PROPERTIES:...</p>
+<p>In an org-mode file, you can press <code>C-c l</code> to store a pointer to wherever you
+are in the file. Then, with (or without) text highlighted hit <code>C-C C-l</code> to make
+it into a link.
+The example file for Magit
+If you don't want to store a pointer (ie, link to a website or something), you
+can just hit <code>C-c C-l</code> and type or paste the link. To manually create a link, do
+something like:</p>
+<p>The Denver Emacs Meetup Group</p>
+<p>Writequit site</p>
+<p>Google's web site
+<a href="http://google.com/">Google</a></p>
+<p>(ignore the *_SRC blocks for now, we'll get there)</p>
+<figure class="code-listing" id="code-38368a1e6716efa0"><figcaption class="code-toolbar"><span class="code-language">fundamental</span><span class="code-actions"><a href="#code-38368a1e6716efa0" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><pre tabindex="0" aria-label="Code listing"><code class="language-fundamental"><span style="color:#323232;">[[http://google.com/][Google]]
+</span></code></pre></div></figure>
+<p>You can link to files, images, websites, emails, irc, and all kinds of things.</p>
+<h2><a href="#various-things-you-can-add-in-headers" aria-hidden="true" class="anchor" id="various-things-you-can-add-in-headers"></a>Various things you can add in headers</h2>
+<p>One of the most common uses for org-mode is a sort of "task list" or TODO list.
+Org-mode supports this by allowing markers in the headline for the state of a
+task. Let's look at an example:</p>
+<h3><a href="#this-is-a-task-that-needs-doing" aria-hidden="true" class="anchor" id="this-is-a-task-that-needs-doing"></a><span class="org-todo todo TODO">TODO</span> This is a task that needs doing</h3>
+<h3><a href="#another-todo-task" aria-hidden="true" class="anchor" id="another-todo-task"></a><span class="org-todo todo TODO">TODO</span> Another todo task</h3>
+<ul>
+<li><input type="checkbox" disabled="" /> sub task one</li>
+<li><input type="checkbox" disabled="" checked="" /> sub task two</li>
+<li><input type="checkbox" disabled="" /> sub task three</li>
+</ul>
+<h3><a href="#learn-about-org-mode" aria-hidden="true" class="anchor" id="learn-about-org-mode"></a>Learn about org-mode</h3>
+<h4><a href="#learn-todos" aria-hidden="true" class="anchor" id="learn-todos"></a><span class="org-todo todo TODO">TODO</span> learn todos</h4>
+<h4><a href="#learn-other-stuff" aria-hidden="true" class="anchor" id="learn-other-stuff"></a><span class="org-todo todo TODO">TODO</span> learn other stuff</h4>
+<p>You can toggle each task in a list with the <code>C-c C-c</code> keyboard shortcut.</p>
+<h3><a href="#i-ve-already-finished-this-one" aria-hidden="true" class="anchor" id="i-ve-already-finished-this-one"></a><span class="org-todo done DONE">DONE</span> I've already finished this one</h3>
+<p>You can change the status of a task by hitting <code>C-c t</code> in the body of a task
+anywhere, which will prompt for the state to put it in.</p>
+<p>You can create as many of these as you'd like, for example (from my own config,
+use what works best for you, configuring them is a little out of scope right
+here) here's what I use:</p>
+<h4><a href="#something-that-needs-doing" aria-hidden="true" class="anchor" id="something-that-needs-doing"></a><span class="org-todo todo TODO">TODO</span> something that needs doing</h4>
+<h4><a href="#something-that-s-already-done" aria-hidden="true" class="anchor" id="something-that-s-already-done"></a><span class="org-todo done DONE">DONE</span> something that's already done</h4>
+<h4><a href="#inprogress-something-i-m-currently-doing" aria-hidden="true" class="anchor" id="inprogress-something-i-m-currently-doing"></a>INPROGRESS something I'm currently doing</h4>
+<h4><a href="#waiting-waiting-for-someone-else-before-doing-anything" aria-hidden="true" class="anchor" id="waiting-waiting-for-someone-else-before-doing-anything"></a>WAITING waiting for someone else before doing anything</h4>
+<h4><a href="#needsreview-there-s-a-pr-for-this-it-needs-someone-to-look-at-it" aria-hidden="true" class="anchor" id="needsreview-there-s-a-pr-for-this-it-needs-someone-to-look-at-it"></a>NEEDSREVIEW there's a PR for this, it needs someone to look at it</h4>
+<h4><a href="#hold-this-is-in-permanent-hold-until-further-notice" aria-hidden="true" class="anchor" id="hold-this-is-in-permanent-hold-until-further-notice"></a>HOLD this is in permanent hold until further notice</h4>
+<h4><a href="#cancelled-i-don-t-need-this-any-more" aria-hidden="true" class="anchor" id="cancelled-i-don-t-need-this-any-more"></a>CANCELLED I don't need this any more</h4>
+<h4><a href="#someday-i-d-like-to-do-this-someday-in-the-waaaaay-off-future" aria-hidden="true" class="anchor" id="someday-i-d-like-to-do-this-someday-in-the-waaaaay-off-future"></a>SOMEDAY I'd like to do this someday in the waaaaay off future</h4>
+<p>A lot of people just use "TODO" and "DONE" though.</p>
+<h3><a href="#adding-tags-and-priorities" aria-hidden="true" class="anchor" id="adding-tags-and-priorities"></a>Adding tags and priorities</h3>
+<p>You can add tags by putting them surrounded in ":" in the headline.
+Additionally, priorities</p>
+<h4><a href="#headline-with-a-tag" aria-hidden="true" class="anchor" id="headline-with-a-tag"></a>Headline with a tag <span class="tag"><span class="org">org</span></span></h4>
+<h4><a href="#another-tagged-headline" aria-hidden="true" class="anchor" id="another-tagged-headline"></a>Another tagged headline <span class="tag"><span class="turing">turing</span><span class="denver">denver</span></span></h4>
+<h4><a href="#headline-with-multiple-tags" aria-hidden="true" class="anchor" id="headline-with-multiple-tags"></a>Headline with multiple tags <span class="tag"><span class="org">org</span><span class="emacs">emacs</span></span></h4>
+<p>Tags are just another way of organizing things.</p>
+<h4><a href="#important-task" aria-hidden="true" class="anchor" id="important-task"></a>Important task</h4>
+<h4><a href="#medium-task" aria-hidden="true" class="anchor" id="medium-task"></a>Medium task</h4>
+<h4><a href="#non-important-task" aria-hidden="true" class="anchor" id="non-important-task"></a>Non-important task</h4>
+<p>Again you can configure these, or just use the 3 built in ones.</p>
+<h4><a href="#task-with-sub-headlines" aria-hidden="true" class="anchor" id="task-with-sub-headlines"></a><span class="org-todo todo TODO">TODO</span> <code>[1/3]</code> Task with sub headlines</h4>
+<!--list-separator-->
+<ul>
+<li><span class="org-todo todo TODO">TODO</span>  Finish thing</li>
+</ul>
+<!--list-separator-->
+<ul>
+<li><span class="org-todo todo TODO">TODO</span>  Finish that other thing</li>
+</ul>
+<!--list-separator-->
+<ul>
+<li><span class="org-todo done DONE">DONE</span>  Done with a thing</li>
+</ul>
+<h4><a href="#task-with-sub-headlines--percent-cookie" aria-hidden="true" class="anchor" id="task-with-sub-headlines--percent-cookie"></a><code>[33%]</code> Task with sub headlines (percent cookie)</h4>
+<!--list-separator-->
+<ul>
+<li><span class="org-todo todo TODO">TODO</span>  Finish thing</li>
+</ul>
+<!--list-separator-->
+<ul>
+<li><span class="org-todo todo TODO">TODO</span>  Finish that other thing</li>
+</ul>
+<!--list-separator-->
+<ul>
+<li><span class="org-todo done DONE">DONE</span>  Done with a thing</li>
+</ul>
+<h2><a href="#the-todo-planner-payoff" aria-hidden="true" class="anchor" id="the-todo-planner-payoff"></a>The TODO-planner payoff</h2>
+<p>:PROPERTIES:...
+So TODOs are all well and good, but what is a really neat feature is when you
+can easily capture new TODOs and display them easily.</p>
+<p>In order to do this, let's configure a couple of Emacs options in your emacs init:</p>
+<figure class="code-listing" id="code-7e46a6707950fe0f"><figcaption class="code-toolbar"><span class="code-language">emacs-lisp</span><span class="code-actions"><a href="#code-7e46a6707950fe0f" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-7e46a6707950fe0f-L1" href="#code-7e46a6707950fe0f-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-7e46a6707950fe0f-L2" href="#code-7e46a6707950fe0f-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-7e46a6707950fe0f-L3" href="#code-7e46a6707950fe0f-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-7e46a6707950fe0f-L4" href="#code-7e46a6707950fe0f-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-7e46a6707950fe0f-L5" href="#code-7e46a6707950fe0f-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-7e46a6707950fe0f-L6" href="#code-7e46a6707950fe0f-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-7e46a6707950fe0f-L7" href="#code-7e46a6707950fe0f-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-7e46a6707950fe0f-L8" href="#code-7e46a6707950fe0f-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-7e46a6707950fe0f-L9" href="#code-7e46a6707950fe0f-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-7e46a6707950fe0f-L10" href="#code-7e46a6707950fe0f-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-7e46a6707950fe0f-L11" href="#code-7e46a6707950fe0f-L11" aria-label="Link to line 11" data-line="11"></a></div><div class="code-line-reference" style="--line-offset:11"><a id="code-7e46a6707950fe0f-L12" href="#code-7e46a6707950fe0f-L12" aria-label="Link to line 12" data-line="12"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-emacs-lisp"><span style="color:#323232;">(require &#39;org)
+</span><span style="color:#323232;">;; Setup C-c c to capture new TODOs
+</span><span style="color:#323232;">(global-set-key (kbd &quot;C-c c&quot;) &#39;org-capture)
+</span><span style="color:#323232;">;; Setup a key bind for the agenda
+</span><span style="color:#323232;">(global-set-key (kbd &quot;C-c a&quot;) &#39;org-agenda)
+</span><span style="color:#323232;">;; Set up agenda to know about our file, you can use a list of files or
+</span><span style="color:#323232;">;; directories here
+</span><span style="color:#323232;">(setq org-agenda-files &#39;(&quot;~/todo.org&quot;))
+</span><span style="color:#323232;">;; A new template
+</span><span style="color:#323232;">(setq org-capture-templates
+</span><span style="color:#323232;">      &#39;((&quot;t&quot; &quot;Todo&quot; entry (file &quot;~/todo.org&quot;)
+</span><span style="color:#323232;">         &quot;* TODO %?\n%U\n&quot;)))
+</span></code></pre></div></figure>
+<p>Now, hit <code>C-c c</code> to bring up the capture template list, then <code>t</code> to capture a
+new TODO item.</p>
+<p>Once you've captured a few TODOs, you can try out the agenda by hitting <code>C-c a</code>,
+which will prompt for what agenda you'd like to see, for now hit <code>t</code> to see the
+TODO list agenda.</p>
+<h2><a href="#exporting-an-org-mode-buffer" aria-hidden="true" class="anchor" id="exporting-an-org-mode-buffer"></a>Exporting an org-mode buffer</h2>
+<p>Org has a lot of export options, they are all contained behind a <code>C-c C-e</code>
+export backend, exporting to HTML, markdown, plain text, pdf, etc.</p>
+<h2><a href="#further-authoring-features-and-source-blocks" aria-hidden="true" class="anchor" id="further-authoring-features-and-source-blocks"></a>Further authoring features and source blocks</h2>
+<p>Org-mode also supports the following authoring workflows. They are listed for
+context, not as features implemented by this website:</p>
+<ul>
+<li>refiling (<code>org-refile</code>)</li>
+<li>source code blocks</li>
+<li>org-babel</li>
+<li>clocking in/out</li>
+<li>table formulas</li>
+<li>custom agenda views</li>
+<li>capturing notes (not just TODOs)</li>
+<li>publishing projects remotely via TRAMP</li>
+</ul>
+<p>The remaining examples exercise export of LaTeX, Emacs Lisp and shell source
+blocks, and stored results. They are display examples, not instructions to run
+the shell commands below.</p>
+<div class="LaTeX">
+<p>\(a + b\)</p>
+</div>
+<figure class="code-listing" id="code-a4e416640b4c1f02"><figcaption class="code-toolbar"><span class="code-language">emacs-lisp</span><span class="code-actions"><a href="#code-a4e416640b4c1f02" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-a4e416640b4c1f02-L1" href="#code-a4e416640b4c1f02-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-a4e416640b4c1f02-L2" href="#code-a4e416640b4c1f02-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-a4e416640b4c1f02-L3" href="#code-a4e416640b4c1f02-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-a4e416640b4c1f02-L4" href="#code-a4e416640b4c1f02-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-a4e416640b4c1f02-L5" href="#code-a4e416640b4c1f02-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-a4e416640b4c1f02-L6" href="#code-a4e416640b4c1f02-L6" aria-label="Link to line 6" data-line="6"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-emacs-lisp"><span style="color:#323232;">(defun my/function ()
+</span><span style="color:#323232;">  &quot;docstring&quot;
+</span><span style="color:#323232;">  (interactive)
+</span><span style="color:#323232;">  (progn
+</span><span style="color:#323232;">    (+ 1 1)
+</span><span style="color:#323232;">    (message &quot;Hi&quot;)))
+</span></code></pre></div></figure>
+<figure class="code-listing" id="code-9322401098be34f1"><figcaption class="code-toolbar"><span class="code-language">sh</span><span class="code-actions"><a href="#code-9322401098be34f1" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-9322401098be34f1-L1" href="#code-9322401098be34f1-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-9322401098be34f1-L2" href="#code-9322401098be34f1-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-9322401098be34f1-L3" href="#code-9322401098be34f1-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-9322401098be34f1-L4" href="#code-9322401098be34f1-L4" aria-label="Link to line 4" data-line="4"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-sh"><span style="color:#62a35c;">echo </span><span style="color:#323232;">$data </span><span style="font-weight:bold;color:#a71d5d;">&gt;</span><span style="color:#323232;"> /tmp/foo
+</span><span style="font-weight:bold;color:#a71d5d;">for</span><span style="color:#323232;"> i </span><span style="font-weight:bold;color:#a71d5d;">in </span><span style="color:#323232;">`cat /tmp/foo`</span><span style="font-weight:bold;color:#a71d5d;">; do
+</span><span style="color:#323232;">  </span><span style="color:#62a35c;">echo </span><span style="color:#323232;">$i
+</span><span style="font-weight:bold;color:#a71d5d;">done
+</span></code></pre></div></figure>
+<table>
+<tr>
+<th>1</th>
+</tr>
+<tr>
+<td>2</td>
+</tr>
+<tr>
+<td>3</td>
+</tr>
+<tr>
+<td>4</td>
+</tr>
+</table>
+<figure class="code-listing" id="code-snippet--say-hi"><figcaption class="code-toolbar"><span class="code-language">sh</span><span class="code-actions"><a href="#code-snippet--say-hi" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><pre tabindex="0" aria-label="Code listing"><code class="language-sh"><span style="color:#62a35c;">echo </span><span style="color:#183691;">&quot;hi&quot;
+</span></code></pre></div></figure>
+<figure class="code-listing" id="code-284ee2c0bcd11cae"><figcaption class="code-toolbar"><span class="code-language">Text</span><span class="code-actions"><a href="#code-284ee2c0bcd11cae" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><pre tabindex="0" aria-label="Code listing"><code class="language-text"><span style="color:#323232;">hi
+</span></code></pre></div></figure>
+<figure class="code-listing" id="code-8104daad4185b548"><figcaption class="code-toolbar"><span class="code-language">sh</span><span class="code-actions"><a href="#code-8104daad4185b548" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-8104daad4185b548-L1" href="#code-8104daad4185b548-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-8104daad4185b548-L2" href="#code-8104daad4185b548-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-8104daad4185b548-L3" href="#code-8104daad4185b548-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-8104daad4185b548-L4" href="#code-8104daad4185b548-L4" aria-label="Link to line 4" data-line="4"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-sh"><span style="font-style:italic;color:#969896;"># do some things
+</span><span style="color:#62a35c;">echo </span><span style="color:#183691;">&quot;stuff&quot;
+</span><span style="color:#62a35c;">echo </span><span style="color:#183691;">&quot;more stuff&quot;
+</span><span style="color:#62a35c;">echo </span><span style="font-weight:bold;color:#a71d5d;">&lt;&lt;hi&gt;&gt;
+</span></code></pre></div></figure>
+<p>To enter and edit a block of text, use <code>C-c C-'</code></p>
+</div>
+  </div>
+  <footer class="study-end">
+    <section class="article-backlinks" aria-labelledby="backlinks-title">
+  <h2 id="backlinks-title">Referenced in</h2>
+  <ul>
+    
+    <li>
+      <a class="backlink-title" href="https://sekaiser.github.io/notes/publishing-from-org.html#bln-ref-1">Publishing from Org</a>
+      <blockquote>The Org-mode publishing showcase deliberately puts headings, tables, task states, inline formatting, and source blocks together. It is the place to look when asking a narrow question: does this part of an Org document still make sense after export?</blockquote>
+    </li>
+    
+    <li>
+      <a class="backlink-title" href="https://sekaiser.github.io/notes/publishing-from-org.html#bln-ref-4">Publishing from Org</a>
+      <blockquote>This guide introduces both the publishing showcase and the Rust learning exercise. The uncertainty is how much orientation belongs here without repeating the explanations in those notes.</blockquote>
+    </li>
+    
+    <li>
+      <a class="backlink-title" href="https://sekaiser.github.io/notes/processing-json-with-rust.html#bln-ref-1">Processing JSON with Rust</a>
+      <blockquote>Org-mode publishing showcase</blockquote>
+    </li>
+    
+  </ul>
+</section>
+
+    
+  
+    <h2>Keep exploring</h2>
+    <div class="study-next">
+      <a href="https://sekaiser.github.io/notes/processing-json-with-rust.html">
+        <small>The publishing workflow in use</small>
+        <span>Processing JSON with Rust</span>
+        <p>A learning note with source listings, line references, and a worked JSON example.</p>
+      </a>
+    </div>
+  
+  
+  
+  
+    
+    
+    
+    
+  
+  
+    <div class="notebook-connection">
+      
+        <span>Related reading</span>
+        <a href="https:&#x2F;&#x2F;honnef.co&#x2F;articles&#x2F;my-org-roam-workflows-for-taking-notes-and-writing-articles&#x2F;">My org-roam workflows for taking notes and writing articles</a>
+      
+    </div>
+  
+
+
+    
+    <a class="study-return" href="https://sekaiser.github.io/notes.html">Back to all notes</a>
+  </footer>
+</article>
+
+        </main>
+
+        
+            <footer class="site-footer">
+  <div class="footer-colophon">
+    <a class="footer-home" href="https://sekaiser.github.io/">
+      <span class="footer-bookplate" aria-hidden="true">sk.</span>
+      <span class="footer-name">Sebastian Kaiser</span>
+    </a>
+    <p>A personal notebook. Built with Berlin.</p>
+  </div>
+  <nav aria-label="Elsewhere">
+    
+      <a class="footer-icon" href="https:&#x2F;&#x2F;github.com&#x2F;sekaiser" aria-label="GitHub" title="GitHub">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M12 .5a12 12 0 0 0-3.793 23.385c.6.111.82-.261.82-.577 0-.285-.01-1.04-.016-2.04-3.338.725-4.043-1.61-4.043-1.61-.546-1.386-1.333-1.755-1.333-1.755-1.09-.745.083-.73.083-.73 1.205.085 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.419-1.305.762-1.605-2.665-.303-5.467-1.333-5.467-5.931 0-1.31.469-2.381 1.236-3.221-.124-.303-.536-1.524.117-3.176 0 0 1.008-.323 3.301 1.23a11.52 11.52 0 0 1 6.006 0c2.291-1.553 3.297-1.23 3.297-1.23.655 1.652.243 2.873.12 3.176.77.84 1.235 1.911 1.235 3.221 0 4.61-2.807 5.625-5.479 5.922.43.372.823 1.102.823 2.222 0 1.606-.015 2.902-.015 3.296 0 .319.216.694.825.576A12 12 0 0 0 12 .5Z"/>
+        </svg>
+      </a>
+    
+    
+      <a class="footer-icon" href="https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;sekaiser&#x2F;" aria-label="LinkedIn" title="LinkedIn">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.049c.476-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286ZM5.337 7.433a2.062 2.062 0 1 1 0-4.124 2.062 2.062 0 0 1 0 4.124ZM7.119 20.452H3.555V9h3.564v11.452ZM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0Z"/>
+        </svg>
+      </a>
+    
+    <a class="footer-icon" href="#main" aria-label="Back to top" title="Back to top">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <path d="M5 4h14M6 13l6-6 6 6M12 7v13"/>
+      </svg>
+    </a>
+  </nav>
+</footer>
+
+        
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="https://sekaiser.github.io/static/favicon.svg?v=d722fec0e0cca8eb" type="image/svg+xml">
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/vendor.css?v=cf6814bed6634e0a" type="text/css" media="screen" />
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/notebook.css?v=ba72a2ed5e79b2f0">
+  
+  
+  <script src="https://sekaiser.github.io/static/js/study.js?v=097960b1aa1fd3bf" defer></script>
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/article.css?v=b2fe45bcd621acd3">
+  
+
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/project.css?v=8bb1ebecdc8b92d7">
+  <script src="https://sekaiser.github.io/static/js/main.js?v=7ffe88eb20e1b177"></script>
+
+  
+  
+
+
+
+
+  
+  
+  
+  
+    
+  
+
+<title>Processing JSON with Rust | Sebastian Kaiser</title>
+<meta name="description" content="A practical Rust learning project: navigate nested Olympic results with serde_json, count medals by country, and rank the results.">
+<meta property="og:title" content="Processing JSON with Rust | Sebastian Kaiser">
+<meta property="og:description" content="A practical Rust learning project: navigate nested Olympic results with serde_json, count medals by country, and rank the results.">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Sebastian Kaiser — engineering notebook">
+<meta name="twitter:card" content="summary">
+
+  
+  
+  <link rel="canonical" href="https://sekaiser.github.io/notes/processing-json-with-rust.html">
+  <meta property="og:url" content="https:&#x2F;&#x2F;sekaiser.github.io&#x2F;notes&#x2F;processing-json-with-rust.html">
+  <meta property="og:image" content="https://sekaiser.github.io/static/pics/study/engineering-desk.png?v=478d3aa3a9ffa967">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1254">
+  <meta property="og:image:height" content="1254">
+  <meta property="og:image:alt" content="An illustrated desk with a notebook, computer, and reading lamp.">
+
+
+  <meta property="article:published_time" content="2023-05-25">
+  
+
+<link rel="me" href="https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;sekaiser&#x2F;">
+
+  
+</head>
+<body>
+  
+<div class="margin-sketches" aria-hidden="true">
+  <svg class="margin-sketch-definitions" width="0" height="0" focusable="false">
+    <defs>
+      <symbol id="margin-branches" viewBox="0 0 88 270">
+        <path d="M44 34 C44 67 18 60 18 96 M44 34 C44 67 70 60 70 96 M18 112 C18 153 44 145 44 177 M70 112 C70 153 44 145 44 177 M44 193 L44 230"/>
+        <circle cx="44" cy="26" r="8" class="sketch-node"/>
+        <rect x="10" y="96" width="16" height="16" rx="3"/>
+        <rect x="62" y="96" width="16" height="16" rx="3"/>
+        <circle cx="44" cy="185" r="8" class="sketch-node"/>
+        <path d="M36 238 L44 230 L52 238 L44 246 Z" class="sketch-accent"/>
+      </symbol>
+      <symbol id="margin-pages" viewBox="0 0 88 270">
+        <path d="M29 27 L62 30 L59 76 L26 73 Z M22 34 L55 37 L52 83 L19 80 Z"/>
+        <path d="M30 47 L46 49 M29 55 L43 57 M29 63 L38 64"/>
+        <path d="M38 93 C37 126 69 112 67 145 C65 167 30 153 29 183" stroke-dasharray="2 7"/>
+        <circle cx="29" cy="191" r="8" class="sketch-node"/>
+        <path d="M36 195 L62 216 M62 210 L68 216 L62 222 L56 216 Z" class="sketch-accent"/>
+        <circle cx="13" cy="130" r="3"/>
+      </symbol>
+      <symbol id="margin-orbit" viewBox="0 0 88 270">
+        <ellipse cx="44" cy="72" rx="31" ry="39"/>
+        <ellipse cx="44" cy="72" rx="17" ry="39" transform="rotate(28 44 72)"/>
+        <circle cx="44" cy="72" r="6" class="sketch-node"/>
+        <circle cx="71" cy="52" r="4" class="sketch-accent"/>
+        <path d="M44 121 L44 164 M30 182 L44 164 L58 182 Z M44 183 L44 212" stroke-dasharray="3 6"/>
+        <path d="M35 230 Q44 215 53 230 Q44 244 35 230 Z"/>
+      </symbol>
+      <symbol id="margin-stack" viewBox="0 0 88 270">
+        <path d="M10 54 L44 36 L78 54 L44 72 Z M10 70 L44 88 L78 70 M10 86 L44 104 L78 86"/>
+        <path d="M44 116 L44 150 M20 168 L44 150 L68 168 M20 168 L20 193 M68 168 L68 193"/>
+        <rect x="12" y="194" width="16" height="16" rx="3"/>
+        <circle cx="68" cy="202" r="8" class="sketch-node"/>
+        <path d="M37 239 L51 239 M44 232 L44 246" class="sketch-accent"/>
+      </symbol>
+      <symbol id="margin-signal" viewBox="0 0 88 270">
+        <path d="M12 58 L26 58 L26 36 L42 36 L42 80 L58 80 L58 58 L76 58"/>
+        <path d="M12 114 Q27 85 44 114 T76 114"/>
+        <path d="M12 153 L76 153" stroke-dasharray="2 7"/>
+        <circle cx="26" cy="153" r="4" class="sketch-node"/>
+        <circle cx="62" cy="153" r="4" class="sketch-accent"/>
+        <path d="M23 202 L44 182 L65 202 L44 222 Z M23 202 L65 202"/>
+      </symbol>
+      <symbol id="margin-network" viewBox="0 0 88 270">
+        <path d="M19 45 L68 66 L36 108 L19 45 M36 108 L70 155 L18 179 L36 108 M18 179 L48 226 L70 155"/>
+        <circle cx="19" cy="45" r="6" class="sketch-node"/>
+        <circle cx="68" cy="66" r="5"/>
+        <circle cx="36" cy="108" r="8" class="sketch-node"/>
+        <circle cx="70" cy="155" r="5"/>
+        <circle cx="18" cy="179" r="6"/>
+        <circle cx="48" cy="226" r="6" class="sketch-accent"/>
+      </symbol>
+    </defs>
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:0" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:1" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:2" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-stack" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:3" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-signal" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:4" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:5" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:6" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:7" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:0" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:1" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:2" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-signal" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:3" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:4" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:5" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-stack" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:6" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:7" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+</div>
+
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div id="root" class="site-shell">
+        
+<header class="study-masthead">
+  <a class="study-signature" href="https://sekaiser.github.io/">
+    <span class="study-bookmark" aria-hidden="true">sk.</span>
+    <span class="study-identity"><span class="study-name">Sebastian <em>Kaiser</em></span><small>A personal engineering notebook</small></span>
+  </a>
+  <nav aria-label="Main navigation">
+    <a href="https://sekaiser.github.io/notes.html" aria-current="true">Notes</a>
+    <a href="https://sekaiser.github.io/feed.html">Reading</a>
+    <a href="https://sekaiser.github.io/about.html">About</a>
+    <a href="https://sekaiser.github.io/search.html">Search</a>
+  </nav>
+</header>
+
+
+
+        <main id="main" tabindex="-1">
+           
+
+          
+<article class="study-page">
+  <header class="study-opening">
+    <div class="study-heading">
+      <div class="study-title">
+        <p class="study-context"><a href="https://sekaiser.github.io/notes.html">The notebook</a>
+  
+    <span aria-hidden="true"> / </span>Learning Rust
+  
+</p>
+        <h1>
+  
+    Processing JSON with Rust
+  
+</h1>
+        <div class="study-metadata">
+          <dl class="study-dates">
+            <div><dt>Published</dt><dd><time datetime="2023-05-25">25 May 2023</time></dd></div>
+            
+          </dl>
+          <nav class="study-topics" aria-label="Article topics">
+<a class="paper-tag" data-tag="serde-json" href="https://sekaiser.github.io/tags/serde-json.html"><span>serde-json</span></a>
+
+<a class="paper-tag" data-tag="rust" href="https://sekaiser.github.io/tags/rust.html"><span>rust</span></a>
+</nav>
+        </div>
+      </div>
+      <div class="study-introduction"></div>
+    </div>
+  </header>
+  <div class="study-layout">
+    <aside class="study-margin" aria-label="Article navigation and reading notes">
+      <div class="study-margin-content">
+        <details class="study-contents" hidden>
+          <summary>On this page</summary>
+          <nav aria-label="On this page"></nav>
+        </details>
+        
+  
+    <div class="study-observation">
+      <h2>A detail in the data</h2>
+      <p><code>countryObject</code> is not always an object. The lookup falls back to <code>country</code>.</p>
+      <a href="#code-snippet--medal-pipeline-L8">See the country lookup</a>
+    </div>
+  
+
+      </div>
+    </aside>
+    <div class="document-body study-prose"><div class="frontmatter">
+<div class="abstract">
+<p>As I’ve been learning Rust, I’ve been looking for easy and practical projects to get my head around basic concepts and increase my syntax muscle memory.
+One of the more common tasks is to load data from different sources, like text files, or more structured data like JSON.</p>
+<p>So it got me thinking, how would parsing a fairly complex JSON look like in Rust? Luckily, it is not this difficult!</p>
+</div>
+<div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a href="#the-code">The code</a><ul>
+<li><a href="#let-s-add-indexing-operations">Let's add indexing operations</a></li>
+</ul>
+</li>
+<li><a href="#conclusion">Conclusion</a></li>
+<li><a href="#next-steps">Next Steps</a></li>
+</ul>
+</div>
+<!--endtoc-->
+</div>
+<p>This post is a demonstration of using <a href="https://crates.io/crates/serde_json">serde_json</a> to parse JSON in <a href="https://sekaiser.github.io/tags/rust.html">Rust</a>. For this purpose, I am using the athletics data set of the <a href="https://olympics.com/en/olympic-games/tokyo-2020/results/athletics">Olympic Games Tokyo 2020</a>. The goal is to find the five most successful countries and print them.</p>
+<figure class="code-listing" id="code-66dea63124eee006"><figcaption class="code-toolbar"><span class="code-language">Text</span><span class="code-caption">Print the top five countries and the medals they won.</span><span class="code-actions"><a href="#code-66dea63124eee006" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-66dea63124eee006-L1" href="#code-66dea63124eee006-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-66dea63124eee006-L2" href="#code-66dea63124eee006-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-66dea63124eee006-L3" href="#code-66dea63124eee006-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-66dea63124eee006-L4" href="#code-66dea63124eee006-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-66dea63124eee006-L5" href="#code-66dea63124eee006-L5" aria-label="Link to line 5" data-line="5"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-nil"><span style="color:#323232;">United States of America MedalCount { g: 7, s: 12, b: 7 }
+</span><span style="color:#323232;">Italy MedalCount { g: 5, s: 0, b: 0 }
+</span><span style="color:#323232;">Kenya MedalCount { g: 4, s: 4, b: 2 }
+</span><span style="color:#323232;">Poland MedalCount { g: 4, s: 2, b: 3 }
+</span><span style="color:#323232;">Jamaica MedalCount { g: 4, s: 1, b: 4 }
+</span></code></pre></div></figure>
+<p><span id="bln-ref-1" class="document-reference"><a href="https://sekaiser.github.io/notes/org-mode-publishing-showcase.html">Org-mode publishing showcase</a></span></p>
+<p>I chose an excerpt of the athletics data set, because its a bit more complex than a typical hello world example. The data set is deeply nested, contains a lot of data and different object types and to make things even more interesting some data, such as the <strong>countryObject</strong> field appears to be inconsistent.</p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/67ef64c3d94bb980ac5e667c7bd6491decd8e35fbc8df57acfd30ee6dd43ad08/athletics_db_excerpt.png?v=67ef64c3d94bb980"><figcaption><span class="figure-number">Figure 1: </span>Structure of our JSON data</figcaption></figure>
+<p>In order to print the requested information, we need to parse the JSON data and extract the fields <strong>medalType</strong> and the <strong>countryObejct</strong> as shown above.</p>
+<h2><a href="#the-code" aria-hidden="true" class="anchor" id="the-code"></a>The code</h2>
+<p>Serde_json allows us to map JSON data to enums and this is what we are going to do. Since we  also want to count the different types of medals we define a struct called <strong>MedalCount</strong>.</p>
+<figure class="code-listing" id="code-snippet--medal-types"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-actions"><a href="#code-snippet--medal-types" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--medal-types-L1" href="#code-snippet--medal-types-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--medal-types-L2" href="#code-snippet--medal-types-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--medal-types-L3" href="#code-snippet--medal-types-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--medal-types-L4" href="#code-snippet--medal-types-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--medal-types-L5" href="#code-snippet--medal-types-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--medal-types-L6" href="#code-snippet--medal-types-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--medal-types-L7" href="#code-snippet--medal-types-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--medal-types-L8" href="#code-snippet--medal-types-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--medal-types-L9" href="#code-snippet--medal-types-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--medal-types-L10" href="#code-snippet--medal-types-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-snippet--medal-types-L11" href="#code-snippet--medal-types-L11" aria-label="Link to line 11" data-line="11"></a></div><div class="code-line-reference" style="--line-offset:11"><a id="code-snippet--medal-types-L12" href="#code-snippet--medal-types-L12" aria-label="Link to line 12" data-line="12"></a></div><div class="code-line-reference" style="--line-offset:12"><a id="code-snippet--medal-types-L13" href="#code-snippet--medal-types-L13" aria-label="Link to line 13" data-line="13"></a></div><div class="code-line-reference" style="--line-offset:13"><a id="code-snippet--medal-types-L14" href="#code-snippet--medal-types-L14" aria-label="Link to line 14" data-line="14"></a></div><div class="code-line-reference" style="--line-offset:14"><a id="code-snippet--medal-types-L15" href="#code-snippet--medal-types-L15" aria-label="Link to line 15" data-line="15"></a></div><div class="code-line-reference" style="--line-offset:15"><a id="code-snippet--medal-types-L16" href="#code-snippet--medal-types-L16" aria-label="Link to line 16" data-line="16"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="color:#323232;">#[derive(Debug, PartialEq, Eq, Deserialize)]
+</span><span style="font-weight:bold;color:#a71d5d;">enum </span><span style="color:#323232;">Class {
+</span><span style="color:#323232;">    #[serde(rename </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#183691;">&quot;GOLD&quot;</span><span style="color:#323232;">)]
+</span><span style="color:#323232;">    Gold,
+</span><span style="color:#323232;">    #[serde(rename </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#183691;">&quot;SILVER&quot;</span><span style="color:#323232;">)]
+</span><span style="color:#323232;">    Silver,
+</span><span style="color:#323232;">    #[serde(rename </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#183691;">&quot;BRONZE&quot;</span><span style="color:#323232;">)]
+</span><span style="color:#323232;">    Bronze,
+</span><span style="color:#323232;">}
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">#[derive(Default, Debug, PartialEq, Eq, PartialOrd, Ord)]
+</span><span style="font-weight:bold;color:#a71d5d;">struct </span><span style="color:#323232;">MedalCount {
+</span><span style="color:#323232;">    g: </span><span style="font-weight:bold;color:#a71d5d;">usize</span><span style="color:#323232;">,
+</span><span style="color:#323232;">    s: </span><span style="font-weight:bold;color:#a71d5d;">usize</span><span style="color:#323232;">,
+</span><span style="color:#323232;">    b: </span><span style="font-weight:bold;color:#a71d5d;">usize</span><span style="color:#323232;">,
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<h3><a href="#let-s-add-indexing-operations" aria-hidden="true" class="anchor" id="let-s-add-indexing-operations"></a>Let's add indexing operations</h3>
+<p>Thanks to serde_json we can easily map the medal data to our enum. But how can we use this information to our advantage once we want to count how many gold, silver and bronze medals a country won? After all, we would like to keep the actual counting as readable as possible and for this, the mapping logic needs be stored elsewhere.</p>
+<p>Luckily, Rust offers two traits that can be used for indexing operations: <a href="https://doc.rust-lang.org/std/ops/trait.Index.html">Index</a> and <a href="https://doc.rust-lang.org/std/ops/trait.IndexMut.html">IndexMut</a>. By implementing both traits we can map a variant of our class enum to the respective field in our <strong>MedalCount</strong> struct as shown below.</p>
+<figure class="code-listing" id="code-snippet--medal-indexing"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-actions"><a href="#code-snippet--medal-indexing" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--medal-indexing-L1" href="#code-snippet--medal-indexing-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--medal-indexing-L2" href="#code-snippet--medal-indexing-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--medal-indexing-L3" href="#code-snippet--medal-indexing-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--medal-indexing-L4" href="#code-snippet--medal-indexing-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--medal-indexing-L5" href="#code-snippet--medal-indexing-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--medal-indexing-L6" href="#code-snippet--medal-indexing-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--medal-indexing-L7" href="#code-snippet--medal-indexing-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--medal-indexing-L8" href="#code-snippet--medal-indexing-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--medal-indexing-L9" href="#code-snippet--medal-indexing-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--medal-indexing-L10" href="#code-snippet--medal-indexing-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-snippet--medal-indexing-L11" href="#code-snippet--medal-indexing-L11" aria-label="Link to line 11" data-line="11"></a></div><div class="code-line-reference" style="--line-offset:11"><a id="code-snippet--medal-indexing-L12" href="#code-snippet--medal-indexing-L12" aria-label="Link to line 12" data-line="12"></a></div><div class="code-line-reference" style="--line-offset:12"><a id="code-snippet--medal-indexing-L13" href="#code-snippet--medal-indexing-L13" aria-label="Link to line 13" data-line="13"></a></div><div class="code-line-reference" style="--line-offset:13"><a id="code-snippet--medal-indexing-L14" href="#code-snippet--medal-indexing-L14" aria-label="Link to line 14" data-line="14"></a></div><div class="code-line-reference" style="--line-offset:14"><a id="code-snippet--medal-indexing-L15" href="#code-snippet--medal-indexing-L15" aria-label="Link to line 15" data-line="15"></a></div><div class="code-line-reference" style="--line-offset:15"><a id="code-snippet--medal-indexing-L16" href="#code-snippet--medal-indexing-L16" aria-label="Link to line 16" data-line="16"></a></div><div class="code-line-reference" style="--line-offset:16"><a id="code-snippet--medal-indexing-L17" href="#code-snippet--medal-indexing-L17" aria-label="Link to line 17" data-line="17"></a></div><div class="code-line-reference" style="--line-offset:17"><a id="code-snippet--medal-indexing-L18" href="#code-snippet--medal-indexing-L18" aria-label="Link to line 18" data-line="18"></a></div><div class="code-line-reference" style="--line-offset:18"><a id="code-snippet--medal-indexing-L19" href="#code-snippet--medal-indexing-L19" aria-label="Link to line 19" data-line="19"></a></div><div class="code-line-reference" style="--line-offset:19"><a id="code-snippet--medal-indexing-L20" href="#code-snippet--medal-indexing-L20" aria-label="Link to line 20" data-line="20"></a></div><div class="code-line-reference" style="--line-offset:20"><a id="code-snippet--medal-indexing-L21" href="#code-snippet--medal-indexing-L21" aria-label="Link to line 21" data-line="21"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Index&lt;Class&gt; </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">MedalCount {
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">type </span><span style="color:#323232;">Output </span><span style="font-weight:bold;color:#a71d5d;">= usize</span><span style="color:#323232;">;
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">index</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self, class: Class) -&gt; </span><span style="font-weight:bold;color:#a71d5d;">&amp;Self::</span><span style="color:#323232;">Output {
+</span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">match</span><span style="color:#323232;"> class {
+</span><span style="color:#323232;">            Class::Gold </span><span style="font-weight:bold;color:#a71d5d;">=&gt; &amp;</span><span style="color:#323232;">self.g,
+</span><span style="color:#323232;">            Class::Silver </span><span style="font-weight:bold;color:#a71d5d;">=&gt; &amp;</span><span style="color:#323232;">self.s,
+</span><span style="color:#323232;">            Class::Bronze </span><span style="font-weight:bold;color:#a71d5d;">=&gt; &amp;</span><span style="color:#323232;">self.b,
+</span><span style="color:#323232;">        }
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">}
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">IndexMut&lt;Class&gt; </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">MedalCount {
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">index_mut</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span style="color:#323232;">self, class: Class) -&gt; </span><span style="font-weight:bold;color:#a71d5d;">&amp;mut Self::</span><span style="color:#323232;">Output {
+</span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">match</span><span style="color:#323232;"> class {
+</span><span style="color:#323232;">            Class::Gold </span><span style="font-weight:bold;color:#a71d5d;">=&gt; &amp;mut </span><span style="color:#323232;">self.g,
+</span><span style="color:#323232;">            Class::Silver </span><span style="font-weight:bold;color:#a71d5d;">=&gt; &amp;mut </span><span style="color:#323232;">self.s,
+</span><span style="color:#323232;">            Class::Bronze </span><span style="font-weight:bold;color:#a71d5d;">=&gt; &amp;mut </span><span style="color:#323232;">self.b,
+</span><span style="color:#323232;">        }
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<p>As far as I know, serde_json does not support mapping of nested data to struct via some form of dot notation. Luckily, if data is not mapped to a predefined struct than the JSON data can still be deserialized into a <strong>Value</strong>, which then allows us to get the nested data we want.</p>
+<figure class="medal-flow" aria-labelledby="medal-flow-title">
+  <figcaption id="medal-flow-title"><span class="flow-eyebrow">Reading the code</span>From nested results to a country ranking</figcaption>
+  <ol class="flow-stages">
+    <li>
+      <h3>Walk the events and their awards</h3>
+      <p class="flow-path"><code>pageProps.<wbr>gameDiscipline.<wbr>events[]</code><span>each event’s</span><code>awards[]</code></p>
+    </li>
+    <li>
+      <h3>Extract one medal and one country</h3>
+      <div class="flow-branches">
+        <div><span class="flow-label">Medal</span><code>medalType</code><p>Deserialize to <code>Class</code>: Gold, Silver, or Bronze.</p></div>
+        <div><span class="flow-label">Country</span><code>participant</code><p>Use <code>countryObject.name</code> when <code>countryObject</code> is an object; otherwise use <code>country.name</code>.</p><a href="#code-snippet--medal-pipeline-L8">Country lookup in the listing</a></div>
+      </div>
+      <p class="flow-result">One <code>(Class, country)</code> pair per award.</p>
+    </li>
+    <li>
+      <h3>Fold the pairs into a counter for each country</h3>
+      <p><code>HashMap&lt;String, MedalCount&gt;</code> keeps the running totals. <code>IndexMut</code> selects the field to increment.</p>
+      <div class="flow-medals"><span><code>g</code> gold</span><span><code>s</code> silver</span><span><code>b</code> bronze</span></div>
+      <a href="#code-snippet--medal-pipeline-L36">Counting in the listing</a>
+    </li>
+    <li>
+      <h3>Rank the countries, then take five</h3>
+      <p>Descending by gold, then silver, then bronze. The calling code uses <code>take(5)</code> to select the result—not a sum of all medals.</p>
+      <a href="#code-snippet--medal-pipeline-L51">Comparison in the listing</a>
+    </li>
+  </ol>
+</figure>
+<p>Follow the three operations in this listing:</p>
+<figure class="code-listing" id="code-snippet--medal-pipeline"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">Extract country names, count medals, and rank the results.</span><span class="code-actions"><a href="#code-snippet--medal-pipeline" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><script type="application/json" class="code-source">"fn get_class_country_tuple\u003c'a\u003e(values: \u0026'a Vec\u003cValue\u003e) -\u003e Vec\u003c(Class, String)\u003e {\n    let get_country = |participant: \u0026'a serde_json::Value| -\u003e \u0026'a serde_json::Value {\n        let mut country_key = \"countryObject\";\n        if !participant[country_key].is_object() {\n            country_key = \"country\";\n        }\n\n        \u0026participant[country_key][\"name\"]\n    };\n\n    let to_tuple = |v: \u0026'a Value| {\n        let class = serde_json::from_value::\u003cClass\u003e(v[\"medalType\"].to_owned()).unwrap();\n        let country = get_country(\u0026v[\"participant\"]).as_str().unwrap().to_string();\n        (class, country)\n    };\n\n    values.iter().map(to_tuple).collect()\n}\n\n// returns a projection on the medals per country data\npub fn get_medals_per_country(\u0026self) -\u003e Result\u003cProjection, Box\u003cdyn std::error::Error\u003e\u003e {\n    let to_medal_country_tuple =\n        |v: \u0026serde_json::Value| get_class_country_tuple(v[\"awards\"].as_array().unwrap());\n\n    let group_by_country = |mut acc: HashMap\u003c_, _\u003e, x| {\n        let (class, country): (Class, String) = x;\n\n        // remember the IndexMut trait, we used it here for indexing\n        // If there is no entry for a country yet, we create one and\n        // initialize the medal count to g: 0, s: 0, b: 0.\n        // The fields will be incremented by one based on the indexing\n        // operations defined earlier.\n        // So, the value \"Gold\" will be deserialized to the enum variant\n        // Class::Gold which will increment the field `g` of teh struct\n        // MedalCount.\n        acc.entry(country).or_insert(MedalCount::default())[class] += 1;\n        acc\n    };\n\n    let events = self.0.json[\"pageProps\"][\"gameDiscipline\"][\"events\"]\n        .as_array()\n        .unwrap();\n\n    let mut medals_per_country = events\n        .into_iter()\n        .flat_map(to_medal_country_tuple)\n        .fold(HashMap::new(), group_by_country)\n        .into_iter()\n        .collect::\u003cVec\u003c(_, _)\u003e\u003e();\n\n    medals_per_country.sort_by(|a, b| b.1.cmp(\u0026a.1));\n\n    Ok(Projection(medals_per_country))\n}\n"</script><div class="code-lines" tabindex="0" aria-label="Annotated code listing"><div class="code-rows"><div class="code-row" id="org-coderef--ba74bb-1"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L1"></span><pre><code><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">get_class_country_tuple</span><span style="color:#323232;">&lt;</span><span style="font-weight:bold;color:#a71d5d;">&#39;a</span><span style="color:#323232;">&gt;(values: </span><span style="font-weight:bold;color:#a71d5d;">&amp;&#39;a </span><span style="color:#323232;">Vec&lt;Value&gt;) -&gt; Vec&lt;(Class, String)&gt; {
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-2"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L2"></span><pre><code><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">let </span><span style="font-weight:bold;color:#795da3;">get_country </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">|participant: </span><span style="font-weight:bold;color:#a71d5d;">&amp;&#39;a </span><span style="color:#323232;">serde_json::Value| -&gt; </span><span style="font-weight:bold;color:#a71d5d;">&amp;&#39;a </span><span style="color:#323232;">serde_json::Value {
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-3"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L3"></span><pre><code><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">let mut</span><span style="color:#323232;"> country_key </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#183691;">&quot;countryObject&quot;</span><span style="color:#323232;">;
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-4"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L4"></span><pre><code><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">if !</span><span style="color:#323232;">participant[country_key].</span><span style="color:#62a35c;">is_object</span><span style="color:#323232;">() {
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-5"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L5"></span><pre><code><span style="color:#323232;">            country_key </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#183691;">&quot;country&quot;</span><span style="color:#323232;">;
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-6"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L6"></span><pre><code><span style="color:#323232;">        }
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-7"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L7"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row is-highlighted" id="org-coderef--ba74bb-8"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L8"></span><pre><code><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">participant[country_key][</span><span style="color:#183691;">&quot;name&quot;</span><span style="color:#323232;">]
+</span></code></pre><details class="code-note"><summary aria-label="Notes for line 8">Note</summary><div class="code-explanations"><div class="code-explanation" id="org-coderef--ba74bb-8-note-1"><p><strong>Extract the country name.</strong> The lookup uses <code>countryObject</code> when it is an object, otherwise <code>country</code>.</p></div></div></details></div><div class="code-row" id="org-coderef--ba74bb-9"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L9"></span><pre><code><span style="color:#323232;">    };
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-10"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L10"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-11"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L11"></span><pre><code><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">let </span><span style="font-weight:bold;color:#795da3;">to_tuple </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">|v: </span><span style="font-weight:bold;color:#a71d5d;">&amp;&#39;a</span><span style="color:#323232;"> Value| {
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-12"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L12"></span><pre><code><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> class </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">serde_json::from_value::&lt;Class&gt;(v[</span><span style="color:#183691;">&quot;medalType&quot;</span><span style="color:#323232;">].</span><span style="color:#62a35c;">to_owned</span><span style="color:#323232;">()).</span><span style="color:#62a35c;">unwrap</span><span style="color:#323232;">();
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-13"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L13"></span><pre><code><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> country </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#62a35c;">get_country</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">v[</span><span style="color:#183691;">&quot;participant&quot;</span><span style="color:#323232;">]).</span><span style="color:#62a35c;">as_str</span><span style="color:#323232;">().</span><span style="color:#62a35c;">unwrap</span><span style="color:#323232;">().</span><span style="color:#62a35c;">to_string</span><span style="color:#323232;">();
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-14"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L14"></span><pre><code><span style="color:#323232;">        (class, country)
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-15"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L15"></span><pre><code><span style="color:#323232;">    };
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-16"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L16"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-17"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L17"></span><pre><code><span style="color:#323232;">    values.</span><span style="color:#62a35c;">iter</span><span style="color:#323232;">().</span><span style="color:#62a35c;">map</span><span style="color:#323232;">(to_tuple).</span><span style="color:#62a35c;">collect</span><span style="color:#323232;">()
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-18"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L18"></span><pre><code><span style="color:#323232;">}
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-19"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L19"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-20"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L20"></span><pre><code><span style="font-style:italic;color:#969896;">// returns a projection on the medals per country data
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-21"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L21"></span><pre><code><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">get_medals_per_country</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self) -&gt; Result&lt;Projection, Box&lt;dyn std::error::Error&gt;&gt; {
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-22"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L22"></span><pre><code><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> to_medal_country_tuple </span><span style="font-weight:bold;color:#a71d5d;">=
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-23"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L23"></span><pre><code><span style="color:#323232;">        |v: </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">serde_json::Value| </span><span style="color:#62a35c;">get_class_country_tuple</span><span style="color:#323232;">(v[</span><span style="color:#183691;">&quot;awards&quot;</span><span style="color:#323232;">].</span><span style="color:#62a35c;">as_array</span><span style="color:#323232;">().</span><span style="color:#62a35c;">unwrap</span><span style="color:#323232;">());
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-24"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L24"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-25"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L25"></span><pre><code><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">let </span><span style="font-weight:bold;color:#795da3;">group_by_country </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">|</span><span style="font-weight:bold;color:#a71d5d;">mut </span><span style="color:#323232;">acc: HashMap&lt;</span><span style="font-weight:bold;color:#a71d5d;">_</span><span style="color:#323232;">, </span><span style="font-weight:bold;color:#a71d5d;">_</span><span style="color:#323232;">&gt;, x| {
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-26"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L26"></span><pre><code><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">let </span><span style="color:#323232;">(class, country): (Class, </span><span style="color:#0086b3;">String</span><span style="color:#323232;">) </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> x;
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-27"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L27"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-28"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L28"></span><pre><code><span style="color:#323232;">        </span><span style="font-style:italic;color:#969896;">// remember the IndexMut trait, we used it here for indexing
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-29"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L29"></span><pre><code><span style="color:#323232;">        </span><span style="font-style:italic;color:#969896;">// If there is no entry for a country yet, we create one and
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-30"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L30"></span><pre><code><span style="color:#323232;">        </span><span style="font-style:italic;color:#969896;">// initialize the medal count to g: 0, s: 0, b: 0.
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-31"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L31"></span><pre><code><span style="color:#323232;">        </span><span style="font-style:italic;color:#969896;">// The fields will be incremented by one based on the indexing
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-32"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L32"></span><pre><code><span style="color:#323232;">        </span><span style="font-style:italic;color:#969896;">// operations defined earlier.
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-33"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L33"></span><pre><code><span style="color:#323232;">        </span><span style="font-style:italic;color:#969896;">// So, the value &quot;Gold&quot; will be deserialized to the enum variant
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-34"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L34"></span><pre><code><span style="color:#323232;">        </span><span style="font-style:italic;color:#969896;">// Class::Gold which will increment the field `g` of teh struct
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-35"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L35"></span><pre><code><span style="color:#323232;">        </span><span style="font-style:italic;color:#969896;">// MedalCount.
+</span></code></pre></div><div class="code-row is-highlighted" id="org-coderef--ba74bb-36"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L36"></span><pre><code><span style="color:#323232;">        acc.</span><span style="color:#62a35c;">entry</span><span style="color:#323232;">(country).</span><span style="color:#62a35c;">or_insert</span><span style="color:#323232;">(MedalCount::default())[class] </span><span style="font-weight:bold;color:#a71d5d;">+= </span><span style="color:#0086b3;">1</span><span style="color:#323232;">;
+</span></code></pre><details class="code-note"><summary aria-label="Notes for line 36">Note</summary><div class="code-explanations"><div class="code-explanation" id="org-coderef--ba74bb-36-note-1"><p><strong>Accumulate the medals.</strong> Each country gets a counter; <code>IndexMut</code> selects the gold, silver, or bronze field to increment.</p></div></div></details></div><div class="code-row" id="org-coderef--ba74bb-37"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L37"></span><pre><code><span style="color:#323232;">        acc
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-38"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L38"></span><pre><code><span style="color:#323232;">    };
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-39"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L39"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-40"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L40"></span><pre><code><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> events </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">self.</span><span style="color:#0086b3;">0.</span><span style="color:#323232;">json[</span><span style="color:#183691;">&quot;pageProps&quot;</span><span style="color:#323232;">][</span><span style="color:#183691;">&quot;gameDiscipline&quot;</span><span style="color:#323232;">][</span><span style="color:#183691;">&quot;events&quot;</span><span style="color:#323232;">]
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-41"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L41"></span><pre><code><span style="color:#323232;">        .</span><span style="color:#62a35c;">as_array</span><span style="color:#323232;">()
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-42"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L42"></span><pre><code><span style="color:#323232;">        .</span><span style="color:#62a35c;">unwrap</span><span style="color:#323232;">();
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-43"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L43"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-44"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L44"></span><pre><code><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">let mut</span><span style="color:#323232;"> medals_per_country </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> events
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-45"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L45"></span><pre><code><span style="color:#323232;">        .</span><span style="color:#62a35c;">into_iter</span><span style="color:#323232;">()
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-46"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L46"></span><pre><code><span style="color:#323232;">        .</span><span style="color:#62a35c;">flat_map</span><span style="color:#323232;">(to_medal_country_tuple)
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-47"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L47"></span><pre><code><span style="color:#323232;">        .</span><span style="color:#62a35c;">fold</span><span style="color:#323232;">(HashMap::new(), group_by_country)
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-48"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L48"></span><pre><code><span style="color:#323232;">        .</span><span style="color:#62a35c;">into_iter</span><span style="color:#323232;">()
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-49"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L49"></span><pre><code><span style="color:#323232;">        .collect::&lt;Vec&lt;(</span><span style="font-weight:bold;color:#a71d5d;">_</span><span style="color:#323232;">, </span><span style="font-weight:bold;color:#a71d5d;">_</span><span style="color:#323232;">)&gt;&gt;();
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-50"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L50"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row is-highlighted" id="org-coderef--ba74bb-51"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L51"></span><pre><code><span style="color:#323232;">    medals_per_country.</span><span style="color:#62a35c;">sort_by</span><span style="color:#323232;">(|a, b| b.</span><span style="color:#0086b3;">1.</span><span style="color:#62a35c;">cmp</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">a.</span><span style="color:#0086b3;">1</span><span style="color:#323232;">));
+</span></code></pre><details class="code-note"><summary aria-label="Notes for line 51">Note</summary><div class="code-explanations"><div class="code-explanation" id="org-coderef--ba74bb-51-note-1"><p><strong>Rank the results.</strong> The comparison orders by gold first, then silver, then bronze—not by the total medal count.</p></div></div></details></div><div class="code-row" id="org-coderef--ba74bb-52"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L52"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-53"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L53"></span><pre><code><span style="color:#323232;">    </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(Projection(medals_per_country))
+</span></code></pre></div><div class="code-row" id="org-coderef--ba74bb-54"><span class="code-line-anchor" id="code-snippet--medal-pipeline-L54"></span><pre><code><span style="color:#323232;">}
+</span></code></pre></div></div></div></figure>
+<!--listend-->
+<figure class="code-listing" id="code-snippet--medal-projection"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-actions"><a href="#code-snippet--medal-projection" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--medal-projection-L1" href="#code-snippet--medal-projection-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--medal-projection-L2" href="#code-snippet--medal-projection-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--medal-projection-L3" href="#code-snippet--medal-projection-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--medal-projection-L4" href="#code-snippet--medal-projection-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--medal-projection-L5" href="#code-snippet--medal-projection-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--medal-projection-L6" href="#code-snippet--medal-projection-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--medal-projection-L7" href="#code-snippet--medal-projection-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--medal-projection-L8" href="#code-snippet--medal-projection-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--medal-projection-L9" href="#code-snippet--medal-projection-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--medal-projection-L10" href="#code-snippet--medal-projection-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-snippet--medal-projection-L11" href="#code-snippet--medal-projection-L11" aria-label="Link to line 11" data-line="11"></a></div><div class="code-line-reference" style="--line-offset:11"><a id="code-snippet--medal-projection-L12" href="#code-snippet--medal-projection-L12" aria-label="Link to line 12" data-line="12"></a></div><div class="code-line-reference" style="--line-offset:12"><a id="code-snippet--medal-projection-L13" href="#code-snippet--medal-projection-L13" aria-label="Link to line 13" data-line="13"></a></div><div class="code-line-reference" style="--line-offset:13"><a id="code-snippet--medal-projection-L14" href="#code-snippet--medal-projection-L14" aria-label="Link to line 14" data-line="14"></a></div><div class="code-line-reference" style="--line-offset:14"><a id="code-snippet--medal-projection-L15" href="#code-snippet--medal-projection-L15" aria-label="Link to line 15" data-line="15"></a></div><div class="code-line-reference" style="--line-offset:15"><a id="code-snippet--medal-projection-L16" href="#code-snippet--medal-projection-L16" aria-label="Link to line 16" data-line="16"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="color:#323232;">#[derive(Eq, PartialEq)]
+</span><span style="font-weight:bold;color:#a71d5d;">struct </span><span style="color:#323232;">Projection(Vec&lt;(String, MedalCount)</span><span style="font-weight:bold;color:#a71d5d;">&gt;</span><span style="color:#323232;">);
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Projection {
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">empty</span><span style="color:#323232;">() -&gt; </span><span style="font-weight:bold;color:#a71d5d;">Self </span><span style="color:#323232;">{
+</span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">(vec![])
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">take</span><span style="color:#323232;">(self, n: </span><span style="font-weight:bold;color:#a71d5d;">usize</span><span style="color:#323232;">) -&gt; </span><span style="font-weight:bold;color:#a71d5d;">Self </span><span style="color:#323232;">{
+</span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">(self.</span><span style="color:#0086b3;">0.</span><span style="color:#62a35c;">into_iter</span><span style="color:#323232;">().</span><span style="color:#62a35c;">take</span><span style="color:#323232;">(n).</span><span style="color:#62a35c;">collect</span><span style="color:#323232;">())
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">get</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self) -&gt; </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">Vec&lt;(String, MedalCount)&gt; {
+</span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self.</span><span style="color:#0086b3;">0
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<p>Having all the components in place, we can finally implement the logic we wanted:</p>
+<figure class="code-listing" id="code-7364c934d44bf5fb"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-actions"><a href="#code-7364c934d44bf5fb" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-7364c934d44bf5fb-L1" href="#code-7364c934d44bf5fb-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-7364c934d44bf5fb-L2" href="#code-7364c934d44bf5fb-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-7364c934d44bf5fb-L3" href="#code-7364c934d44bf5fb-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-7364c934d44bf5fb-L4" href="#code-7364c934d44bf5fb-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-7364c934d44bf5fb-L5" href="#code-7364c934d44bf5fb-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-7364c934d44bf5fb-L6" href="#code-7364c934d44bf5fb-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-7364c934d44bf5fb-L7" href="#code-7364c934d44bf5fb-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-7364c934d44bf5fb-L8" href="#code-7364c934d44bf5fb-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-7364c934d44bf5fb-L9" href="#code-7364c934d44bf5fb-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-7364c934d44bf5fb-L10" href="#code-7364c934d44bf5fb-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-7364c934d44bf5fb-L11" href="#code-7364c934d44bf5fb-L11" aria-label="Link to line 11" data-line="11"></a></div><div class="code-line-reference" style="--line-offset:11"><a id="code-7364c934d44bf5fb-L12" href="#code-7364c934d44bf5fb-L12" aria-label="Link to line 12" data-line="12"></a></div><div class="code-line-reference" style="--line-offset:12"><a id="code-7364c934d44bf5fb-L13" href="#code-7364c934d44bf5fb-L13" aria-label="Link to line 13" data-line="13"></a></div><div class="code-line-reference" style="--line-offset:13"><a id="code-7364c934d44bf5fb-L14" href="#code-7364c934d44bf5fb-L14" aria-label="Link to line 14" data-line="14"></a></div><div class="code-line-reference" style="--line-offset:14"><a id="code-7364c934d44bf5fb-L15" href="#code-7364c934d44bf5fb-L15" aria-label="Link to line 15" data-line="15"></a></div><div class="code-line-reference" style="--line-offset:15"><a id="code-7364c934d44bf5fb-L16" href="#code-7364c934d44bf5fb-L16" aria-label="Link to line 16" data-line="16"></a></div><div class="code-line-reference" style="--line-offset:16"><a id="code-7364c934d44bf5fb-L17" href="#code-7364c934d44bf5fb-L17" aria-label="Link to line 17" data-line="17"></a></div><div class="code-line-reference" style="--line-offset:17"><a id="code-7364c934d44bf5fb-L18" href="#code-7364c934d44bf5fb-L18" aria-label="Link to line 18" data-line="18"></a></div><div class="code-line-reference" style="--line-offset:18"><a id="code-7364c934d44bf5fb-L19" href="#code-7364c934d44bf5fb-L19" aria-label="Link to line 19" data-line="19"></a></div><div class="code-line-reference" style="--line-offset:19"><a id="code-7364c934d44bf5fb-L20" href="#code-7364c934d44bf5fb-L20" aria-label="Link to line 20" data-line="20"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">load_data</span><span style="color:#323232;">() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> url </span><span style="font-weight:bold;color:#a71d5d;">=
+</span><span style="color:#323232;">        </span><span style="color:#183691;">&quot;https://raw.githubusercontent.com/sekaiser/rust-sample-parse-json/main/athletics.json&quot;</span><span style="color:#323232;">;
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> db </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">AthleticsDb::from_url(Url::from_str(url)</span><span style="font-weight:bold;color:#a71d5d;">?</span><span style="color:#323232;">)</span><span style="font-weight:bold;color:#a71d5d;">?</span><span style="color:#323232;">;
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">let mut</span><span style="color:#323232;"> last_top5 </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">Projection::empty();
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">loop </span><span style="color:#323232;">{
+</span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> medals_per_country </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> db.</span><span style="color:#62a35c;">get_medals_per_country</span><span style="color:#323232;">()</span><span style="font-weight:bold;color:#a71d5d;">?</span><span style="color:#323232;">;
+</span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> top5 </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> medals_per_country.</span><span style="color:#62a35c;">take</span><span style="color:#323232;">(</span><span style="color:#0086b3;">5</span><span style="color:#323232;">);
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">if</span><span style="color:#323232;"> top5 </span><span style="font-weight:bold;color:#a71d5d;">!=</span><span style="color:#323232;"> last_top5 {
+</span><span style="color:#323232;">            </span><span style="font-weight:bold;color:#a71d5d;">for</span><span style="color:#323232;"> e </span><span style="font-weight:bold;color:#a71d5d;">in</span><span style="color:#323232;"> top5.</span><span style="color:#62a35c;">get</span><span style="color:#323232;">() {
+</span><span style="color:#323232;">                println!(</span><span style="color:#183691;">&quot;</span><span style="color:#0086b3;">{} {:?}</span><span style="color:#183691;">&quot;</span><span style="color:#323232;">, e.</span><span style="color:#0086b3;">0</span><span style="color:#323232;">, e.</span><span style="color:#0086b3;">1</span><span style="color:#323232;">);
+</span><span style="color:#323232;">            }
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">            last_top5 </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> top5;
+</span><span style="color:#323232;">        }
+</span><span style="color:#323232;">        thread::sleep(time::Duration::from_secs(</span><span style="color:#0086b3;">2</span><span style="color:#323232;">));
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<section class="json-explorer" data-json-explorer aria-labelledby="json-explorer-title">
+<h3 id="json-explorer-title">Follow the medal pipeline</h3>
+<p>One worked example, from five awards to a ranked medal table. This small, invented dataset is not the Olympic results; the values below illustrate one pass through the article’s extraction, counting, and ranking steps.</p>
+<p><strong>Example input · 5 awards</strong></p>
+<div id="medal-json" aria-label="Example JSON">
+<figure class="code-listing" id="org-example-block--medal-input"><figcaption class="code-toolbar"><span class="code-language">Text</span><span class="code-actions"><a href="#org-example-block--medal-input" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="org-example-block--medal-input-L1" href="#org-example-block--medal-input-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="org-example-block--medal-input-L2" href="#org-example-block--medal-input-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="org-example-block--medal-input-L3" href="#org-example-block--medal-input-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="org-example-block--medal-input-L4" href="#org-example-block--medal-input-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="org-example-block--medal-input-L5" href="#org-example-block--medal-input-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="org-example-block--medal-input-L6" href="#org-example-block--medal-input-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="org-example-block--medal-input-L7" href="#org-example-block--medal-input-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="org-example-block--medal-input-L8" href="#org-example-block--medal-input-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="org-example-block--medal-input-L9" href="#org-example-block--medal-input-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="org-example-block--medal-input-L10" href="#org-example-block--medal-input-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="org-example-block--medal-input-L11" href="#org-example-block--medal-input-L11" aria-label="Link to line 11" data-line="11"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-text"><span style="color:#323232;">{
+</span><span style="color:#323232;">  &quot;pageProps&quot;: {&quot;gameDiscipline&quot;: {&quot;events&quot;: [
+</span><span style="color:#323232;">    {&quot;awards&quot;: [
+</span><span style="color:#323232;">      {&quot;medalType&quot;:&quot;GOLD&quot;,&quot;participant&quot;:{&quot;countryObject&quot;:{&quot;name&quot;:&quot;Japan&quot;}}},
+</span><span style="color:#323232;">      {&quot;medalType&quot;:&quot;SILVER&quot;,&quot;participant&quot;:{&quot;country&quot;:{&quot;name&quot;:&quot;Italy&quot;}}},
+</span><span style="color:#323232;">      {&quot;medalType&quot;:&quot;BRONZE&quot;,&quot;participant&quot;:{&quot;country&quot;:{&quot;name&quot;:&quot;Italy&quot;}}},
+</span><span style="color:#323232;">      {&quot;medalType&quot;:&quot;GOLD&quot;,&quot;participant&quot;:{&quot;countryObject&quot;:{&quot;name&quot;:&quot;Japan&quot;}}},
+</span><span style="color:#323232;">      {&quot;medalType&quot;:&quot;GOLD&quot;,&quot;participant&quot;:{&quot;country&quot;:{&quot;name&quot;:&quot;Kenya&quot;}}}
+</span><span style="color:#323232;">    ]}
+</span><span style="color:#323232;">  ]}}
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+</div>
+<details>
+<summary>1. Extract country and medal</summary>
+<p>Flatten the events into five awards. Read <code>countryObject.name</code> when the country is an object there; otherwise use <code>country.name</code>.</p>
+<div data-output="extracted" aria-label="Extracted awards">
+<figure class="code-listing" id="code-44bcdda430f192b8"><figcaption class="code-toolbar"><span class="code-language">Text</span><span class="code-actions"><a href="#code-44bcdda430f192b8" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-44bcdda430f192b8-L1" href="#code-44bcdda430f192b8-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-44bcdda430f192b8-L2" href="#code-44bcdda430f192b8-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-44bcdda430f192b8-L3" href="#code-44bcdda430f192b8-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-44bcdda430f192b8-L4" href="#code-44bcdda430f192b8-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-44bcdda430f192b8-L5" href="#code-44bcdda430f192b8-L5" aria-label="Link to line 5" data-line="5"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-text"><span style="color:#323232;">Japan → gold
+</span><span style="color:#323232;">Italy → silver
+</span><span style="color:#323232;">Italy → bronze
+</span><span style="color:#323232;">Japan → gold
+</span><span style="color:#323232;">Kenya → gold
+</span></code></pre></div></figure>
+</div>
+</details>
+<details>
+<summary>2. Count medals per country</summary>
+<p>Group the five awards into three countries, incrementing the matching medal counter for each award. Japan’s two gold awards become one row.</p>
+<div data-output="counted" aria-label="Medal counts">
+<figure class="code-listing" id="code-c094ee90a6c0ed7f"><figcaption class="code-toolbar"><span class="code-language">Text</span><span class="code-actions"><a href="#code-c094ee90a6c0ed7f" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-c094ee90a6c0ed7f-L1" href="#code-c094ee90a6c0ed7f-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-c094ee90a6c0ed7f-L2" href="#code-c094ee90a6c0ed7f-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-c094ee90a6c0ed7f-L3" href="#code-c094ee90a6c0ed7f-L3" aria-label="Link to line 3" data-line="3"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-text"><span style="color:#323232;">Japan: gold 2, silver 0, bronze 0
+</span><span style="color:#323232;">Italy: gold 0, silver 1, bronze 1
+</span><span style="color:#323232;">Kenya: gold 1, silver 0, bronze 0
+</span></code></pre></div></figure>
+</div>
+</details>
+<details>
+<summary>3. Rank and take the top five</summary>
+<p>Compare gold first, then silver, then bronze. Kenya’s one gold places it ahead of Italy’s silver and bronze. There are only three countries, so taking the top five retains all three; no tie-breaker is needed.</p>
+<div data-output="ranked" aria-label="Ranked countries">
+<figure class="code-listing" id="code-8ee402dbb6a9cc4b"><figcaption class="code-toolbar"><span class="code-language">Text</span><span class="code-actions"><a href="#code-8ee402dbb6a9cc4b" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-8ee402dbb6a9cc4b-L1" href="#code-8ee402dbb6a9cc4b-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-8ee402dbb6a9cc4b-L2" href="#code-8ee402dbb6a9cc4b-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-8ee402dbb6a9cc4b-L3" href="#code-8ee402dbb6a9cc4b-L3" aria-label="Link to line 3" data-line="3"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-text"><span style="color:#323232;">1. Japan — 2 gold
+</span><span style="color:#323232;">2. Kenya — 1 gold
+</span><span style="color:#323232;">3. Italy — 1 silver, 1 bronze
+</span></code></pre></div></figure>
+</div>
+</details>
+</section>
+<h2><a href="#conclusion" aria-hidden="true" class="anchor" id="conclusion"></a>Conclusion</h2>
+<p>This post demonstrates the usage of <a href="https://crates.io/crates/serde_json">serde_json</a> in order to parse nested JSON data. The article also briefly covers how to use traits in order to keep the code organized and the logic clean.
+Serde is very powerful and I encourage people who are interested in Rust to take a look at it.</p>
+<h2><a href="#next-steps" aria-hidden="true" class="anchor" id="next-steps"></a>Next Steps</h2>
+<ul>
+<li>Get the code from GitHub: <a href="https://github.com/sekaiser/rust-sample-parse-json">github.com/sekaiser/rust-sample-parse-json</a></li>
+<li>Browse and edit the code in your browser: <a href="https://github.dev/sekaiser/rust-sample-parse-json">github.dev/sekaiser/rust-sample-parse-json</a></li>
+<li>Check out serde: <a href="https://github.com/serde-rs/json">github.com/serde-rs/json</a></li>
+</ul>
+</div>
+  </div>
+  <footer class="study-end">
+    <section class="article-backlinks" aria-labelledby="backlinks-title">
+  <h2 id="backlinks-title">Referenced in</h2>
+  <ul>
+    
+    <li>
+      <a class="backlink-title" href="https://sekaiser.github.io/notes/publishing-from-org.html#bln-ref-2">Publishing from Org</a>
+      <blockquote>Processing JSON with Rust is a learning exercise rather than a publishing test. Read it for the relationship between the prose, the source listings, and the medal results. Code references let an explanation point to a precise part of a listing without turning the whole article in…</blockquote>
+    </li>
+    
+    <li>
+      <a class="backlink-title" href="https://sekaiser.github.io/notes/publishing-from-org.html#bln-ref-3">Publishing from Org</a>
+      <blockquote>The worked example in Processing JSON with Rust places a small input beside its extraction, counting, and ranking results. That makes the explanation inspectable. It does not, by itself, establish that another environment will produce the same result.</blockquote>
+    </li>
+    
+    <li>
+      <a class="backlink-title" href="https://sekaiser.github.io/notes/publishing-from-org.html#bln-ref-5">Publishing from Org</a>
+      <blockquote>This guide introduces both the publishing showcase and the Rust learning exercise. The uncertainty is how much orientation belongs here without repeating the explanations in those notes.</blockquote>
+    </li>
+    
+    <li>
+      <a class="backlink-title" href="https://sekaiser.github.io/notes/org-mode-publishing-showcase.html#bln-ref-1">Org-mode publishing showcase</a>
+      <blockquote>For these publishing features in a regular article, see Processing JSON with Rust. That link also exercises the resolution of an Org ID into a published page.</blockquote>
+    </li>
+    
+  </ul>
+</section>
+
+    
+  
+    <h2>Keep exploring</h2>
+    <div class="study-next">
+      <a href="https://github.com/sekaiser/rust-sample-parse-json">
+        <small>The working example · GitHub</small>
+        <span>Explore the Rust source</span>
+        <p>Follow the implementation behind this article.</p>
+      </a>
+      <a href="https://sekaiser.github.io/notes/org-mode-publishing-showcase.html">
+        <small>Elsewhere in the notebook</small>
+        <span>Org-mode publishing showcase</span>
+        <p>See how headings, tables, tasks, and code travel from Emacs to this website.</p>
+      </a>
+    </div>
+  
+  
+  
+  
+    
+    
+    
+    
+  
+  
+    <div class="notebook-connection">
+      
+        <span>Related reading</span>
+        <a href="https:&#x2F;&#x2F;darkcoding.net&#x2F;software&#x2F;traits-rusts-unifying-concept&#x2F;">Traits: Rust&#x27;s unifying concept</a>
+      
+    </div>
+  
+
+
+    
+    <a class="study-return" href="https://sekaiser.github.io/notes.html">Back to all notes</a>
+  </footer>
+</article>
+
+        </main>
+
+        
+            <footer class="site-footer">
+  <div class="footer-colophon">
+    <a class="footer-home" href="https://sekaiser.github.io/">
+      <span class="footer-bookplate" aria-hidden="true">sk.</span>
+      <span class="footer-name">Sebastian Kaiser</span>
+    </a>
+    <p>A personal notebook. Built with Berlin.</p>
+  </div>
+  <nav aria-label="Elsewhere">
+    
+      <a class="footer-icon" href="https:&#x2F;&#x2F;github.com&#x2F;sekaiser" aria-label="GitHub" title="GitHub">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M12 .5a12 12 0 0 0-3.793 23.385c.6.111.82-.261.82-.577 0-.285-.01-1.04-.016-2.04-3.338.725-4.043-1.61-4.043-1.61-.546-1.386-1.333-1.755-1.333-1.755-1.09-.745.083-.73.083-.73 1.205.085 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.419-1.305.762-1.605-2.665-.303-5.467-1.333-5.467-5.931 0-1.31.469-2.381 1.236-3.221-.124-.303-.536-1.524.117-3.176 0 0 1.008-.323 3.301 1.23a11.52 11.52 0 0 1 6.006 0c2.291-1.553 3.297-1.23 3.297-1.23.655 1.652.243 2.873.12 3.176.77.84 1.235 1.911 1.235 3.221 0 4.61-2.807 5.625-5.479 5.922.43.372.823 1.102.823 2.222 0 1.606-.015 2.902-.015 3.296 0 .319.216.694.825.576A12 12 0 0 0 12 .5Z"/>
+        </svg>
+      </a>
+    
+    
+      <a class="footer-icon" href="https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;sekaiser&#x2F;" aria-label="LinkedIn" title="LinkedIn">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.049c.476-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286ZM5.337 7.433a2.062 2.062 0 1 1 0-4.124 2.062 2.062 0 0 1 0 4.124ZM7.119 20.452H3.555V9h3.564v11.452ZM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0Z"/>
+        </svg>
+      </a>
+    
+    <a class="footer-icon" href="#main" aria-label="Back to top" title="Back to top">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <path d="M5 4h14M6 13l6-6 6 6M12 7v13"/>
+      </svg>
+    </a>
+  </nav>
+</footer>
+
+        
+
+  </div>
+</body>
+</html>

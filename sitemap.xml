@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://sekaiser.github.io/about.html</loc></url>
+  <url><loc>https://sekaiser.github.io/feed.html</loc></url>
+  <url><loc>https://sekaiser.github.io/</loc></url>
+  <url><loc>https://sekaiser.github.io/notes.html</loc></url>
+  <url><loc>https://sekaiser.github.io/notes/org-mode-publishing-showcase.html</loc></url>
+  <url><loc>https://sekaiser.github.io/notes/processing-json-with-rust.html</loc></url>
+  <url><loc>https://sekaiser.github.io/notes/publishing-from-org.html</loc></url>
+  <url><loc>https://sekaiser.github.io/search.html</loc></url>
+  <url><loc>https://sekaiser.github.io/tags/emacs.html</loc></url>
+  <url><loc>https://sekaiser.github.io/tags/org-mode.html</loc></url>
+  <url><loc>https://sekaiser.github.io/tags/org-roam.html</loc></url>
+  <url><loc>https://sekaiser.github.io/tags/publishing.html</loc></url>
+  <url><loc>https://sekaiser.github.io/tags/rust.html</loc></url>
+  <url><loc>https://sekaiser.github.io/tags/serde-json.html</loc></url>
+  <url><loc>https://sekaiser.github.io/tags/traits.html</loc></url>
+  <url><loc>https://sekaiser.github.io/tags/workflow.html</loc></url>
+</urlset>
