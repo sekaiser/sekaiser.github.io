@@ -379,7 +379,6 @@ supports that comparison, detailed in the run-record and release-decision tables
 below.</p>
 <p><a id="figure--fig-development-flow"></a></p>
 <figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/7c2315733b5ccb235cf75239d49610a108edf6b680bc54493b84becea7516369/software-delivery-process.svg?v=7c2315733b5ccb23" alt="Artifact-preserving delivery with checksummed image handoff, publication gated by enabled checks, no-rebuild promotion, and deployment supported by the run record and relevant conditional checks"><figcaption><span class="figure-number">Figure 1: </span>Follow the checksummed image handoff through gated publication and promotion; conditional checks support deployment decisions.</figcaption></figure>
-<p><a href="https://sekaiser.github.io/attachments/7c2315733b5ccb235cf75239d49610a108edf6b680bc54493b84becea7516369/software-delivery-process.svg?v=7c2315733b5ccb23">Open the full-size delivery diagram</a></p>
 <p>Runner placement follows the work, not the application language. A build or
 isolated test can run without access to private services; target checks and
 deployment need approved routes and credentials. Platform engineers maintain
@@ -544,8 +543,8 @@ apply. Another team may replace the consumer while the test runs: the order
 assertions might pass without establishing which combination produced the
 result. Version checks before and after the test also miss a temporary
 replacement between those snapshots.</p>
-<p>Using results from a shared, changeable target to approve deployment requires
-control over competing writes. Each run reserves the resources that affect its
+<p>If a shared, changeable target supplies release evidence, the platform must
+control competing writes. Each run reserves the resources that affect its
 assertions from deployment through result collection. Participating jobs use the
 same control across repositories; a repository-local concurrency group cannot
 provide that scope. The platform team operates it with the affected teams and
@@ -625,14 +624,14 @@ on the target and prevents competing jobs from changing them while deployment
 proceeds. The development environment need not stay locked while production
 approval waits.</p>
 <p>Reusing evidence does not require identical environments. Service teams identify
-the settings relevant to each acceptance claim: feature flags, event formats,
-consumer modes, and storage-schema expectations. The rollout must use the tested
-values or have explicit coverage of the alternatives. Timeouts and retry policies
-also matter when the claim includes a deadline. An unexplained configuration
-change needs verification, not an assumption that it is harmless.</p>
+the settings each acceptance claim depends on: feature flags, event formats,
+consumer modes, storage-schema expectations, and any timeout or retry policy
+behind a deadline. The rollout must use the tested values or have explicit
+coverage of the alternatives. If configuration changes without explanation,
+verify it; do not assume it is harmless.</p>
 <p>Endpoint addresses and secret references may differ under a reviewed substitution
-policy. Keep them in the record and check routes, authentication, and intended
-service identities on the target. Those checks establish that the substituted
+policy. Keep them in the record, then check routes, authentication, and intended
+service identities on the target. Those checks show that the substituted
 configuration reaches the expected services; they do not extend the behavioral
 coverage to untested flags, formats, or processing modes.</p>
 <p>Where a required external service exposes no version, the record shows what it
@@ -650,14 +649,13 @@ records and replayed events, not just newly submitted orders.</p>
 the order. An unchanged query response read before the consumer handles the
 replayed event says nothing about replay behavior. The teams agree how to
 observe completion rather than leave that choice to the step implementation.</p>
-<p>The person coordinating the release needs the affected teams' agreement on those
-combinations and on how long older formats remain supported. The person operating
-the target must be able to stop the rollout. If teams disagree about support,
-priority, or acceptable risk, they need a named person with authority to settle
-it; a workflow cannot settle that disagreement. The same applies to exceptions:
-policy names who may approve them, and the decision records the scope, unresolved
-risk, and person accountable for it. An exception does not make a failed or
-inapplicable test result pass.</p>
+<p>The release coordinator needs the affected teams to agree on those combinations
+and on how long older formats remain supported. The target operator must be able
+to stop the rollout. If teams disagree about support, priority, or acceptable
+risk, a named authority must settle it; a workflow cannot. The same applies to
+exceptions: policy names who may approve them, and the decision records the
+scope, unresolved risk, and accountable person. An exception does not make a
+failed or inapplicable test result pass.</p>
 <p>During activation, the operations owner watches the delay from acceptance to
 query and the consumer backlog against agreed stop conditions. Exceeding them
 holds further activation and starts recovery. Turning off the option or limiting
@@ -688,15 +686,14 @@ merely transfers work to the engineer investigating its failure. New assertions,
 service versions, profile changes, and workflow upgrades need time in the teams'
 plans, not just names in an ownership table.</p>
 <p>Adoption can start with shared build and test jobs, then add a slice for a
-recurring cross-service check. Consumers choose supported workflow versions
-and an upgrade policy. A commit reference pins the workflow revision; a moving
-release tag can deliver fixes, but requires recording its resolved commit for
-each run. Maintainers check changes against representative services, including
-unusual build and access requirements. Teams agree which workflow and record
-versions deployment jobs accept; an old revision's output does not remain
-supported indefinitely.
-Apply the same upgrade policy to separately referenced actions and record their
-resolved commits; pinning the workflow does not pin those actions.</p>
+recurring cross-service check. Consumers choose supported workflow versions and
+an upgrade policy. Commit references pin revisions; moving release tags require
+each run to record the resolved commit. Maintainers check changes against
+representative services, including unusual build and access requirements. Teams
+agree which workflow and record versions deployment jobs accept; an old revision's
+output does not remain supported indefinitely. Separately referenced actions need
+the same upgrade policy and resolved-commit record; pinning the workflow does not
+pin those actions.</p>
 <p>Assess shared delivery jobs and the testbench investment separately: repeated
 build and setup work, defects found, debugging effort, deployment queues, and
 runner and maintenance costs. A faster build can simply move work into manual
