@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="https://sekaiser.github.io/static/favicon.svg?v=d722fec0e0cca8eb" type="image/svg+xml">
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/vendor.css?v=cf6814bed6634e0a" type="text/css" media="screen" />
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/notebook.css?v=8634ea4c55d0c6d8">
+  
+  
+  
+  <script src="https://sekaiser.github.io/static/js/study.js?v=097960b1aa1fd3bf" defer></script>
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/article.css?v=919c161ba2902f9c">
+  
+
+  
+
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/project.css?v=1a0d7a21c51adfc4">
+  <script src="https://sekaiser.github.io/static/js/main.js?v=7ffe88eb20e1b177"></script>
+
+  
+  
+
+
+
+
+  
+  
+  
+  
+
+<title>The Iterator Is the State Machine | Sebastian Kaiser</title>
+<meta name="description" content="How Rust&#x27;s Iterator trait supports lazy composition, and what a comparison with C++ ranges tells us about ownership checks and optimization.">
+<meta property="og:title" content="The Iterator Is the State Machine | Sebastian Kaiser">
+<meta property="og:description" content="How Rust&#x27;s Iterator trait supports lazy composition, and what a comparison with C++ ranges tells us about ownership checks and optimization.">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Sebastian Kaiser — engineering notebook">
+<meta name="twitter:card" content="summary">
+
+  
+  
+  <link rel="canonical" href="https://sekaiser.github.io/notes/the-iterator-is-the-state-machine.html">
+  <meta property="og:url" content="https:&#x2F;&#x2F;sekaiser.github.io&#x2F;notes&#x2F;the-iterator-is-the-state-machine.html">
+  <meta property="og:image" content="https://sekaiser.github.io/static/pics/study/engineering-desk.png?v=478d3aa3a9ffa967">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1254">
+  <meta property="og:image:height" content="1254">
+  <meta property="og:image:alt" content="An illustrated desk with a notebook, computer, and reading lamp.">
+
+
+  <meta property="article:published_time" content="2026-10-26">
+  
+
+<link rel="me" href="https://www.linkedin.com/in/sekaiser/">
+
+  
+</head>
+<body>
+  
+<div class="margin-sketches" aria-hidden="true">
+  <svg class="margin-sketch-definitions" width="0" height="0" focusable="false">
+    <defs>
+      <symbol id="margin-branches" viewBox="0 0 88 270">
+        <path d="M44 34 C44 67 18 60 18 96 M44 34 C44 67 70 60 70 96 M18 112 C18 153 44 145 44 177 M70 112 C70 153 44 145 44 177 M44 193 L44 230"/>
+        <circle cx="44" cy="26" r="8" class="sketch-node"/>
+        <rect x="10" y="96" width="16" height="16" rx="3"/>
+        <rect x="62" y="96" width="16" height="16" rx="3"/>
+        <circle cx="44" cy="185" r="8" class="sketch-node"/>
+        <path d="M36 238 L44 230 L52 238 L44 246 Z" class="sketch-accent"/>
+      </symbol>
+      <symbol id="margin-pages" viewBox="0 0 88 270">
+        <path d="M29 27 L62 30 L59 76 L26 73 Z M22 34 L55 37 L52 83 L19 80 Z"/>
+        <path d="M30 47 L46 49 M29 55 L43 57 M29 63 L38 64"/>
+        <path d="M38 93 C37 126 69 112 67 145 C65 167 30 153 29 183" stroke-dasharray="2 7"/>
+        <circle cx="29" cy="191" r="8" class="sketch-node"/>
+        <path d="M36 195 L62 216 M62 210 L68 216 L62 222 L56 216 Z" class="sketch-accent"/>
+        <circle cx="13" cy="130" r="3"/>
+      </symbol>
+      <symbol id="margin-orbit" viewBox="0 0 88 270">
+        <ellipse cx="44" cy="72" rx="31" ry="39"/>
+        <ellipse cx="44" cy="72" rx="17" ry="39" transform="rotate(28 44 72)"/>
+        <circle cx="44" cy="72" r="6" class="sketch-node"/>
+        <circle cx="71" cy="52" r="4" class="sketch-accent"/>
+        <path d="M44 121 L44 164 M30 182 L44 164 L58 182 Z M44 183 L44 212" stroke-dasharray="3 6"/>
+        <path d="M35 230 Q44 215 53 230 Q44 244 35 230 Z"/>
+      </symbol>
+      <symbol id="margin-stack" viewBox="0 0 88 270">
+        <path d="M10 54 L44 36 L78 54 L44 72 Z M10 70 L44 88 L78 70 M10 86 L44 104 L78 86"/>
+        <path d="M44 116 L44 150 M20 168 L44 150 L68 168 M20 168 L20 193 M68 168 L68 193"/>
+        <rect x="12" y="194" width="16" height="16" rx="3"/>
+        <circle cx="68" cy="202" r="8" class="sketch-node"/>
+        <path d="M37 239 L51 239 M44 232 L44 246" class="sketch-accent"/>
+      </symbol>
+      <symbol id="margin-signal" viewBox="0 0 88 270">
+        <path d="M12 58 L26 58 L26 36 L42 36 L42 80 L58 80 L58 58 L76 58"/>
+        <path d="M12 114 Q27 85 44 114 T76 114"/>
+        <path d="M12 153 L76 153" stroke-dasharray="2 7"/>
+        <circle cx="26" cy="153" r="4" class="sketch-node"/>
+        <circle cx="62" cy="153" r="4" class="sketch-accent"/>
+        <path d="M23 202 L44 182 L65 202 L44 222 Z M23 202 L65 202"/>
+      </symbol>
+      <symbol id="margin-network" viewBox="0 0 88 270">
+        <path d="M19 45 L68 66 L36 108 L19 45 M36 108 L70 155 L18 179 L36 108 M18 179 L48 226 L70 155"/>
+        <circle cx="19" cy="45" r="6" class="sketch-node"/>
+        <circle cx="68" cy="66" r="5"/>
+        <circle cx="36" cy="108" r="8" class="sketch-node"/>
+        <circle cx="70" cy="155" r="5"/>
+        <circle cx="18" cy="179" r="6"/>
+        <circle cx="48" cy="226" r="6" class="sketch-accent"/>
+      </symbol>
+    </defs>
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:0" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:1" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:2" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-stack" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:3" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-signal" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:4" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:5" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:6" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:7" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:0" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:1" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:2" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-signal" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:3" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:4" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:5" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-stack" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:6" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:7" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+</div>
+
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div id="root" class="site-shell">
+        
+<header class="study-masthead">
+  <a class="study-signature" href="https://sekaiser.github.io/">
+    <span class="study-bookmark" aria-hidden="true">sk.</span>
+    <span class="study-identity"><span class="study-name">Sebastian <em>Kaiser</em></span><small>A personal engineering notebook</small></span>
+  </a>
+  <nav aria-label="Main navigation">
+    <a href="https://sekaiser.github.io/notes.html" aria-current="true">Notes</a>
+    <a href="https://sekaiser.github.io/feed.html">Reading</a>
+    <a href="https://sekaiser.github.io/about.html">About</a>
+    <a href="https://sekaiser.github.io/search.html">Search</a>
+  </nav>
+</header>
+
+
+
+        <main id="main" tabindex="-1">
+           
+
+          
+<article class="study-page">
+  <header class="study-opening">
+    <div class="study-heading">
+      <div class="study-title">
+        <p class="study-context"><a href="https://sekaiser.github.io/notes.html">The notebook</a>
+  
+</p>
+        <h1>
+  
+    The Iterator Is the State Machine
+  
+</h1>
+        <div class="study-metadata">
+          <dl class="study-dates">
+            <div><dt>Published</dt><dd><time datetime="2026-10-26">26 Oct 2026</time></dd></div>
+            
+          </dl>
+          <nav class="study-topics" aria-label="Article topics">
+
+
+<a class="paper-tag" data-tag="rust" data-tag-color="39" href="https://sekaiser.github.io/tags/rust.html"><span>rust</span></a>
+
+
+
+<a class="paper-tag" data-tag="iterators" data-tag-color="52" href="https://sekaiser.github.io/tags/iterators.html"><span>iterators</span></a>
+
+
+
+<a class="paper-tag" data-tag="api-design" data-tag-color="32" href="https://sekaiser.github.io/tags/api-design.html"><span>api-design</span></a>
+</nav>
+        </div>
+      </div>
+      <div class="study-introduction"></div>
+    </div>
+  </header>
+  <div class="study-layout">
+    <aside class="study-margin" aria-label="Article navigation and reading notes">
+      <div class="study-margin-content">
+        <details class="study-contents" hidden>
+          <summary>On this page</summary>
+          <nav aria-label="On this page"></nav>
+        </details>
+        
+      </div>
+    </aside>
+    <div class="document-body study-prose"><div class="frontmatter">
+<div class="abstract">
+<p>I can read a chain of <code>enumerate()</code>, <code>filter()</code>, and <code>take()</code> and understand what it asks for. I find it harder to picture what is actually running. Does each step traverse the data again? What does the chain borrow, and what work stops when we stop asking for values?</p>
+<p>We'll build a small adapter, extend the pattern to prefix sums, and follow a query over borrowed telemetry records. The aim is to understand how the <code>Iterator</code> contract lets these pieces compose, and how ownership and dispatch affect the code we can write. That also gives us a basis for deciding when an ordinary iterator is enough and when asynchronous streams or coroutines help.</p>
+<p>C++ ranges provide a useful comparison because they support lazy composition too. Looking at both languages helps distinguish the techniques they share from Rust's compile-time checks on borrowing. This gives us a way to judge the safety and potential costs of an iterator-based design, including which performance claims still need measurement.</p>
+</div>
+<div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a href="#where-the-index-lives">How Rust iterators work</a></li>
+<li><a href="#build-the-numbering">Composing iterators with adapters</a><ul>
+<li><a href="#prefix-sums">Prefix sums</a></li>
+</ul>
+</li>
+<li><a href="#ask-for-two-matches">Ask for two matches</a><ul>
+<li><a href="#does-the-order-matter">Does the order matter?</a></li>
+</ul>
+</li>
+<li><a href="#keep-records-in-place">Keep the records where they are</a><ul>
+<li><a href="#a-borrowed-telemetry-query">A borrowed telemetry query</a></li>
+<li><a href="#keep-a-result-while-asking-for-another">Keep a result while asking for another</a></li>
+</ul>
+</li>
+<li><a href="#choosing-dispatch">Static and dynamic dispatch</a></li>
+<li><a href="#what-happens-to-the-layers">Compiler optimization</a></li>
+<li><a href="#when-the-source-is-not-ready">Asynchronous iteration and coroutines</a></li>
+<li><a href="#the-cpp-comparison">Iterator composition in C++</a></li>
+<li><a href="#choosing-the-mechanism">Choosing the mechanism</a></li>
+<li><a href="#references">References</a></li>
+</ul>
+</div>
+<!--endtoc-->
+</div>
+<p>I'll assume you can follow a <code>for</code> loop and have met <code>map</code> or <code>filter</code> in some language. You don't need to know Rust's trait system yet. The examples use Rust 2021 or later.</p>
+<h2><a href="#where-the-index-lives" aria-hidden="true" class="anchor" id="where-the-index-lives"></a>How Rust iterators work</h2>
+<p>Here are four values, printed with their positions:</p>
+<figure class="code-listing" id="code-snippet--numbered-values"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">enumerate() adds a position to each value.</span><span class="code-actions"><a href="#code-snippet--numbered-values" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--numbered-values-L1" href="#code-snippet--numbered-values-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--numbered-values-L2" href="#code-snippet--numbered-values-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--numbered-values-L3" href="#code-snippet--numbered-values-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--numbered-values-L4" href="#code-snippet--numbered-values-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--numbered-values-L5" href="#code-snippet--numbered-values-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--numbered-values-L6" href="#code-snippet--numbered-values-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--numbered-values-L7" href="#code-snippet--numbered-values-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--numbered-values-L8" href="#code-snippet--numbered-values-L8" aria-label="Link to line 8" data-line="8"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">main</span><span style="color:#323232;">() {
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">(index, value) </span><span style="font-weight:bold;color:#a71d5d;">in </span><span style="color:#323232;">[</span><span style="color:#0086b3;">1</span><span style="color:#323232;">, </span><span style="color:#0086b3;">2</span><span style="color:#323232;">, </span><span style="color:#0086b3;">3</span><span style="color:#323232;">, </span><span style="color:#0086b3;">4</span><span style="color:#323232;">]
+</span><span style="color:#323232;">        .</span><span style="color:#62a35c;">into_iter</span><span style="color:#323232;">()
+</span><span style="color:#323232;">        .</span><span style="color:#62a35c;">enumerate</span><span style="color:#323232;">()
+</span><span style="color:#323232;">    {
+</span><span style="color:#323232;">        println!(</span><span style="color:#183691;">&quot;</span><span style="color:#0086b3;">{index}</span><span style="color:#183691;">: </span><span style="color:#0086b3;">{value}</span><span style="color:#183691;">&quot;</span><span style="color:#323232;">);
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<p>The output starts at <code>0: 1</code> and ends at <code>3: 4</code>. Somewhere, something remembers which value comes next and which index to attach to it.</p>
+<p>Rust's iteration protocol puts that responsibility in the iterator. Its required interface is small:<sup class="footnote-ref"><a href="#fn-fn:1">fn:1</a></sup></p>
+<figure class="code-listing" id="code-snippet--iterator-contract"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">The required part of Iterator, with its provided methods omitted.</span><span class="code-actions"><a href="#code-snippet--iterator-contract" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--iterator-contract-L1" href="#code-snippet--iterator-contract-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--iterator-contract-L2" href="#code-snippet--iterator-contract-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--iterator-contract-L3" href="#code-snippet--iterator-contract-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--iterator-contract-L4" href="#code-snippet--iterator-contract-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--iterator-contract-L5" href="#code-snippet--iterator-contract-L5" aria-label="Link to line 5" data-line="5"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">pub trait </span><span style="color:#323232;">Iterator {
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">type </span><span style="color:#323232;">Item;
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">next</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span style="color:#323232;">self) -&gt; Option&lt;</span><span style="font-weight:bold;color:#a71d5d;">Self::</span><span style="color:#323232;">Item&gt;;
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<p>A <em>trait</em> describes behavior a type can provide. Here, <code>Item</code> names the type of value it produces. <code>next()</code> asks for one value and returns either <code>Some(value)</code> or <code>None</code>. The <code>&amp;mut self</code> parameter lets the iterator change its own state while answering.</p>
+<p>A <code>for</code> loop first asks <code>IntoIterator</code> to turn its input into an iterator, then repeatedly asks for the next value. For this simple array, we can sketch the loop like this:<sup class="footnote-ref"><a href="#fn-fn:2">fn:2</a></sup></p>
+<figure class="code-listing" id="code-snippet--for-as-next"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">A sketch of the iteration behavior, not the complete language desugaring.</span><span class="code-actions"><a href="#code-snippet--for-as-next" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--for-as-next-L1" href="#code-snippet--for-as-next-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--for-as-next-L2" href="#code-snippet--for-as-next-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--for-as-next-L3" href="#code-snippet--for-as-next-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--for-as-next-L4" href="#code-snippet--for-as-next-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--for-as-next-L5" href="#code-snippet--for-as-next-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--for-as-next-L6" href="#code-snippet--for-as-next-L6" aria-label="Link to line 6" data-line="6"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> values </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">[</span><span style="color:#0086b3;">10</span><span style="color:#323232;">, </span><span style="color:#0086b3;">20</span><span style="color:#323232;">, </span><span style="color:#0086b3;">30</span><span style="color:#323232;">];
+</span><span style="font-weight:bold;color:#a71d5d;">let mut</span><span style="color:#323232;"> iterator </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#0086b3;">IntoIterator</span><span style="color:#323232;">::into_iter(values);
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">while let </span><span style="color:#0086b3;">Some</span><span style="color:#323232;">(value) </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> iterator.</span><span style="color:#62a35c;">next</span><span style="color:#323232;">() {
+</span><span style="color:#323232;">    println!(</span><span style="color:#183691;">&quot;</span><span style="color:#0086b3;">{value}</span><span style="color:#183691;">&quot;</span><span style="color:#323232;">);
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<p>The loop stops at the first <code>None</code>. It doesn't need to know whether advancing means moving through an array, following a list, or reading from a file.</p>
+<details>
+<summary>Does None always mean the iterator has finished forever?</summary>
+<p>The <code>Iterator</code> contract allows an implementation to return <code>Some</code> again after returning <code>None</code>. A <code>for</code> loop still stops at that first <code>None</code>. If you need later calls to keep returning <code>None</code>, <code>fuse()</code> supplies that behavior. Iterators implementing <code>FusedIterator</code> already promise it.<sup class="footnote-ref"><a href="#fn-fn:3">fn:3</a></sup></p>
+<p>This becomes relevant when we reach asynchronous streams: <code>None</code> is not a general-purpose instruction to wait and try again later.</p>
+</details>
+<h2><a href="#build-the-numbering" aria-hidden="true" class="anchor" id="build-the-numbering"></a>Composing iterators with adapters</h2>
+<p>An <em>adapter</em> wraps an iterator and implements <code>Iterator</code> itself. That shared interface lets us connect adapters: each one can use another as its source, without knowing how that source obtains its values.</p>
+<p>To add a position, our wrapper needs to hold the source iterator and a counter:</p>
+<figure class="code-listing" id="code-snippet--indexed-adapter"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">A small numbering adapter. The counter starts at zero when we construct it.</span><span class="code-actions"><a href="#code-snippet--indexed-adapter" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><script type="application/json" class="code-source">"struct Indexed\u003cI\u003e {\n    source: I,\n    index: usize,\n}\n\nimpl\u003cI: Iterator\u003e Iterator for Indexed\u003cI\u003e {\n    type Item = (usize, I::Item);\n\n    fn next(\u0026mut self) -\u003e Option\u003cSelf::Item\u003e {\n        let value = self.source.next()?;\n\n        let index = self.index;\n        self.index += 1;\n\n        Some((index, value))\n    }\n}\n"</script><div class="code-lines" tabindex="0" aria-label="Annotated code listing"><div class="code-rows"><div class="code-row" id="org-coderef--cdb592-1"><span class="code-line-anchor" id="code-snippet--indexed-adapter-L1"></span><pre><code><span style="font-weight:bold;color:#a71d5d;">struct </span><span style="color:#323232;">Indexed&lt;I&gt; {
+</span></code></pre></div><div class="code-row" id="org-coderef--cdb592-2"><span class="code-line-anchor" id="code-snippet--indexed-adapter-L2"></span><pre><code><span style="color:#323232;">    source: I,
+</span></code></pre></div><div class="code-row is-highlighted" id="org-coderef--cdb592-3"><span class="code-line-anchor" id="code-snippet--indexed-adapter-L3"></span><pre><code><span style="color:#323232;">    index: </span><span style="font-weight:bold;color:#a71d5d;">usize</span><span style="color:#323232;">,
+</span></code></pre><details class="code-note"><summary aria-label="Notes for line 3">Note</summary><div class="code-explanations"><div class="code-explanation" id="org-coderef--cdb592-3-note-1"><p><strong>State between calls.</strong> The wrapper owns its source iterator and a counter. The source may itself borrow a collection; storing it here preserves that relationship.</p></div></div></details></div><div class="code-row" id="org-coderef--cdb592-4"><span class="code-line-anchor" id="code-snippet--indexed-adapter-L4"></span><pre><code><span style="color:#323232;">}
+</span></code></pre></div><div class="code-row" id="org-coderef--cdb592-5"><span class="code-line-anchor" id="code-snippet--indexed-adapter-L5"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row is-highlighted" id="org-coderef--cdb592-6"><span class="code-line-anchor" id="code-snippet--indexed-adapter-L6"></span><pre><code><span style="font-weight:bold;color:#a71d5d;">impl</span><span style="color:#323232;">&lt;I: Iterator&gt; Iterator </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">Indexed&lt;I&gt; {
+</span></code></pre><details class="code-note"><summary aria-label="Notes for line 6">Note</summary><div class="code-explanations"><div class="code-explanation" id="org-coderef--cdb592-6-note-1"><p><strong>The same contract on both sides.</strong> <code>I</code> must implement <code>Iterator</code>, and <code>Indexed&lt;I&gt;</code> implements it too. Another adapter can use this wrapper as its source.</p></div></div></details></div><div class="code-row" id="org-coderef--cdb592-7"><span class="code-line-anchor" id="code-snippet--indexed-adapter-L7"></span><pre><code><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">type </span><span style="color:#323232;">Item </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">usize</span><span style="color:#323232;">, I::Item);
+</span></code></pre></div><div class="code-row" id="org-coderef--cdb592-8"><span class="code-line-anchor" id="code-snippet--indexed-adapter-L8"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row" id="org-coderef--cdb592-9"><span class="code-line-anchor" id="code-snippet--indexed-adapter-L9"></span><pre><code><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">next</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span style="color:#323232;">self) -&gt; Option&lt;</span><span style="font-weight:bold;color:#a71d5d;">Self::</span><span style="color:#323232;">Item&gt; {
+</span></code></pre></div><div class="code-row is-highlighted" id="org-coderef--cdb592-10"><span class="code-line-anchor" id="code-snippet--indexed-adapter-L10"></span><pre><code><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> value </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">self.source.</span><span style="color:#62a35c;">next</span><span style="color:#323232;">()</span><span style="font-weight:bold;color:#a71d5d;">?</span><span style="color:#323232;">;
+</span></code></pre><details class="code-note"><summary aria-label="Notes for line 10">Note</summary><div class="code-explanations"><div class="code-explanation" id="org-coderef--cdb592-10-note-1"><p><strong>Ask the source for one item.</strong> <code>?</code> returns <code>None</code> if the source has no item on this call. The counter advances only after an item is obtained.</p></div></div></details></div><div class="code-row" id="org-coderef--cdb592-11"><span class="code-line-anchor" id="code-snippet--indexed-adapter-L11"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row" id="org-coderef--cdb592-12"><span class="code-line-anchor" id="code-snippet--indexed-adapter-L12"></span><pre><code><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> index </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">self.index;
+</span></code></pre></div><div class="code-row" id="org-coderef--cdb592-13"><span class="code-line-anchor" id="code-snippet--indexed-adapter-L13"></span><pre><code><span style="color:#323232;">        self.index </span><span style="font-weight:bold;color:#a71d5d;">+= </span><span style="color:#0086b3;">1</span><span style="color:#323232;">;
+</span></code></pre></div><div class="code-row" id="org-coderef--cdb592-14"><span class="code-line-anchor" id="code-snippet--indexed-adapter-L14"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row" id="org-coderef--cdb592-15"><span class="code-line-anchor" id="code-snippet--indexed-adapter-L15"></span><pre><code><span style="color:#323232;">        </span><span style="color:#0086b3;">Some</span><span style="color:#323232;">((index, value))
+</span></code></pre></div><div class="code-row" id="org-coderef--cdb592-16"><span class="code-line-anchor" id="code-snippet--indexed-adapter-L16"></span><pre><code><span style="color:#323232;">    }
+</span></code></pre></div><div class="code-row" id="org-coderef--cdb592-17"><span class="code-line-anchor" id="code-snippet--indexed-adapter-L17"></span><pre><code><span style="color:#323232;">}
+</span></code></pre></div></div></div></figure>
+<p><code>I</code> stands for whichever iterator we wrap. The bound <code>I: Iterator</code> lets us call its <code>next()</code> method, and <code>I::Item</code> names the type it produces. Our adapter returns a pair: a position and that source item. Because <code>Indexed&lt;I&gt;</code> also implements <code>Iterator</code>, it gets the trait's provided methods, including <code>filter()</code> and <code>take()</code>.</p>
+<p>The <code>?</code> after <code>self.source.next()</code> returns <code>None</code> immediately if the source returned <code>None</code>. Otherwise, it extracts the value. We save the current index, increment the counter for next time, and return the pair.</p>
+<p>We can construct one with the counter set to zero and step through it ourselves:</p>
+<figure class="code-listing" id="code-snippet--indexed-usage"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">Each call advances the source and the counter held by the same object.</span><span class="code-actions"><a href="#code-snippet--indexed-usage" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--indexed-usage-L1" href="#code-snippet--indexed-usage-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--indexed-usage-L2" href="#code-snippet--indexed-usage-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--indexed-usage-L3" href="#code-snippet--indexed-usage-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--indexed-usage-L4" href="#code-snippet--indexed-usage-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--indexed-usage-L5" href="#code-snippet--indexed-usage-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--indexed-usage-L6" href="#code-snippet--indexed-usage-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--indexed-usage-L7" href="#code-snippet--indexed-usage-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--indexed-usage-L8" href="#code-snippet--indexed-usage-L8" aria-label="Link to line 8" data-line="8"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">let mut</span><span style="color:#323232;"> indexed </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> Indexed {
+</span><span style="color:#323232;">    source: [</span><span style="color:#0086b3;">10</span><span style="color:#323232;">, </span><span style="color:#0086b3;">20</span><span style="color:#323232;">].</span><span style="color:#62a35c;">into_iter</span><span style="color:#323232;">(),
+</span><span style="color:#323232;">    index: </span><span style="color:#0086b3;">0</span><span style="color:#323232;">,
+</span><span style="color:#323232;">};
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">assert_eq!(indexed.</span><span style="color:#62a35c;">next</span><span style="color:#323232;">(), </span><span style="color:#0086b3;">Some</span><span style="color:#323232;">((</span><span style="color:#0086b3;">0</span><span style="color:#323232;">, </span><span style="color:#0086b3;">10</span><span style="color:#323232;">)));
+</span><span style="color:#323232;">assert_eq!(indexed.</span><span style="color:#62a35c;">next</span><span style="color:#323232;">(), </span><span style="color:#0086b3;">Some</span><span style="color:#323232;">((</span><span style="color:#0086b3;">1</span><span style="color:#323232;">, </span><span style="color:#0086b3;">20</span><span style="color:#323232;">)));
+</span><span style="color:#323232;">assert_eq!(indexed.</span><span style="color:#62a35c;">next</span><span style="color:#323232;">(), </span><span style="color:#0086b3;">None</span><span style="color:#323232;">);
+</span></code></pre></div></figure>
+<p>The state persists in these fields between calls to <code>next()</code>. The method returns each time; the next call uses the values left by the previous one.</p>
+<p>Rust's standard-library <code>Enumerate</code> stores the same two pieces of state. It also implements shortcuts for operations such as <code>nth()</code>, <code>fold()</code>, and <code>try_fold()</code>. We will come back to why those matter.<sup class="footnote-ref"><a href="#fn-fn:4">fn:4</a></sup></p>
+<details>
+<summary>A counter still has a limit</summary>
+<p>The example uses <code>usize</code>, just as <code>Enumerate</code> does. Its index can overflow on a sufficiently long sequence. The public <code>enumerate()</code> documentation says that enumeration can panic or produce an incorrect count when the counter overflows, with a panic guaranteed when overflow checks are enabled. This adapter is a model of ordinary enumeration, not an arbitrary-precision counter.<sup class="footnote-ref"><a href="#fn-fn:5">fn:5</a></sup></p>
+</details>
+<h3><a href="#prefix-sums" aria-hidden="true" class="anchor" id="prefix-sums"></a>Prefix sums</h3>
+<p>The same structure can produce prefix sums. Keep a running total alongside the source, add each incoming value, and yield the new total. For <code>3, 1, 4, 2</code>, the prefix sums are <code>3, 4, 8, 10</code>.</p>
+<figure class="code-listing" id="code-snippet--prefix-sums"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">A custom prefix-sum adapter composes with the standard enumerate() and take() adapters.</span><span class="code-actions"><a href="#code-snippet--prefix-sums" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><script type="application/json" class="code-source">"struct PrefixSums\u003cI\u003e {\n    source: I,\n    total: u64,\n}\n\nimpl\u003cI: Iterator\u003cItem = u64\u003e\u003e Iterator for PrefixSums\u003cI\u003e {\n    type Item = u64;\n\n    fn next(\u0026mut self) -\u003e Option\u003cSelf::Item\u003e {\n        self.total += self.source.next()?;\n        Some(self.total)\n    }\n}\n\nlet sums: Vec\u003c_\u003e = PrefixSums {\n    source: [3u64, 1, 4, 2].into_iter(),\n    total: 0,\n}\n.enumerate()\n.take(3)\n.collect();\n\nassert_eq!(sums, vec![(0, 3), (1, 4), (2, 8)]);\n"</script><div class="code-lines" tabindex="0" aria-label="Annotated code listing"><div class="code-rows"><div class="code-row" id="org-coderef--823cc2-1"><span class="code-line-anchor" id="code-snippet--prefix-sums-L1"></span><pre><code><span style="font-weight:bold;color:#a71d5d;">struct </span><span style="color:#323232;">PrefixSums&lt;I&gt; {
+</span></code></pre></div><div class="code-row" id="org-coderef--823cc2-2"><span class="code-line-anchor" id="code-snippet--prefix-sums-L2"></span><pre><code><span style="color:#323232;">    source: I,
+</span></code></pre></div><div class="code-row" id="org-coderef--823cc2-3"><span class="code-line-anchor" id="code-snippet--prefix-sums-L3"></span><pre><code><span style="color:#323232;">    total: </span><span style="font-weight:bold;color:#a71d5d;">u64</span><span style="color:#323232;">,
+</span></code></pre></div><div class="code-row" id="org-coderef--823cc2-4"><span class="code-line-anchor" id="code-snippet--prefix-sums-L4"></span><pre><code><span style="color:#323232;">}
+</span></code></pre></div><div class="code-row" id="org-coderef--823cc2-5"><span class="code-line-anchor" id="code-snippet--prefix-sums-L5"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row" id="org-coderef--823cc2-6"><span class="code-line-anchor" id="code-snippet--prefix-sums-L6"></span><pre><code><span style="font-weight:bold;color:#a71d5d;">impl</span><span style="color:#323232;">&lt;I: Iterator&lt;Item = </span><span style="font-weight:bold;color:#a71d5d;">u64</span><span style="color:#323232;">&gt;&gt; Iterator </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">PrefixSums&lt;I&gt; {
+</span></code></pre></div><div class="code-row" id="org-coderef--823cc2-7"><span class="code-line-anchor" id="code-snippet--prefix-sums-L7"></span><pre><code><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">type </span><span style="color:#323232;">Item </span><span style="font-weight:bold;color:#a71d5d;">= u64</span><span style="color:#323232;">;
+</span></code></pre></div><div class="code-row" id="org-coderef--823cc2-8"><span class="code-line-anchor" id="code-snippet--prefix-sums-L8"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row" id="org-coderef--823cc2-9"><span class="code-line-anchor" id="code-snippet--prefix-sums-L9"></span><pre><code><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">next</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span style="color:#323232;">self) -&gt; Option&lt;</span><span style="font-weight:bold;color:#a71d5d;">Self::</span><span style="color:#323232;">Item&gt; {
+</span></code></pre></div><div class="code-row is-highlighted" id="org-coderef--823cc2-10"><span class="code-line-anchor" id="code-snippet--prefix-sums-L10"></span><pre><code><span style="color:#323232;">        self.total </span><span style="font-weight:bold;color:#a71d5d;">+= </span><span style="color:#323232;">self.source.</span><span style="color:#62a35c;">next</span><span style="color:#323232;">()</span><span style="font-weight:bold;color:#a71d5d;">?</span><span style="color:#323232;">;
+</span></code></pre><details class="code-note"><summary aria-label="Notes for line 10">Note</summary><div class="code-explanations"><div class="code-explanation" id="org-coderef--823cc2-10-note-1"><p><strong>Update the retained total.</strong> Each successful pull adds one source value. The same field holds <code>3</code>, then <code>4</code>, then <code>8</code> as the caller advances.</p></div></div></details></div><div class="code-row" id="org-coderef--823cc2-11"><span class="code-line-anchor" id="code-snippet--prefix-sums-L11"></span><pre><code><span style="color:#323232;">        </span><span style="color:#0086b3;">Some</span><span style="color:#323232;">(self.total)
+</span></code></pre></div><div class="code-row" id="org-coderef--823cc2-12"><span class="code-line-anchor" id="code-snippet--prefix-sums-L12"></span><pre><code><span style="color:#323232;">    }
+</span></code></pre></div><div class="code-row" id="org-coderef--823cc2-13"><span class="code-line-anchor" id="code-snippet--prefix-sums-L13"></span><pre><code><span style="color:#323232;">}
+</span></code></pre></div><div class="code-row" id="org-coderef--823cc2-14"><span class="code-line-anchor" id="code-snippet--prefix-sums-L14"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row" id="org-coderef--823cc2-15"><span class="code-line-anchor" id="code-snippet--prefix-sums-L15"></span><pre><code><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> sums: Vec&lt;</span><span style="font-weight:bold;color:#a71d5d;">_</span><span style="color:#323232;">&gt; </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> PrefixSums {
+</span></code></pre></div><div class="code-row" id="org-coderef--823cc2-16"><span class="code-line-anchor" id="code-snippet--prefix-sums-L16"></span><pre><code><span style="color:#323232;">    source: [</span><span style="color:#0086b3;">3</span><span style="font-weight:bold;color:#a71d5d;">u64</span><span style="color:#323232;">, </span><span style="color:#0086b3;">1</span><span style="color:#323232;">, </span><span style="color:#0086b3;">4</span><span style="color:#323232;">, </span><span style="color:#0086b3;">2</span><span style="color:#323232;">].</span><span style="color:#62a35c;">into_iter</span><span style="color:#323232;">(),
+</span></code></pre></div><div class="code-row" id="org-coderef--823cc2-17"><span class="code-line-anchor" id="code-snippet--prefix-sums-L17"></span><pre><code><span style="color:#323232;">    total: </span><span style="color:#0086b3;">0</span><span style="color:#323232;">,
+</span></code></pre></div><div class="code-row" id="org-coderef--823cc2-18"><span class="code-line-anchor" id="code-snippet--prefix-sums-L18"></span><pre><code><span style="color:#323232;">}
+</span></code></pre></div><div class="code-row" id="org-coderef--823cc2-19"><span class="code-line-anchor" id="code-snippet--prefix-sums-L19"></span><pre><code><span style="color:#323232;">.</span><span style="color:#62a35c;">enumerate</span><span style="color:#323232;">()
+</span></code></pre></div><div class="code-row is-highlighted" id="org-coderef--823cc2-20"><span class="code-line-anchor" id="code-snippet--prefix-sums-L20"></span><pre><code><span style="color:#323232;">.</span><span style="color:#62a35c;">take</span><span style="color:#323232;">(</span><span style="color:#0086b3;">3</span><span style="color:#323232;">)
+</span></code></pre><details class="code-note"><summary aria-label="Notes for line 20">Note</summary><div class="code-explanations"><div class="code-explanation" id="org-coderef--823cc2-20-note-1"><p><strong>Let the consumer stop the work.</strong> <code>take(3)</code> stops before asking for a fourth sum. The final input, <code>2</code>, is not read by this chain.</p></div></div></details></div><div class="code-row" id="org-coderef--823cc2-21"><span class="code-line-anchor" id="code-snippet--prefix-sums-L21"></span><pre><code><span style="color:#323232;">.</span><span style="color:#62a35c;">collect</span><span style="color:#323232;">();
+</span></code></pre></div><div class="code-row" id="org-coderef--823cc2-22"><span class="code-line-anchor" id="code-snippet--prefix-sums-L22"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row" id="org-coderef--823cc2-23"><span class="code-line-anchor" id="code-snippet--prefix-sums-L23"></span><pre><code><span style="color:#323232;">assert_eq!(sums, vec![(</span><span style="color:#0086b3;">0</span><span style="color:#323232;">, </span><span style="color:#0086b3;">3</span><span style="color:#323232;">), (</span><span style="color:#0086b3;">1</span><span style="color:#323232;">, </span><span style="color:#0086b3;">4</span><span style="color:#323232;">), (</span><span style="color:#0086b3;">2</span><span style="color:#323232;">, </span><span style="color:#0086b3;">8</span><span style="color:#323232;">)]);
+</span></code></pre></div></div></div></figure>
+<p>This time the bound is narrower: the source must produce <code>u64</code> values so we can add them to the total. The adapters after it still work through <code>Iterator</code>. <code>enumerate()</code> numbers the sums, and <code>take(3)</code> stops the chain before the last input is read. Neither needs to know how <code>PrefixSums</code> maintains its total.</p>
+<p>As with the index counter, a reusable numeric adapter needs a policy for overflow. These small sums fit in <code>u64</code>. The standard library also provides <code>scan()</code>, which can express the same running total using stored state and a closure.<sup class="footnote-ref"><a href="#fn-fn:6">fn:6</a></sup></p>
+<h2><a href="#ask-for-two-matches" aria-hidden="true" class="anchor" id="ask-for-two-matches"></a>Ask for two matches</h2>
+<p>Now suppose we want the first two even values and their positions in the original input:</p>
+<figure class="code-listing" id="code-snippet--count-examined-values"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">Two results retain their original positions; inspect() counts three source values.</span><span class="code-actions"><a href="#code-snippet--count-examined-values" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--count-examined-values-L1" href="#code-snippet--count-examined-values-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--count-examined-values-L2" href="#code-snippet--count-examined-values-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--count-examined-values-L3" href="#code-snippet--count-examined-values-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--count-examined-values-L4" href="#code-snippet--count-examined-values-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--count-examined-values-L5" href="#code-snippet--count-examined-values-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--count-examined-values-L6" href="#code-snippet--count-examined-values-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--count-examined-values-L7" href="#code-snippet--count-examined-values-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--count-examined-values-L8" href="#code-snippet--count-examined-values-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--count-examined-values-L9" href="#code-snippet--count-examined-values-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--count-examined-values-L10" href="#code-snippet--count-examined-values-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-snippet--count-examined-values-L11" href="#code-snippet--count-examined-values-L11" aria-label="Link to line 11" data-line="11"></a></div><div class="code-line-reference" style="--line-offset:11"><a id="code-snippet--count-examined-values-L12" href="#code-snippet--count-examined-values-L12" aria-label="Link to line 12" data-line="12"></a></div><div class="code-line-reference" style="--line-offset:12"><a id="code-snippet--count-examined-values-L13" href="#code-snippet--count-examined-values-L13" aria-label="Link to line 13" data-line="13"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> values </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">[</span><span style="color:#0086b3;">10</span><span style="color:#323232;">, </span><span style="color:#0086b3;">11</span><span style="color:#323232;">, </span><span style="color:#0086b3;">12</span><span style="color:#323232;">, </span><span style="color:#0086b3;">13</span><span style="color:#323232;">, </span><span style="color:#0086b3;">14</span><span style="color:#323232;">];
+</span><span style="font-weight:bold;color:#a71d5d;">let mut</span><span style="color:#323232;"> examined </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#0086b3;">0</span><span style="color:#323232;">;
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> result: Vec&lt;</span><span style="font-weight:bold;color:#a71d5d;">_</span><span style="color:#323232;">&gt; </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> values
+</span><span style="color:#323232;">    .</span><span style="color:#62a35c;">into_iter</span><span style="color:#323232;">()
+</span><span style="color:#323232;">    .</span><span style="color:#62a35c;">inspect</span><span style="color:#323232;">(|_| examined </span><span style="font-weight:bold;color:#a71d5d;">+= </span><span style="color:#0086b3;">1</span><span style="color:#323232;">)
+</span><span style="color:#323232;">    .</span><span style="color:#62a35c;">enumerate</span><span style="color:#323232;">()
+</span><span style="color:#323232;">    .</span><span style="color:#62a35c;">filter</span><span style="color:#323232;">(|(_, value)| value </span><span style="font-weight:bold;color:#a71d5d;">% </span><span style="color:#0086b3;">2 </span><span style="font-weight:bold;color:#a71d5d;">== </span><span style="color:#0086b3;">0</span><span style="color:#323232;">)
+</span><span style="color:#323232;">    .</span><span style="color:#62a35c;">take</span><span style="color:#323232;">(</span><span style="color:#0086b3;">2</span><span style="color:#323232;">)
+</span><span style="color:#323232;">    .</span><span style="color:#62a35c;">collect</span><span style="color:#323232;">();
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">assert_eq!(examined, </span><span style="color:#0086b3;">3</span><span style="color:#323232;">);
+</span><span style="color:#323232;">assert_eq!(result, vec![(</span><span style="color:#0086b3;">0</span><span style="color:#323232;">, </span><span style="color:#0086b3;">10</span><span style="color:#323232;">), (</span><span style="color:#0086b3;">2</span><span style="color:#323232;">, </span><span style="color:#0086b3;">12</span><span style="color:#323232;">)]);
+</span></code></pre></div></figure>
+<p><code>enumerate()</code> produces pairs. <code>filter()</code> keeps pairs whose value is even. Its predicate borrows each item as <code>&amp;Self::Item</code> to test it; an accepted item is then passed on by value. With borrowed source items, that test adds another layer of references.<sup class="footnote-ref"><a href="#fn-fn:7">fn:7</a></sup> <code>take(2)</code> allows at most two items through, and <code>collect()</code> gathers them into a vector.</p>
+<p>It is easy to imagine a separate pass at every dot: number all five values, put the even ones somewhere, then copy the first two. These adapters can instead pass requests and values through the chain without building those intermediate collections.<sup class="footnote-ref"><a href="#fn-fn:8">fn:8</a></sup></p>
+<p>Think of asking the outer iterator for a match. It asks its source, which eventually reaches the array. The value <code>10</code> comes back with index <code>0</code>, passes the filter, and becomes the first result.</p>
+<p>The second request takes more work. <code>11</code> gets index <code>1</code> but fails the filter. The filter asks again, receives <code>(2, 12)</code>, and accepts it. Once <code>take(2)</code> has supplied two results, it stops asking the source for more.</p>
+<div id="fig-pull-trace" class="notebook-diagram">
+<p><a id="figure--fig-pull-trace-image"></a></p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/20e855abac7cbf5aae5b4727f82c23d82cea8650fdb445e13acb0799e62e3595/pull-trace.svg?v=20e855abac7cbf5a" alt="A take-filter-enumerate-source chain retains an output allowance, an even predicate, a position counter, and an input cursor. The first request accepts 10 at position 0. The second rejects 11 at position 1, then accepts 12 at position 2. Take has no outputs remaining, so 13 and 14 are not pulled."><figcaption><span class="figure-number">Figure 1: </span>Requests travel toward the source; accepted items return to the consumer. The second output needs two source reads. This is a semantic trace, not a literal optimized call graph.</figcaption></figure>
+<div class="diagram-actions">
+<p><a href="https://sekaiser.github.io/attachments/20e855abac7cbf5aae5b4727f82c23d82cea8650fdb445e13acb0799e62e3595/pull-trace.svg?v=20e855abac7cbf5a">Open the full-size diagram</a></p>
+</div>
+</div>
+<p>The last two values aren't pulled through <code>inspect()</code>. Constructing the adapter chain didn't scan the input; consuming it caused the work. The final vector has storage of its own, but there is no vector between each adapter.</p>
+<p>There is a limit to this control. Asking for one output can require examining many inputs. A filter over an infinite sequence with no matches never returns a match. Calling <code>take(2)</code> limits the number of outputs; it does not promise two source reads, a time limit, or a bounded amount of work.</p>
+<h3><a href="#does-the-order-matter" aria-hidden="true" class="anchor" id="does-the-order-matter"></a>Does the order matter?</h3>
+<p>Move <code>enumerate()</code> after the filter:</p>
+<figure class="code-listing" id="code-snippet--renumber-after-filter"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">Filtering first numbers the surviving values, not their original positions.</span><span class="code-actions"><a href="#code-snippet--renumber-after-filter" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--renumber-after-filter-L1" href="#code-snippet--renumber-after-filter-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--renumber-after-filter-L2" href="#code-snippet--renumber-after-filter-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--renumber-after-filter-L3" href="#code-snippet--renumber-after-filter-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--renumber-after-filter-L4" href="#code-snippet--renumber-after-filter-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--renumber-after-filter-L5" href="#code-snippet--renumber-after-filter-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--renumber-after-filter-L6" href="#code-snippet--renumber-after-filter-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--renumber-after-filter-L7" href="#code-snippet--renumber-after-filter-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--renumber-after-filter-L8" href="#code-snippet--renumber-after-filter-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--renumber-after-filter-L9" href="#code-snippet--renumber-after-filter-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--renumber-after-filter-L10" href="#code-snippet--renumber-after-filter-L10" aria-label="Link to line 10" data-line="10"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> values </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">[</span><span style="color:#0086b3;">10</span><span style="color:#323232;">, </span><span style="color:#0086b3;">11</span><span style="color:#323232;">, </span><span style="color:#0086b3;">12</span><span style="color:#323232;">, </span><span style="color:#0086b3;">13</span><span style="color:#323232;">, </span><span style="color:#0086b3;">14</span><span style="color:#323232;">];
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> result: Vec&lt;</span><span style="font-weight:bold;color:#a71d5d;">_</span><span style="color:#323232;">&gt; </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> values
+</span><span style="color:#323232;">    .</span><span style="color:#62a35c;">into_iter</span><span style="color:#323232;">()
+</span><span style="color:#323232;">    .</span><span style="color:#62a35c;">filter</span><span style="color:#323232;">(|value| value </span><span style="font-weight:bold;color:#a71d5d;">% </span><span style="color:#0086b3;">2 </span><span style="font-weight:bold;color:#a71d5d;">== </span><span style="color:#0086b3;">0</span><span style="color:#323232;">)
+</span><span style="color:#323232;">    .</span><span style="color:#62a35c;">enumerate</span><span style="color:#323232;">()
+</span><span style="color:#323232;">    .</span><span style="color:#62a35c;">take</span><span style="color:#323232;">(</span><span style="color:#0086b3;">2</span><span style="color:#323232;">)
+</span><span style="color:#323232;">    .</span><span style="color:#62a35c;">collect</span><span style="color:#323232;">();
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">assert_eq!(result, vec![(</span><span style="color:#0086b3;">0</span><span style="color:#323232;">, </span><span style="color:#0086b3;">10</span><span style="color:#323232;">), (</span><span style="color:#0086b3;">1</span><span style="color:#323232;">, </span><span style="color:#0086b3;">12</span><span style="color:#323232;">)]);
+</span></code></pre></div></figure>
+<p>Now <code>12</code> has index <code>1</code>. Only the surviving values reach the counter. In a diagnostic tool, that could turn an original record position into a match number. Both are useful, but we need to choose which one we mean.</p>
+<h2><a href="#keep-records-in-place" aria-hidden="true" class="anchor" id="keep-records-in-place"></a>Keep the records where they are</h2>
+<p>Numbering works the same way whether the source produces owned values or references. The difference travels through <code>Item</code>:</p>
+<table>
+<tr>
+<th>Expression</th>
+<th>Item type</th>
+<th>What the loop receives</th>
+</tr>
+<tr>
+<td><code>names.iter()</code></td>
+<td><code>&amp;String</code></td>
+<td>A shared reference to each string</td>
+</tr>
+<tr>
+<td><code>names.iter_mut()</code></td>
+<td><code>&amp;mut String</code></td>
+<td>An exclusive reference to each string</td>
+</tr>
+<tr>
+<td><code>names.into_iter()</code></td>
+<td><code>String</code></td>
+<td>Ownership of each string from this vector</td>
+</tr>
+</table>
+<p>Here are all three with the same adapter:</p>
+<figure class="code-listing" id="code-snippet--ownership-modes"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">The first two loops borrow the vector; the last consumes it.</span><span class="code-actions"><a href="#code-snippet--ownership-modes" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--ownership-modes-L1" href="#code-snippet--ownership-modes-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--ownership-modes-L2" href="#code-snippet--ownership-modes-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--ownership-modes-L3" href="#code-snippet--ownership-modes-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--ownership-modes-L4" href="#code-snippet--ownership-modes-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--ownership-modes-L5" href="#code-snippet--ownership-modes-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--ownership-modes-L6" href="#code-snippet--ownership-modes-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--ownership-modes-L7" href="#code-snippet--ownership-modes-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--ownership-modes-L8" href="#code-snippet--ownership-modes-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--ownership-modes-L9" href="#code-snippet--ownership-modes-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--ownership-modes-L10" href="#code-snippet--ownership-modes-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-snippet--ownership-modes-L11" href="#code-snippet--ownership-modes-L11" aria-label="Link to line 11" data-line="11"></a></div><div class="code-line-reference" style="--line-offset:11"><a id="code-snippet--ownership-modes-L12" href="#code-snippet--ownership-modes-L12" aria-label="Link to line 12" data-line="12"></a></div><div class="code-line-reference" style="--line-offset:12"><a id="code-snippet--ownership-modes-L13" href="#code-snippet--ownership-modes-L13" aria-label="Link to line 13" data-line="13"></a></div><div class="code-line-reference" style="--line-offset:13"><a id="code-snippet--ownership-modes-L14" href="#code-snippet--ownership-modes-L14" aria-label="Link to line 14" data-line="14"></a></div><div class="code-line-reference" style="--line-offset:14"><a id="code-snippet--ownership-modes-L15" href="#code-snippet--ownership-modes-L15" aria-label="Link to line 15" data-line="15"></a></div><div class="code-line-reference" style="--line-offset:15"><a id="code-snippet--ownership-modes-L16" href="#code-snippet--ownership-modes-L16" aria-label="Link to line 16" data-line="16"></a></div><div class="code-line-reference" style="--line-offset:16"><a id="code-snippet--ownership-modes-L17" href="#code-snippet--ownership-modes-L17" aria-label="Link to line 17" data-line="17"></a></div><div class="code-line-reference" style="--line-offset:17"><a id="code-snippet--ownership-modes-L18" href="#code-snippet--ownership-modes-L18" aria-label="Link to line 18" data-line="18"></a></div><div class="code-line-reference" style="--line-offset:18"><a id="code-snippet--ownership-modes-L19" href="#code-snippet--ownership-modes-L19" aria-label="Link to line 19" data-line="19"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">let mut</span><span style="color:#323232;"> names </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">vec![
+</span><span style="color:#323232;">    </span><span style="color:#0086b3;">String</span><span style="color:#323232;">::from(</span><span style="color:#183691;">&quot;Alice&quot;</span><span style="color:#323232;">),
+</span><span style="color:#323232;">    </span><span style="color:#0086b3;">String</span><span style="color:#323232;">::from(</span><span style="color:#183691;">&quot;Bob&quot;</span><span style="color:#323232;">),
+</span><span style="color:#323232;">];
+</span><span style="color:#323232;">
+</span><span style="font-style:italic;color:#969896;">// Borrow the elements.
+</span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">(i, name) </span><span style="font-weight:bold;color:#a71d5d;">in</span><span style="color:#323232;"> names.</span><span style="color:#62a35c;">iter</span><span style="color:#323232;">().</span><span style="color:#62a35c;">enumerate</span><span style="color:#323232;">() {
+</span><span style="color:#323232;">    println!(</span><span style="color:#183691;">&quot;</span><span style="color:#0086b3;">{i}</span><span style="color:#183691;">: </span><span style="color:#0086b3;">{name}</span><span style="color:#183691;">&quot;</span><span style="color:#323232;">);
+</span><span style="color:#323232;">}
+</span><span style="color:#323232;">
+</span><span style="font-style:italic;color:#969896;">// Mutably borrow the elements.
+</span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">_</span><span style="color:#323232;">, name) </span><span style="font-weight:bold;color:#a71d5d;">in</span><span style="color:#323232;"> names.</span><span style="color:#62a35c;">iter_mut</span><span style="color:#323232;">().</span><span style="color:#62a35c;">enumerate</span><span style="color:#323232;">() {
+</span><span style="color:#323232;">    name.</span><span style="color:#62a35c;">push</span><span style="color:#323232;">(</span><span style="color:#183691;">&#39;!&#39;</span><span style="color:#323232;">);
+</span><span style="color:#323232;">}
+</span><span style="color:#323232;">
+</span><span style="font-style:italic;color:#969896;">// Transfer ownership of the elements.
+</span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">(i, name) </span><span style="font-weight:bold;color:#a71d5d;">in</span><span style="color:#323232;"> names.</span><span style="color:#62a35c;">into_iter</span><span style="color:#323232;">().</span><span style="color:#62a35c;">enumerate</span><span style="color:#323232;">() {
+</span><span style="color:#323232;">    println!(</span><span style="color:#183691;">&quot;</span><span style="color:#0086b3;">{i}</span><span style="color:#183691;">: </span><span style="color:#0086b3;">{name}</span><span style="color:#183691;">&quot;</span><span style="color:#323232;">);
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<p>The last loop moves the strings out of the vector. It doesn't clone their contents, and we cannot use <code>names</code> afterward as though it still owned them. In the earlier loops, Rust checks that uses of the references respect their lifetimes and exclusive access requirements.<sup class="footnote-ref"><a href="#fn-fn:9">fn:9</a></sup></p>
+<p><code>enumerate()</code> doesn't need separate code for each case. Its pair contains <code>I::Item</code>, whatever that happens to be. It adds a counter while leaving the ownership relationship intact.</p>
+<p>Ownership also determines cleanup. When we drop an adapter, its owned fields are dropped too, including the source iterator and any closure state. If a chain consumes a vector with <code>into_iter()</code>, dropping it also drops the vector iterator's unconsumed elements. A chain built with <code>iter()</code> only borrows the vector; dropping that chain leaves the elements in place.<sup class="footnote-ref"><a href="#fn-fn:10">fn:10</a></sup> Early termination stops further pulls, but cleanup can still do work.</p>
+<h3><a href="#a-borrowed-telemetry-query" aria-hidden="true" class="anchor" id="a-borrowed-telemetry-query"></a>A borrowed telemetry query</h3>
+<p>Consider readings already loaded into a buffer. We want unverified readings above a latency threshold, with their original positions. We can offer that search without copying matching records into another collection:</p>
+<figure class="code-listing" id="code-snippet--suspicious-readings"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">Returning a borrowed iterator lets the caller choose how many matches to inspect.</span><span class="code-actions"><a href="#code-snippet--suspicious-readings" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><script type="application/json" class="code-source">"#[derive(Debug)]\nstruct Reading {\n    device_id: u64,\n    latency_ms: u32,\n    verified: bool,\n}\n\nfn suspicious\u003c'a\u003e(\n    readings: \u0026'a [Reading],\n    threshold_ms: u32,\n) -\u003e impl Iterator\u003cItem = (usize, \u0026'a Reading)\u003e + 'a {\n    readings\n        .iter()\n        .enumerate()\n        .filter(move |(_, reading)| {\n            reading.latency_ms \u003e threshold_ms\n                \u0026\u0026 !reading.verified\n        })\n}\n"</script><div class="code-lines" tabindex="0" aria-label="Annotated code listing"><div class="code-rows"><div class="code-row" id="org-coderef--9a023f-1"><span class="code-line-anchor" id="code-snippet--suspicious-readings-L1"></span><pre><code><span style="color:#323232;">#[derive(Debug)]
+</span></code></pre></div><div class="code-row" id="org-coderef--9a023f-2"><span class="code-line-anchor" id="code-snippet--suspicious-readings-L2"></span><pre><code><span style="font-weight:bold;color:#a71d5d;">struct </span><span style="color:#323232;">Reading {
+</span></code></pre></div><div class="code-row" id="org-coderef--9a023f-3"><span class="code-line-anchor" id="code-snippet--suspicious-readings-L3"></span><pre><code><span style="color:#323232;">    device_id: </span><span style="font-weight:bold;color:#a71d5d;">u64</span><span style="color:#323232;">,
+</span></code></pre></div><div class="code-row" id="org-coderef--9a023f-4"><span class="code-line-anchor" id="code-snippet--suspicious-readings-L4"></span><pre><code><span style="color:#323232;">    latency_ms: </span><span style="font-weight:bold;color:#a71d5d;">u32</span><span style="color:#323232;">,
+</span></code></pre></div><div class="code-row" id="org-coderef--9a023f-5"><span class="code-line-anchor" id="code-snippet--suspicious-readings-L5"></span><pre><code><span style="color:#323232;">    verified: </span><span style="font-weight:bold;color:#a71d5d;">bool</span><span style="color:#323232;">,
+</span></code></pre></div><div class="code-row" id="org-coderef--9a023f-6"><span class="code-line-anchor" id="code-snippet--suspicious-readings-L6"></span><pre><code><span style="color:#323232;">}
+</span></code></pre></div><div class="code-row" id="org-coderef--9a023f-7"><span class="code-line-anchor" id="code-snippet--suspicious-readings-L7"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row" id="org-coderef--9a023f-8"><span class="code-line-anchor" id="code-snippet--suspicious-readings-L8"></span><pre><code><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">suspicious</span><span style="color:#323232;">&lt;</span><span style="font-weight:bold;color:#a71d5d;">&#39;a</span><span style="color:#323232;">&gt;(
+</span></code></pre></div><div class="code-row" id="org-coderef--9a023f-9"><span class="code-line-anchor" id="code-snippet--suspicious-readings-L9"></span><pre><code><span style="color:#323232;">    readings: </span><span style="font-weight:bold;color:#a71d5d;">&amp;&#39;a</span><span style="color:#323232;"> [Reading],
+</span></code></pre></div><div class="code-row" id="org-coderef--9a023f-10"><span class="code-line-anchor" id="code-snippet--suspicious-readings-L10"></span><pre><code><span style="color:#323232;">    threshold_ms: </span><span style="font-weight:bold;color:#a71d5d;">u32</span><span style="color:#323232;">,
+</span></code></pre></div><div class="code-row is-highlighted" id="org-coderef--9a023f-11"><span class="code-line-anchor" id="code-snippet--suspicious-readings-L11"></span><pre><code><span style="color:#323232;">) -&gt; impl Iterator&lt;Item = (</span><span style="font-weight:bold;color:#a71d5d;">usize</span><span style="color:#323232;">, </span><span style="font-weight:bold;color:#a71d5d;">&amp;&#39;a</span><span style="color:#323232;"> Reading)&gt; </span><span style="font-weight:bold;color:#a71d5d;">+ &#39;a </span><span style="color:#323232;">{
+</span></code></pre><details class="code-note"><summary aria-label="Notes for line 11">Note</summary><div class="code-explanations"><div class="code-explanation" id="org-coderef--9a023f-11-note-1"><p><strong>Borrow from the caller's buffer.</strong> The yielded <code>&amp;'a Reading</code> points into <code>readings</code>. Returning this iterator does not copy the records or extend the input's lifetime.</p></div></div></details></div><div class="code-row" id="org-coderef--9a023f-12"><span class="code-line-anchor" id="code-snippet--suspicious-readings-L12"></span><pre><code><span style="color:#323232;">    readings
+</span></code></pre></div><div class="code-row" id="org-coderef--9a023f-13"><span class="code-line-anchor" id="code-snippet--suspicious-readings-L13"></span><pre><code><span style="color:#323232;">        .</span><span style="color:#62a35c;">iter</span><span style="color:#323232;">()
+</span></code></pre></div><div class="code-row" id="org-coderef--9a023f-14"><span class="code-line-anchor" id="code-snippet--suspicious-readings-L14"></span><pre><code><span style="color:#323232;">        .</span><span style="color:#62a35c;">enumerate</span><span style="color:#323232;">()
+</span></code></pre></div><div class="code-row is-highlighted" id="org-coderef--9a023f-15"><span class="code-line-anchor" id="code-snippet--suspicious-readings-L15"></span><pre><code><span style="color:#323232;">        .</span><span style="color:#62a35c;">filter</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">move |</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">_</span><span style="color:#323232;">, reading)</span><span style="font-weight:bold;color:#a71d5d;">| </span><span style="color:#323232;">{
+</span></code></pre><details class="code-note"><summary aria-label="Notes for line 15">Note</summary><div class="code-explanations"><div class="code-explanation" id="org-coderef--9a023f-15-note-1"><p><strong>Keep the threshold with the predicate.</strong> <code>move</code> captures <code>threshold_ms</code> by value. Since <code>u32</code> is <code>Copy</code>, the closure keeps a copy; the source iterator still borrows the readings.</p></div></div></details></div><div class="code-row" id="org-coderef--9a023f-16"><span class="code-line-anchor" id="code-snippet--suspicious-readings-L16"></span><pre><code><span style="color:#323232;">            reading.latency_ms </span><span style="font-weight:bold;color:#a71d5d;">&gt;</span><span style="color:#323232;"> threshold_ms
+</span></code></pre></div><div class="code-row" id="org-coderef--9a023f-17"><span class="code-line-anchor" id="code-snippet--suspicious-readings-L17"></span><pre><code><span style="color:#323232;">                </span><span style="font-weight:bold;color:#a71d5d;">&amp;&amp; !</span><span style="color:#323232;">reading.verified
+</span></code></pre></div><div class="code-row" id="org-coderef--9a023f-18"><span class="code-line-anchor" id="code-snippet--suspicious-readings-L18"></span><pre><code><span style="color:#323232;">        })
+</span></code></pre></div><div class="code-row" id="org-coderef--9a023f-19"><span class="code-line-anchor" id="code-snippet--suspicious-readings-L19"></span><pre><code><span style="color:#323232;">}
+</span></code></pre></div></div></div></figure>
+<details class="notebook-example">
+<summary>Inspect the sample readings and call site</summary>
+<figure class="code-listing" id="code-snippet--suspicious-readings-example"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">Use this main() with Reading and suspicious() above.</span><span class="code-actions"><a href="#code-snippet--suspicious-readings-example" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><script type="application/json" class="code-source">"fn main() {\n    let readings = [\n        Reading {\n            device_id: 101,\n            latency_ms: 150,\n            verified: true,\n        },\n        Reading {\n            device_id: 102,\n            latency_ms: 400,\n            verified: false,\n        },\n        Reading {\n            device_id: 103,\n            latency_ms: 350,\n            verified: false,\n        },\n    ];\n\n    for (index, reading) in suspicious(\u0026readings, 250).take(2) {\n        println!(\"{index}: {reading:?}\");\n    }\n}\n"</script><div class="code-lines" tabindex="0" aria-label="Annotated code listing"><div class="code-rows"><div class="code-row" id="org-coderef--f5985e-1"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L1"></span><pre><code><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">main</span><span style="color:#323232;">() {
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-2"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L2"></span><pre><code><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> readings </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">[
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-3"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L3"></span><pre><code><span style="color:#323232;">        Reading {
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-4"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L4"></span><pre><code><span style="color:#323232;">            device_id: </span><span style="color:#0086b3;">101</span><span style="color:#323232;">,
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-5"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L5"></span><pre><code><span style="color:#323232;">            latency_ms: </span><span style="color:#0086b3;">150</span><span style="color:#323232;">,
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-6"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L6"></span><pre><code><span style="color:#323232;">            verified: </span><span style="color:#0086b3;">true</span><span style="color:#323232;">,
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-7"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L7"></span><pre><code><span style="color:#323232;">        },
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-8"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L8"></span><pre><code><span style="color:#323232;">        Reading {
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-9"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L9"></span><pre><code><span style="color:#323232;">            device_id: </span><span style="color:#0086b3;">102</span><span style="color:#323232;">,
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-10"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L10"></span><pre><code><span style="color:#323232;">            latency_ms: </span><span style="color:#0086b3;">400</span><span style="color:#323232;">,
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-11"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L11"></span><pre><code><span style="color:#323232;">            verified: </span><span style="color:#0086b3;">false</span><span style="color:#323232;">,
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-12"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L12"></span><pre><code><span style="color:#323232;">        },
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-13"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L13"></span><pre><code><span style="color:#323232;">        Reading {
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-14"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L14"></span><pre><code><span style="color:#323232;">            device_id: </span><span style="color:#0086b3;">103</span><span style="color:#323232;">,
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-15"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L15"></span><pre><code><span style="color:#323232;">            latency_ms: </span><span style="color:#0086b3;">350</span><span style="color:#323232;">,
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-16"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L16"></span><pre><code><span style="color:#323232;">            verified: </span><span style="color:#0086b3;">false</span><span style="color:#323232;">,
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-17"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L17"></span><pre><code><span style="color:#323232;">        },
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-18"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L18"></span><pre><code><span style="color:#323232;">    ];
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-19"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L19"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row is-highlighted" id="org-coderef--f5985e-20"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L20"></span><pre><code><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">(index, reading) </span><span style="font-weight:bold;color:#a71d5d;">in </span><span style="color:#62a35c;">suspicious</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">readings, </span><span style="color:#0086b3;">250</span><span style="color:#323232;">).</span><span style="color:#62a35c;">take</span><span style="color:#323232;">(</span><span style="color:#0086b3;">2</span><span style="color:#323232;">) {
+</span></code></pre><details class="code-note"><summary aria-label="Notes for line 20">Note</summary><div class="code-explanations"><div class="code-explanation" id="org-coderef--f5985e-20-note-1"><p><strong>Choose how many matches to inspect.</strong> The first reading is verified and excluded. This call prints the entries at positions <code>1</code> and <code>2</code> without collecting them into a new vector.</p></div></div></details></div><div class="code-row" id="org-coderef--f5985e-21"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L21"></span><pre><code><span style="color:#323232;">        println!(</span><span style="color:#183691;">&quot;</span><span style="color:#0086b3;">{index}</span><span style="color:#183691;">: </span><span style="color:#0086b3;">{reading:?}</span><span style="color:#183691;">&quot;</span><span style="color:#323232;">);
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-22"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L22"></span><pre><code><span style="color:#323232;">    }
+</span></code></pre></div><div class="code-row" id="org-coderef--f5985e-23"><span class="code-line-anchor" id="code-snippet--suspicious-readings-example-L23"></span><pre><code><span style="color:#323232;">}
+</span></code></pre></div></div></div></figure>
+</details>
+<p>The function describes how to find a reading. Its caller can ask for two, find the first, or count every match. Returning an iterator keeps that choice open.</p>
+<p>The lifetime label <code>'a</code> ties the references in the results to the borrowed input. It doesn't extend the life of the buffer or copy it somewhere safe. If a caller tries to keep using the search after the readings have gone away, the program fails to compile.</p>
+<p>The <code>move</code> keyword makes the closure capture <code>threshold_ms</code> by value. Because <code>u32</code> implements <code>Copy</code>, the closure stores a copy of the threshold instead of borrowing the function's local variable. The readings remain borrowed through the source iterator.<sup class="footnote-ref"><a href="#fn-fn:11">fn:11</a></sup></p>
+<h3><a href="#keep-a-result-while-asking-for-another" aria-hidden="true" class="anchor" id="keep-a-result-while-asking-for-another"></a>Keep a result while asking for another</h3>
+<p>Using the same readings, we can retain two matches and drop the search before using them:</p>
+<figure class="code-listing" id="code-snippet--retained-readings"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">Returned references remain usable after the iterator is dropped, while the readings stay valid.</span><span class="code-actions"><a href="#code-snippet--retained-readings" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><script type="application/json" class="code-source">"let mut matches = suspicious(\u0026readings, 250);\n\nlet first = matches.next().expect(\"first matching reading\");\nlet second = matches.next().expect(\"second matching reading\");\n\ndrop(matches);\n\nprintln!(\"{first:?}\");\nprintln!(\"{second:?}\");\n"</script><div class="code-lines" tabindex="0" aria-label="Annotated code listing"><div class="code-rows"><div class="code-row" id="org-coderef--dc2b37-1"><span class="code-line-anchor" id="code-snippet--retained-readings-L1"></span><pre><code><span style="font-weight:bold;color:#a71d5d;">let mut</span><span style="color:#323232;"> matches </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#62a35c;">suspicious</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">readings, </span><span style="color:#0086b3;">250</span><span style="color:#323232;">);
+</span></code></pre></div><div class="code-row" id="org-coderef--dc2b37-2"><span class="code-line-anchor" id="code-snippet--retained-readings-L2"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row is-highlighted" id="org-coderef--dc2b37-3"><span class="code-line-anchor" id="code-snippet--retained-readings-L3"></span><pre><code><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> first </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> matches.</span><span style="color:#62a35c;">next</span><span style="color:#323232;">().</span><span style="color:#62a35c;">expect</span><span style="color:#323232;">(</span><span style="color:#183691;">&quot;first matching reading&quot;</span><span style="color:#323232;">);
+</span></code></pre><details class="code-note"><summary aria-label="Notes for line 3">Note</summary><div class="code-explanations"><div class="code-explanation" id="org-coderef--dc2b37-3-note-1"><p><strong>Keep a result while advancing.</strong> <code>first</code> borrows a reading in the input buffer. It does not retain the temporary mutable borrow used to advance <code>matches</code>, so the next call is allowed.</p></div></div></details></div><div class="code-row" id="org-coderef--dc2b37-4"><span class="code-line-anchor" id="code-snippet--retained-readings-L4"></span><pre><code><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> second </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> matches.</span><span style="color:#62a35c;">next</span><span style="color:#323232;">().</span><span style="color:#62a35c;">expect</span><span style="color:#323232;">(</span><span style="color:#183691;">&quot;second matching reading&quot;</span><span style="color:#323232;">);
+</span></code></pre></div><div class="code-row" id="org-coderef--dc2b37-5"><span class="code-line-anchor" id="code-snippet--retained-readings-L5"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row is-highlighted" id="org-coderef--dc2b37-6"><span class="code-line-anchor" id="code-snippet--retained-readings-L6"></span><pre><code><span style="color:#62a35c;">drop</span><span style="color:#323232;">(matches);
+</span></code></pre><details class="code-note"><summary aria-label="Notes for line 6">Note</summary><div class="code-explanations"><div class="code-explanation" id="org-coderef--dc2b37-6-note-1"><p><strong>Drop the search, keep the references.</strong> The iterator owns its adapter state, but only borrows the readings. Destroying that state does not destroy the caller's buffer.</p></div></div></details></div><div class="code-row" id="org-coderef--dc2b37-7"><span class="code-line-anchor" id="code-snippet--retained-readings-L7"></span><pre><code><span style="color:#323232;">
+</span></code></pre></div><div class="code-row" id="org-coderef--dc2b37-8"><span class="code-line-anchor" id="code-snippet--retained-readings-L8"></span><pre><code><span style="color:#323232;">println!(</span><span style="color:#183691;">&quot;</span><span style="color:#0086b3;">{first:?}</span><span style="color:#183691;">&quot;</span><span style="color:#323232;">);
+</span></code></pre></div><div class="code-row" id="org-coderef--dc2b37-9"><span class="code-line-anchor" id="code-snippet--retained-readings-L9"></span><pre><code><span style="color:#323232;">println!(</span><span style="color:#183691;">&quot;</span><span style="color:#0086b3;">{second:?}</span><span style="color:#183691;">&quot;</span><span style="color:#323232;">);
+</span></code></pre></div></div></div></figure>
+<p>Each call briefly borrows the iterator mutably so it can advance. The returned references borrow <code>readings</code>, not the iterator object. Holding the first result doesn't keep that call's mutable borrow of the iterator open, so we can ask for another. Dropping the iterator leaves both references usable as long as the underlying readings remain valid.<sup class="footnote-ref"><a href="#fn-fn:12">fn:12</a></sup></p>
+<p>The signature separates these lifetimes. <code>Item</code> is fixed for the iterator type; it isn't parameterized by the temporary borrow of each <code>next()</code> call. In this search it contains <code>&amp;'a Reading</code>, with <code>'a</code> tied to the input slice. A mutable iterator must also make it safe to retain several results, for example by yielding references to distinct elements.</p>
+<p>That is a limit on what ordinary <code>Iterator</code> can express. It cannot generally lend out a reference into its own scratch buffer and then overwrite that buffer on the next call while the reference is still in use. Such an API needs a different ownership arrangement, or a lending-style contract that ties each result to the call's borrow. We don't need that here: the caller already owns the buffer.</p>
+<p><code>impl Iterator</code> hides a concrete return type that would be awkward to write out. The compiler still knows that type, including the closure and the wrapped iterators. Returning it this way does not introduce a boxed object or a virtual method call.<sup class="footnote-ref"><a href="#fn-fn:13">fn:13</a></sup></p>
+<h2><a href="#choosing-dispatch" aria-hidden="true" class="anchor" id="choosing-dispatch"></a>Static and dynamic dispatch</h2>
+<p>The trait tells us what an iterator can do. Rust lets us choose how a call reaches the implementation. Here are two functions asking for the same thing:</p>
+<figure class="notebook-comparison notebook-comparison--code" id="code-snippet--dispatch-comparison" aria-labelledby="dispatch-comparison-title">
+<figcaption id="dispatch-comparison-title">
+<span class="comparison-title">Two ways to call next()</span>
+<span class="comparison-description">Both functions borrow an existing iterator. The dynamic version uses a trait object.</span>
+</figcaption>
+<div class="comparison-panels">
+<div class="comparison-panel">
+<h3 class="comparison-label">Static dispatch</h3>
+<figure class="code-listing" id="code-snippet--static-dispatch"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">A concrete generic parameter.</span><span class="code-actions"><a href="#code-snippet--static-dispatch" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference is-highlighted" style="--line-offset:0"><a id="code-snippet--static-dispatch-L1" href="#code-snippet--static-dispatch-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--static-dispatch-L2" href="#code-snippet--static-dispatch-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--static-dispatch-L3" href="#code-snippet--static-dispatch-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--static-dispatch-L4" href="#code-snippet--static-dispatch-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--static-dispatch-L5" href="#code-snippet--static-dispatch-L5" aria-label="Link to line 5" data-line="5"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">next_static</span><span style="color:#323232;">&lt;I: Iterator&lt;Item = </span><span style="font-weight:bold;color:#a71d5d;">u64</span><span style="color:#323232;">&gt;&gt;(
+</span><span style="color:#323232;">    source: </span><span style="font-weight:bold;color:#a71d5d;">&amp;mut</span><span style="color:#323232;"> I,
+</span><span style="color:#323232;">) -&gt; Option&lt;</span><span style="font-weight:bold;color:#a71d5d;">u64</span><span style="color:#323232;">&gt; {
+</span><span style="color:#323232;">    source.</span><span style="color:#62a35c;">next</span><span style="color:#323232;">()
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<p>The compiler can specialize the function for the concrete iterator type.</p>
+</div>
+<div class="comparison-panel">
+<h3 class="comparison-label">Dynamic dispatch</h3>
+<figure class="code-listing" id="code-snippet--dynamic-dispatch"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">A borrowed trait object.</span><span class="code-actions"><a href="#code-snippet--dynamic-dispatch" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--dynamic-dispatch-L1" href="#code-snippet--dynamic-dispatch-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference is-highlighted" style="--line-offset:1"><a id="code-snippet--dynamic-dispatch-L2" href="#code-snippet--dynamic-dispatch-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--dynamic-dispatch-L3" href="#code-snippet--dynamic-dispatch-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--dynamic-dispatch-L4" href="#code-snippet--dynamic-dispatch-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--dynamic-dispatch-L5" href="#code-snippet--dynamic-dispatch-L5" aria-label="Link to line 5" data-line="5"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">next_dynamic</span><span style="color:#323232;">(
+</span><span style="color:#323232;">    source: </span><span style="font-weight:bold;color:#a71d5d;">&amp;mut</span><span style="color:#323232;"> dyn Iterator&lt;Item = </span><span style="font-weight:bold;color:#a71d5d;">u64</span><span style="color:#323232;">&gt;,
+</span><span style="color:#323232;">) -&gt; Option&lt;</span><span style="font-weight:bold;color:#a71d5d;">u64</span><span style="color:#323232;">&gt; {
+</span><span style="color:#323232;">    source.</span><span style="color:#62a35c;">next</span><span style="color:#323232;">()
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<p>The trait-object reference supplies the vtable metadata used to find the method.</p>
+</div>
+</div>
+</figure>
+<p>With <code>next_static</code>, the compiler knows the concrete <code>I</code> and can specialize the function for it. This is <em>static dispatch</em>.<sup class="footnote-ref"><a href="#fn-fn:14">fn:14</a></sup> With <code>next_dynamic</code>, the function accepts a <em>trait object</em>. Its reference carries a pointer to the iterator state and vtable metadata used to find the method at runtime. This is <em>dynamic dispatch</em>.<sup class="footnote-ref"><a href="#fn-fn:15">fn:15</a></sup></p>
+<p>The iterator still holds its state in either case. Dispatch changes how we reach the method, not who drives the sequence or whether it is lazy.</p>
+<p>Notice that <code>next_dynamic</code> borrows an iterator. It doesn't allocate one. We can pass a reference to an iterator already stored in a local variable. Heap allocation and dynamic dispatch are separate choices.</p>
+<p>For our telemetry query, each adapter and closure has a concrete type. <code>suspicious()</code> returns the resulting chain through <code>impl Iterator</code>, which hides its name without erasing that type. The compiler keeps the information needed to specialize calls and consider inlining them.<sup class="footnote-ref"><a href="#fn-fn:13">fn:13</a></sup> We haven't needed a runtime choice of implementation between stages.</p>
+<p>A concrete wrapper can still contain a dynamically dispatched iterator. Adding <code>take()</code> around a trait object doesn't make calls to that underlying source static.</p>
+<details>
+<summary>When would a boxed iterator be useful?</summary>
+<p>Suppose a query can return every value or only even ones, depending on a setting read at runtime:</p>
+<figure class="code-listing" id="code-snippet--runtime-iterator-choice"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">Two concrete iterator types share one boxed return type, while the input remains borrowed.</span><span class="code-actions"><a href="#code-snippet--runtime-iterator-choice" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--runtime-iterator-choice-L1" href="#code-snippet--runtime-iterator-choice-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--runtime-iterator-choice-L2" href="#code-snippet--runtime-iterator-choice-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--runtime-iterator-choice-L3" href="#code-snippet--runtime-iterator-choice-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--runtime-iterator-choice-L4" href="#code-snippet--runtime-iterator-choice-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--runtime-iterator-choice-L5" href="#code-snippet--runtime-iterator-choice-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--runtime-iterator-choice-L6" href="#code-snippet--runtime-iterator-choice-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--runtime-iterator-choice-L7" href="#code-snippet--runtime-iterator-choice-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--runtime-iterator-choice-L8" href="#code-snippet--runtime-iterator-choice-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--runtime-iterator-choice-L9" href="#code-snippet--runtime-iterator-choice-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--runtime-iterator-choice-L10" href="#code-snippet--runtime-iterator-choice-L10" aria-label="Link to line 10" data-line="10"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">choose_values</span><span style="color:#323232;">&lt;</span><span style="font-weight:bold;color:#a71d5d;">&#39;a</span><span style="color:#323232;">&gt;(
+</span><span style="color:#323232;">    values: </span><span style="font-weight:bold;color:#a71d5d;">&amp;&#39;a</span><span style="color:#323232;"> [</span><span style="font-weight:bold;color:#a71d5d;">u64</span><span style="color:#323232;">],
+</span><span style="color:#323232;">    only_even: </span><span style="font-weight:bold;color:#a71d5d;">bool</span><span style="color:#323232;">,
+</span><span style="color:#323232;">) -&gt; Box&lt;dyn Iterator&lt;Item = </span><span style="font-weight:bold;color:#a71d5d;">u64</span><span style="color:#323232;">&gt; </span><span style="font-weight:bold;color:#a71d5d;">+ &#39;a</span><span style="color:#323232;">&gt; {
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">if</span><span style="color:#323232;"> only_even {
+</span><span style="color:#323232;">        </span><span style="color:#0086b3;">Box</span><span style="color:#323232;">::new(values.</span><span style="color:#62a35c;">iter</span><span style="color:#323232;">().</span><span style="color:#62a35c;">copied</span><span style="color:#323232;">().</span><span style="color:#62a35c;">filter</span><span style="color:#323232;">(|x| x </span><span style="font-weight:bold;color:#a71d5d;">% </span><span style="color:#0086b3;">2 </span><span style="font-weight:bold;color:#a71d5d;">== </span><span style="color:#0086b3;">0</span><span style="color:#323232;">))
+</span><span style="color:#323232;">    } </span><span style="font-weight:bold;color:#a71d5d;">else </span><span style="color:#323232;">{
+</span><span style="color:#323232;">        </span><span style="color:#0086b3;">Box</span><span style="color:#323232;">::new(values.</span><span style="color:#62a35c;">iter</span><span style="color:#323232;">().</span><span style="color:#62a35c;">copied</span><span style="color:#323232;">())
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<p>The branches construct different types: one includes a filter and the other doesn't. <code>Box&lt;dyn Iterator&lt;Item = u64&gt; + 'a&gt;</code> gives them a common return type. The box owns the iterator state; the slice remains borrowed. The lifetime bound keeps that borrow valid, and <code>Item = u64</code> tells callers what either implementation produces.</p>
+<p>A plain <code>impl Iterator</code> return cannot hide a different concrete type in each branch. For this particular condition we could instead use one filter with a configurable predicate. An enum could also represent a fixed set of alternatives. A trait object becomes useful when we want a common interface without making that set part of its type.</p>
+<p>Here the box supplies owned heap storage for the iterator, not a newly allocated record on every call. The earlier <code>&amp;mut dyn Iterator</code> example supplies dynamic dispatch without that storage choice. Both retain the usual ownership and borrowing checks.</p>
+<p>Static specialization can increase generated code size and compilation work when many concrete types use the same generic code. Dynamic dispatch can let a consumer share one implementation across those types. An indirect call may make inlining harder, although the optimizer can sometimes recover the target. If this trade-off matters to the application, it needs measurement.<sup class="footnote-ref"><a href="#fn-fn:14">fn:14</a></sup><sup>, </sup><sup class="footnote-ref"><a href="#fn-fn:16">fn:16</a></sup></p>
+</details>
+<details>
+<summary>Which iterator methods can a trait object call?</summary>
+<p>Traits must satisfy Rust's <em>dyn compatibility</em> rules to support trait objects. <code>Iterator</code> does, once we specify its associated <code>Item</code> type. Its <code>next()</code> method can be called through the vtable. Many generic adapter and consumer methods instead require <code>Self: Sized</code>, which excludes those methods from the dynamically callable interface.<sup class="footnote-ref"><a href="#fn-fn:17">fn:17</a></sup></p>
+<p>That doesn't prevent further composition. A sized wrapper such as <code>Box&lt;dyn Iterator&lt;Item = u64&gt;&gt;</code> or <code>&amp;mut dyn Iterator&lt;Item = u64&gt;</code> itself implements <code>Iterator</code>. We can add adapters around it. The outer adapter has a concrete type, while requests reaching the erased source still use its dynamic interface. A generic wrapper doesn't automatically make every call inside it static.<sup class="footnote-ref"><a href="#fn-fn:1">fn:1</a></sup></p>
+</details>
+<p>For a visual tour of trait-object pointers, see Sofía Belén López Vicens's <a href="https://sofiabelen.github.io/projects/visualizing-rusts-vtables-how-dyn-trait-works-in-memory/" target="_blank" rel="noopener">Visualizing Rust's VTables: How dyn Trait Works in Memory</a>. Exact byte layouts and vtable slot offsets should not be treated as a stable Rust ABI.<sup class="footnote-ref"><a href="#fn-fn:18">fn:18</a></sup></p>
+<h2><a href="#what-happens-to-the-layers" aria-hidden="true" class="anchor" id="what-happens-to-the-layers"></a>Compiler optimization</h2>
+<p>An iterator chain can compile to code similar to a hand-written loop. Rust specializes generic code for concrete types through <em>monomorphization</em>. Inlining can then bring operations from different adapters together so the optimizer can work across them.<sup class="footnote-ref"><a href="#fn-fn:14">fn:14</a></sup></p>
+<p>For example, these functions calculate the same sum. The wrapping operations make overflow behavior explicit:</p>
+<figure class="code-listing" id="code-snippet--manual-sum"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">A loop that squares even values and adds them with wrapping arithmetic.</span><span class="code-actions"><a href="#code-snippet--manual-sum" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--manual-sum-L1" href="#code-snippet--manual-sum-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--manual-sum-L2" href="#code-snippet--manual-sum-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--manual-sum-L3" href="#code-snippet--manual-sum-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--manual-sum-L4" href="#code-snippet--manual-sum-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--manual-sum-L5" href="#code-snippet--manual-sum-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--manual-sum-L6" href="#code-snippet--manual-sum-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--manual-sum-L7" href="#code-snippet--manual-sum-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--manual-sum-L8" href="#code-snippet--manual-sum-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--manual-sum-L9" href="#code-snippet--manual-sum-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--manual-sum-L10" href="#code-snippet--manual-sum-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-snippet--manual-sum-L11" href="#code-snippet--manual-sum-L11" aria-label="Link to line 11" data-line="11"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">manual</span><span style="color:#323232;">(input: </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">[</span><span style="font-weight:bold;color:#a71d5d;">u64</span><span style="color:#323232;">]) -&gt; </span><span style="font-weight:bold;color:#a71d5d;">u64 </span><span style="color:#323232;">{
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">let mut</span><span style="color:#323232;"> sum </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#0086b3;">0</span><span style="font-weight:bold;color:#a71d5d;">u64</span><span style="color:#323232;">;
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">for &amp;</span><span style="color:#323232;">x </span><span style="font-weight:bold;color:#a71d5d;">in</span><span style="color:#323232;"> input {
+</span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#a71d5d;">if</span><span style="color:#323232;"> x </span><span style="font-weight:bold;color:#a71d5d;">% </span><span style="color:#0086b3;">2 </span><span style="font-weight:bold;color:#a71d5d;">== </span><span style="color:#0086b3;">0 </span><span style="color:#323232;">{
+</span><span style="color:#323232;">            sum </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> sum.</span><span style="color:#62a35c;">wrapping_add</span><span style="color:#323232;">(x.</span><span style="color:#62a35c;">wrapping_mul</span><span style="color:#323232;">(x));
+</span><span style="color:#323232;">        }
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">    sum
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<figure class="code-listing" id="code-snippet--adapted-sum"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">The same calculation expressed as an iterator chain.</span><span class="code-actions"><a href="#code-snippet--adapted-sum" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--adapted-sum-L1" href="#code-snippet--adapted-sum-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--adapted-sum-L2" href="#code-snippet--adapted-sum-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--adapted-sum-L3" href="#code-snippet--adapted-sum-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--adapted-sum-L4" href="#code-snippet--adapted-sum-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--adapted-sum-L5" href="#code-snippet--adapted-sum-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--adapted-sum-L6" href="#code-snippet--adapted-sum-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--adapted-sum-L7" href="#code-snippet--adapted-sum-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--adapted-sum-L8" href="#code-snippet--adapted-sum-L8" aria-label="Link to line 8" data-line="8"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">adapted</span><span style="color:#323232;">(input: </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">[</span><span style="font-weight:bold;color:#a71d5d;">u64</span><span style="color:#323232;">]) -&gt; </span><span style="font-weight:bold;color:#a71d5d;">u64 </span><span style="color:#323232;">{
+</span><span style="color:#323232;">    input
+</span><span style="color:#323232;">        .</span><span style="color:#62a35c;">iter</span><span style="color:#323232;">()
+</span><span style="color:#323232;">        .</span><span style="color:#62a35c;">copied</span><span style="color:#323232;">()
+</span><span style="color:#323232;">        .</span><span style="color:#62a35c;">filter</span><span style="color:#323232;">(|x| x </span><span style="font-weight:bold;color:#a71d5d;">% </span><span style="color:#0086b3;">2 </span><span style="font-weight:bold;color:#a71d5d;">== </span><span style="color:#0086b3;">0</span><span style="color:#323232;">)
+</span><span style="color:#323232;">        .</span><span style="color:#62a35c;">map</span><span style="color:#323232;">(|x| x.</span><span style="color:#62a35c;">wrapping_mul</span><span style="color:#323232;">(x))
+</span><span style="color:#323232;">        .</span><span style="color:#62a35c;">fold</span><span style="color:#323232;">(</span><span style="color:#0086b3;">0</span><span style="font-weight:bold;color:#a71d5d;">u64</span><span style="color:#323232;">, |sum, x| sum.</span><span style="color:#62a35c;">wrapping_add</span><span style="color:#323232;">(x))
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<p>Inlining and loop optimization can make the generated code resemble the handwritten version. Whether they do so for a particular program depends on the compiler, target, optimization settings, and surrounding code. We would have to inspect that output and benchmark representative inputs to make a performance claim.<sup class="footnote-ref"><a href="#fn-fn:19">fn:19</a></sup></p>
+<p>There is another wrinkle in our request-by-request picture. The standard library can implement a consumer such as <code>fold()</code> by passing the whole accumulation through the adapters. Its <code>Enumerate</code> implementation has specialized <code>fold()</code> and <code>try_fold()</code> methods, so consuming a chain need not literally become a tower of <code>next()</code> calls. The pull model explains the sequence's behavior; optimized bulk operations can implement it differently.<sup class="footnote-ref"><a href="#fn-fn:4">fn:4</a></sup></p>
+<p>Some costs are visible without a benchmark. Our simple adapter chain doesn't require an intermediate collection at every step. It uses concrete types instead of a required virtual call at every boundary. Neither fact makes the predicate free, guarantees vectorization, or eliminates allocation in user-supplied code.</p>
+<p>In <span id="bln-ref-1" class="document-reference"><a href="https://sekaiser.github.io/notes/fast-writes-fresh-reads.html">Fast Writes, Fresh Reads</a></span>, moving work into a background thread introduced replay and coordination costs. Here, calling <code>filter()</code> doesn't start a worker at all. The caller runs the predicate as it consumes the iterator. A fluent chain of methods doesn't, by itself, tell us where computation runs.</p>
+<h2><a href="#when-the-source-is-not-ready" aria-hidden="true" class="anchor" id="when-the-source-is-not-ready"></a>Asynchronous iteration and coroutines</h2>
+<p>The telemetry example starts with a slice already in memory. A live connection has another possibility: there is no new reading yet, but more may arrive.</p>
+<p>An ordinary iterator can block inside <code>next()</code> until data arrives. Its interface doesn't say whether a call will return quickly. What it lacks is a way to return "not ready" together with an asynchronous wakeup arrangement.</p>
+<p>The <code>Stream</code> trait from <code>futures-core</code> adds that distinction:<sup class="footnote-ref"><a href="#fn-fn:20">fn:20</a></sup></p>
+<figure class="code-listing" id="code-snippet--stream-contract"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-caption">The poll_next signature from futures-core::Stream, with surrounding declarations omitted.</span><span class="code-actions"><a href="#code-snippet--stream-contract" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--stream-contract-L1" href="#code-snippet--stream-contract-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--stream-contract-L2" href="#code-snippet--stream-contract-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--stream-contract-L3" href="#code-snippet--stream-contract-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--stream-contract-L4" href="#code-snippet--stream-contract-L4" aria-label="Link to line 4" data-line="4"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">poll_next</span><span style="color:#323232;">(
+</span><span style="color:#323232;">    self: Pin&lt;</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut Self</span><span style="color:#323232;">&gt;,
+</span><span style="color:#323232;">    cx: </span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span style="color:#323232;">Context&lt;&#39;</span><span style="font-weight:bold;color:#a71d5d;">_</span><span style="color:#323232;">&gt;,
+</span><span style="color:#323232;">) -&gt; Poll&lt;Option&lt;</span><span style="font-weight:bold;color:#a71d5d;">Self::</span><span style="color:#323232;">Item&gt;&gt;;
+</span></code></pre></div></figure>
+<table>
+<tr>
+<th>Result</th>
+<th>Meaning</th>
+</tr>
+<tr>
+<td><code>Ready(Some(value))</code></td>
+<td>A value is available</td>
+</tr>
+<tr>
+<td><code>Ready(None)</code></td>
+<td>The stream has ended</td>
+</tr>
+<tr>
+<td><code>Pending</code></td>
+<td>No value yet; arrange a wakeup when progress may be possible</td>
+</tr>
+</table>
+<p><code>Context</code> gives the implementation access to a waker. <code>Pin</code> supports implementations whose state must stay at a stable location while pinned. Those requirements serve asynchronous execution, beyond the in-memory loop we started with.<sup class="footnote-ref"><a href="#fn-fn:21">fn:21</a></sup></p>
+<p>Rust's <code>async</code> computations use the <code>Future</code> protocol. The compiler represents their progress in a generated state machine, retaining what is needed across an <code>await</code>.<sup class="footnote-ref"><a href="#fn-fn:22">fn:22</a></sup><sup>, </sup><sup class="footnote-ref"><a href="#fn-fn:23">fn:23</a></sup></p>
+<p>A <em>coroutine</em> lets a function suspend and later resume from where it stopped. A synchronous generator uses that ability to yield values one at a time, with its consumer requesting each resumption.<sup class="footnote-ref"><a href="#fn-fn:24">fn:24</a></sup></p>
+<p>When producing a value involves nested loops and several yield points, that can be easier to follow than a hand-written state machine. Our numbering adapter needed only a source and a counter; more complicated control flow can justify the extra mechanism.</p>
+<p>There is also a boundary between local demand and system backpressure. A caller can stop pulling this iterator while a device, broker, or network buffer keeps receiving data. The capacity, loss, and admission policies from <span id="bln-ref-2" class="document-reference"><a href="https://sekaiser.github.io/notes/backpressure-in-a-telemetry-pipeline.html">Backpressure in a Telemetry Pipeline</a></span> still need to exist outside the iterator. A <code>take()</code> at the end of a chain doesn't bound every queue upstream.</p>
+<h2><a href="#the-cpp-comparison" aria-hidden="true" class="anchor" id="the-cpp-comparison"></a>Iterator composition in C++</h2>
+<p>C++ ranges let us build a similar lazy pipeline, so they give us a way to ask which parts of the design are specific to Rust. C++23 provides enumeration directly:<sup class="footnote-ref"><a href="#fn-fn:25">fn:25</a></sup></p>
+<figure class="code-listing" id="code-snippet--cpp-enumeration"><figcaption class="code-toolbar"><span class="code-language">cpp</span><span class="code-caption">C++23's standard enumeration view needs no custom coroutine generator.</span><span class="code-actions"><a href="#code-snippet--cpp-enumeration" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--cpp-enumeration-L1" href="#code-snippet--cpp-enumeration-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--cpp-enumeration-L2" href="#code-snippet--cpp-enumeration-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--cpp-enumeration-L3" href="#code-snippet--cpp-enumeration-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--cpp-enumeration-L4" href="#code-snippet--cpp-enumeration-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--cpp-enumeration-L5" href="#code-snippet--cpp-enumeration-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--cpp-enumeration-L6" href="#code-snippet--cpp-enumeration-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--cpp-enumeration-L7" href="#code-snippet--cpp-enumeration-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--cpp-enumeration-L8" href="#code-snippet--cpp-enumeration-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--cpp-enumeration-L9" href="#code-snippet--cpp-enumeration-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--cpp-enumeration-L10" href="#code-snippet--cpp-enumeration-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-snippet--cpp-enumeration-L11" href="#code-snippet--cpp-enumeration-L11" aria-label="Link to line 11" data-line="11"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-cpp"><span style="font-weight:bold;color:#a71d5d;">#include </span><span style="color:#183691;">&lt;array&gt;
+</span><span style="font-weight:bold;color:#a71d5d;">#include </span><span style="color:#183691;">&lt;iostream&gt;
+</span><span style="font-weight:bold;color:#a71d5d;">#include </span><span style="color:#183691;">&lt;ranges&gt;
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">int </span><span style="font-weight:bold;color:#795da3;">main</span><span style="color:#323232;">() {
+</span><span style="color:#323232;">    std::array values{</span><span style="color:#0086b3;">1</span><span style="color:#323232;">, </span><span style="color:#0086b3;">2</span><span style="color:#323232;">, </span><span style="color:#0086b3;">3</span><span style="color:#323232;">, </span><span style="color:#0086b3;">4</span><span style="color:#323232;">};
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">auto </span><span style="color:#323232;">[index, value] </span><span style="font-weight:bold;color:#a71d5d;">: </span><span style="color:#323232;">std::views::enumerate(values)) {
+</span><span style="color:#323232;">        std::cout </span><span style="font-weight:bold;color:#a71d5d;">&lt;&lt;</span><span style="color:#323232;"> index </span><span style="font-weight:bold;color:#a71d5d;">&lt;&lt; </span><span style="color:#183691;">&quot;: &quot; </span><span style="font-weight:bold;color:#a71d5d;">&lt;&lt;</span><span style="color:#323232;"> value </span><span style="font-weight:bold;color:#a71d5d;">&lt;&lt; </span><span style="color:#183691;">&#39;</span><span style="color:#0086b3;">\n</span><span style="color:#183691;">&#39;</span><span style="color:#323232;">;
+</span><span style="color:#323232;">    }
+</span><span style="color:#323232;">}
+</span></code></pre></div></figure>
+<p>C++20 ranges already offered lazy composition; C++23 added this standard numbering adapter. Comparing a small Rust <code>enumerate()</code> call with the plumbing of a hand-built C++ coroutine generator would measure two different implementation choices.</p>
+<p>C++ ranges use iterator and sentinel interfaces, concepts, and views. A sentinel marks the end condition; it need not have the same type as the iterator. Those interfaces support lazy computation and compiler optimization too. Rust doesn't have exclusive access to that technique.</p>
+<p>Both languages support references, moves, and deterministic destruction. Rust's borrowing rules add compiler checks for reference lifetimes and exclusive access across the composition. C++ APIs can express ownership and borrowing relationships, but ordinary references don't generally carry the same static checks. The borrowing example is where I find the comparison most useful: who must establish that these records are still valid when a result is used?</p>
+<h2><a href="#choosing-the-mechanism" aria-hidden="true" class="anchor" id="choosing-the-mechanism"></a>Choosing the mechanism</h2>
+<p>We can now account for the numbered loop. The source remembers its position. <code>Enumerate</code> remembers a counter. A filter may ask several times before passing a value along. The consumer decides whether to keep asking, and the item type preserves whether the result owns or borrows its data.</p>
+<p>For a query over an existing buffer, returning a borrowed iterator lets the caller inspect a few matches without first building a collection. If obtaining the next value requires waiting for a socket, an ordinary iterator can block inside <code>next()</code>. When the caller must yield execution while waiting and resume when progress becomes possible, the interface needs an asynchronous readiness and wakeup protocol. If later work needs to revisit or sort the results, collecting them may be the right choice.</p>
+<p>When I read an iterator chain now, I try to picture the state each adapter holds and the work one request can trigger. That gives me a way to judge the abstraction before making assumptions about its speed.</p>
+<h2><a href="#references" aria-hidden="true" class="anchor" id="references"></a>References</h2>
+<section class="footnote-definition" id="fn-fn:1">
+<p><span class="footnote-label">[fn:1]</span> Rust standard library. <a href="https://doc.rust-lang.org/std/iter/trait.Iterator.html" target="_blank" rel="noopener">Iterator</a>, required associated type and method, and the contract for <code>next()</code>.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:2">
+<p><span class="footnote-label">[fn:2]</span> The Rust Reference. <a href="https://doc.rust-lang.org/reference/expressions/loop-expr.html#iterator-loops" target="_blank" rel="noopener">Iterator loops</a>, including <code>IntoIterator</code> and the complete <code>for</code> desugaring.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:3">
+<p><span class="footnote-label">[fn:3]</span> Rust standard library. <a href="https://doc.rust-lang.org/std/iter/trait.FusedIterator.html" target="_blank" rel="noopener">FusedIterator</a> and <a href="https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.fuse" target="_blank" rel="noopener">Iterator::fuse</a>.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:4">
+<p><span class="footnote-label">[fn:4]</span> Rust standard library. <a href="https://doc.rust-lang.org/src/core/iter/adapters/enumerate.rs.html" target="_blank" rel="noopener">Enumerate source</a>, including stored state and specialized consumers.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:5">
+<p><span class="footnote-label">[fn:5]</span> Rust standard library. <a href="https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.enumerate" target="_blank" rel="noopener">Iterator::enumerate</a>, including its public overflow contract.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:6">
+<p><span class="footnote-label">[fn:6]</span> Rust standard library. <a href="https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.scan" target="_blank" rel="noopener">Iterator::scan</a>, an adapter with an initial state and a closure that updates it for each source item.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:7">
+<p><span class="footnote-label">[fn:7]</span> Rust standard library. <a href="https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.filter" target="_blank" rel="noopener">Iterator::filter</a>, including its borrowed predicate argument.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:8">
+<p><span class="footnote-label">[fn:8]</span> Rust standard library. <a href="https://doc.rust-lang.org/std/iter/index.html#laziness" target="_blank" rel="noopener">Iterator laziness</a> and <a href="https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.take" target="_blank" rel="noopener">Iterator::take</a>.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:9">
+<p><span class="footnote-label">[fn:9]</span> Rust standard library. <a href="https://doc.rust-lang.org/std/iter/index.html#the-three-forms-of-iteration" target="_blank" rel="noopener">The three forms of iteration</a> and <a href="https://doc.rust-lang.org/std/vec/struct.Vec.html" target="_blank" rel="noopener">Vec</a>.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:10">
+<p><span class="footnote-label">[fn:10]</span> The Rust Reference. <a href="https://doc.rust-lang.org/reference/destructors.html" target="_blank" rel="noopener">Destructors</a>, recursive destruction of owned fields. <a href="https://doc.rust-lang.org/src/alloc/vec/into_iter.rs.html" target="_blank" rel="noopener">Vec::IntoIter source</a> implements destruction of remaining elements.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:11">
+<p><span class="footnote-label">[fn:11]</span> The Rust Reference. <a href="https://doc.rust-lang.org/reference/expressions/closure-expr.html" target="_blank" rel="noopener">Closure capture by value</a>, including copying and moving captures.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:12">
+<p><span class="footnote-label">[fn:12]</span> The Rustonomicon. <a href="https://doc.rust-lang.org/nomicon/borrow-splitting.html" target="_blank" rel="noopener">Splitting borrows</a>, including why ordinary Iterator permits retaining several results across calls.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:13">
+<p><span class="footnote-label">[fn:13]</span> The Rust Reference. <a href="https://doc.rust-lang.org/reference/types/impl-trait.html#abstract-return-types" target="_blank" rel="noopener">Return-position impl Trait</a>, an unnamed concrete type.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:14">
+<p><span class="footnote-label">[fn:14]</span> The Rust Programming Language. <a href="https://doc.rust-lang.org/book/ch10-01-syntax.html#performance-of-code-using-generics" target="_blank" rel="noopener">Performance of code using generics</a>. The <a href="https://rustc-dev-guide.rust-lang.org/backend/monomorph.html" target="_blank" rel="noopener">Rust Compiler Development Guide</a> describes monomorphization and its compilation-time and code-size costs.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:15">
+<p><span class="footnote-label">[fn:15]</span> The Rust Reference. <a href="https://doc.rust-lang.org/reference/types/trait-object.html" target="_blank" rel="noopener">Trait objects</a>, data pointers, vtables, and runtime method dispatch.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:16">
+<p><span class="footnote-label">[fn:16]</span> The Rust Programming Language. <a href="https://doc.rust-lang.org/book/ch18-02-trait-objects.html#performing-dynamic-dispatch" target="_blank" rel="noopener">Performing dynamic dispatch</a>, including specialization and inlining trade-offs.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:17">
+<p><span class="footnote-label">[fn:17]</span> The Rust Reference. <a href="https://doc.rust-lang.org/reference/items/traits.html#dyn-compatibility" target="_blank" rel="noopener">Dyn compatibility</a>, including methods excluded through <code>Self: Sized</code>.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:18">
+<p><span class="footnote-label">[fn:18]</span> The Rust Reference. <a href="https://doc.rust-lang.org/reference/type-layout.html#pointers-and-references-layout" target="_blank" rel="noopener">Pointer and reference layout</a>. Its current two-usize observation for pointers to dynamically sized types is explicitly not a general layout guarantee.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:19">
+<p><span class="footnote-label">[fn:19]</span> The Rust Programming Language. <a href="https://doc.rust-lang.org/book/ch13-04-performance.html" target="_blank" rel="noopener">Performance in loops vs. iterators</a>. Its measurements illustrate a particular program; they aren't measurements of the functions in this article.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:20">
+<p><span class="footnote-label">[fn:20]</span> futures-core. <a href="https://docs.rs/futures-core/latest/futures_core/stream/trait.Stream.html" target="_blank" rel="noopener">Stream</a>, polling outcomes and wakeup requirements.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:21">
+<p><span class="footnote-label">[fn:21]</span> Rust standard library. <a href="https://doc.rust-lang.org/std/pin/index.html" target="_blank" rel="noopener">Pinning</a>, including address-sensitive state and the <code>Unpin</code> exception.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:22">
+<p><span class="footnote-label">[fn:22]</span> Rust standard library. <a href="https://doc.rust-lang.org/std/future/trait.Future.html" target="_blank" rel="noopener">Future</a>, polling and wakeups.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:23">
+<p><span class="footnote-label">[fn:23]</span> The Rust Reference. <a href="https://doc.rust-lang.org/reference/expressions/block-expr.html#async-blocks" target="_blank" rel="noopener">Async blocks</a>, including their generated state.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:24">
+<p><span class="footnote-label">[fn:24]</span> C++ working draft. <a href="https://eel.is/c++draft/dcl.fct.def.coroutine" target="_blank" rel="noopener">Coroutine definitions</a>, including a generator resumed directly by its consumer.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:25">
+<p><span class="footnote-label">[fn:25]</span> C++ working draft. <a href="https://eel.is/c++draft/range.enumerate" target="_blank" rel="noopener">Enumerate view</a>, including its stored position and iterator operations. <a href="https://github.com/cplusplus/papers/issues/875" target="_blank" rel="noopener">WG21's P2164 tracking record</a> records its adoption for C++23.</p>
+</section>
+</div>
+  </div>
+  <footer class="study-end">
+    
+    
+  
+  
+  
+  
+  
+
+
+    
+    <a class="study-return" href="https://sekaiser.github.io/notes.html">Back to all notes</a>
+  </footer>
+</article>
+
+        </main>
+
+        
+            <footer class="site-footer">
+  <div class="footer-colophon">
+    <a class="footer-home" href="https://sekaiser.github.io/">
+      <span class="footer-bookplate" aria-hidden="true">sk.</span>
+      <span class="footer-name">Sebastian Kaiser</span>
+    </a>
+    <p>A personal notebook. Built with Berlin.</p>
+  </div>
+  <nav aria-label="Elsewhere">
+    
+      <a class="footer-icon" href="https://github.com/sekaiser" aria-label="GitHub" title="GitHub" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M12 .5a12 12 0 0 0-3.793 23.385c.6.111.82-.261.82-.577 0-.285-.01-1.04-.016-2.04-3.338.725-4.043-1.61-4.043-1.61-.546-1.386-1.333-1.755-1.333-1.755-1.09-.745.083-.73.083-.73 1.205.085 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.419-1.305.762-1.605-2.665-.303-5.467-1.333-5.467-5.931 0-1.31.469-2.381 1.236-3.221-.124-.303-.536-1.524.117-3.176 0 0 1.008-.323 3.301 1.23a11.52 11.52 0 0 1 6.006 0c2.291-1.553 3.297-1.23 3.297-1.23.655 1.652.243 2.873.12 3.176.77.84 1.235 1.911 1.235 3.221 0 4.61-2.807 5.625-5.479 5.922.43.372.823 1.102.823 2.222 0 1.606-.015 2.902-.015 3.296 0 .319.216.694.825.576A12 12 0 0 0 12 .5Z"/>
+        </svg>
+      </a>
+    
+    
+      <a class="footer-icon" href="https://www.linkedin.com/in/sekaiser/" aria-label="LinkedIn" title="LinkedIn" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.049c.476-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286ZM5.337 7.433a2.062 2.062 0 1 1 0-4.124 2.062 2.062 0 0 1 0 4.124ZM7.119 20.452H3.555V9h3.564v11.452ZM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0Z"/>
+        </svg>
+      </a>
+    
+    <a class="footer-icon" href="#main" aria-label="Back to top" title="Back to top">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <path d="M5 4h14M6 13l6-6 6 6M12 7v13"/>
+      </svg>
+    </a>
+  </nav>
+</footer>
+
+        
+
+  </div>
+</body>
+</html>
