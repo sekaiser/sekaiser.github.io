@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="178mm" height="120.79mm" viewBox="0 0 1120 760" role="img" aria-labelledby="title desc">
+  <title id="title">Where cache pressure ends</title>
+  <desc id="desc">A proposed telemetry pipeline separates required publication from a replaceable cache projection. The processor publishes to a durable event stream. Optional cache admission owns a bounded pending queue, coalesces newer values by device and metric, and evicts pending work at capacity. Fixed workers claim bounded batches and write with an atomic version check. Cache slowdown causes bounded waiting and shedding at admission; it does not provide feedback that slows the primary path. Recovery is a separate responsibility.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M1 1 9 5 1 9" fill="none" stroke="#3d5948" stroke-width="1.6"/></marker>
+    <marker id="rust-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M1 1 9 5 1 9" fill="none" stroke="#a96243" stroke-width="1.6"/></marker>
+    <style>
+      text { font-family: Helvetica, Arial, sans-serif; fill: #26362f; font-size: 20px; }
+      .title { font-size: 30px; font-weight: 600; }
+      .heading { font-size: 23px; font-weight: 600; }
+      .small { font-size: 18px; fill: #4c5b53; }
+      .label { font-size: 18px; font-weight: 600; fill: #3d5948; }
+      .box { fill: #e5ebe2; stroke: #647965; stroke-width: 1.5; }
+      .flow { fill: none; stroke: #3d5948; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="1120" height="760" rx="12" fill="#fcfaf5"/>
+  <text x="44" y="56" class="title">Where cache pressure ends</text>
+  <text x="44" y="88" class="small">Proposed design · required events and replaceable state have different contracts</text>
+  <path d="M44 110H1076" stroke="#b8bfb4"/>
+
+  <rect x="44" y="158" width="246" height="128" rx="8" class="box"/>
+  <text x="66" y="196" class="heading">Metric processor</text>
+  <text x="66" y="230">Enrich an observation</text>
+  <text x="66" y="258" class="small">Device + metric + version</text>
+
+  <path d="M290 203H670" class="flow"/>
+  <text x="328" y="176" class="label">REQUIRED PUBLICATION</text>
+  <text x="328" y="233" class="small">Bounded admission + acknowledgement</text>
+
+  <rect x="688" y="158" width="388" height="128" rx="8" class="box"/>
+  <text x="712" y="196" class="heading">Durable event stream</text>
+  <text x="712" y="230">Retain the required observations</text>
+  <text x="712" y="258" class="small">Its own delivery and recovery contract</text>
+
+  <path d="M167 286V368" class="flow"/>
+  <text x="194" y="326" class="label">OPTIONAL CACHE ADMISSION</text>
+  <text x="194" y="352" class="small">Never wait for cache I/O</text>
+
+  <rect x="44" y="385" width="1032" height="211" rx="10" fill="none" stroke="#b8bfb4" stroke-dasharray="6 5"/>
+  <rect x="64" y="406" width="330" height="166" rx="8" class="box"/>
+  <text x="84" y="441" class="heading">Pending queue + index</text>
+  <text x="84" y="474">One entry per device / metric</text>
+  <text x="84" y="504">Replace with a newer version</text>
+  <text x="84" y="541" class="small">Owns the actual pending work</text>
+
+  <path d="M394 487H470" class="flow"/>
+  <text x="412" y="464" class="small">claim</text>
+  <rect x="488" y="406" width="250" height="166" rx="8" class="box"/>
+  <text x="508" y="441" class="heading">Fixed workers</text>
+  <text x="508" y="474">Bounded batches</text>
+  <text x="508" y="504">Deadlines on writes</text>
+  <text x="508" y="541" class="small">No cache I/O under lock</text>
+
+  <path d="M738 487H794" class="flow"/>
+  <rect x="812" y="406" width="244" height="166" rx="8" class="box"/>
+  <text x="832" y="441" class="heading">Current-state cache</text>
+  <text x="832" y="474">Compare the version</text>
+  <text x="832" y="504">and update atomically</text>
+  <text x="832" y="541" class="small">An old write cannot win</text>
+
+  <path d="M229 572V632" fill="none" stroke="#a96243" stroke-width="2" marker-end="url(#rust-arrow)"/>
+  <rect x="64" y="647" width="470" height="70" rx="8" fill="#f4e7dc" stroke="#a96243" stroke-width="1.5"/>
+  <text x="84" y="677" class="heading">At capacity: shed pending work</text>
+  <text x="84" y="702" class="small">Count evictions separately from coalescing</text>
+
+  <text x="574" y="648" class="label">CACHE SLOWDOWN STAYS ON THIS BRANCH</text>
+  <text x="574" y="678" class="small">Bound retained work, including bytes and in-flight batches.</text>
+  <text x="574" y="705" class="small">Lost final updates need a separate, bounded repair path.</text>
+</svg>

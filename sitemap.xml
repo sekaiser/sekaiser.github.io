@@ -4,14 +4,17 @@
   <url><loc>https://sekaiser.github.io/feed.html</loc></url>
   <url><loc>https://sekaiser.github.io/</loc></url>
   <url><loc>https://sekaiser.github.io/notes.html</loc></url>
+  <url><loc>https://sekaiser.github.io/notes/backpressure-in-a-telemetry-pipeline.html</loc></url>
   <url><loc>https://sekaiser.github.io/notes/ci-cd-across-team-boundaries.html</loc></url>
   <url><loc>https://sekaiser.github.io/notes/from-time-series-to-state.html</loc></url>
   <url><loc>https://sekaiser.github.io/notes/org-mode-publishing-showcase.html</loc></url>
   <url><loc>https://sekaiser.github.io/notes/processing-json-with-rust.html</loc></url>
   <url><loc>https://sekaiser.github.io/notes/publishing-from-org.html</loc></url>
   <url><loc>https://sekaiser.github.io/search.html</loc></url>
+  <url><loc>https://sekaiser.github.io/tags/backpressure.html</loc></url>
   <url><loc>https://sekaiser.github.io/tags/caching.html</loc></url>
   <url><loc>https://sekaiser.github.io/tags/ci-cd.html</loc></url>
+  <url><loc>https://sekaiser.github.io/tags/concurrency.html</loc></url>
   <url><loc>https://sekaiser.github.io/tags/emacs.html</loc></url>
   <url><loc>https://sekaiser.github.io/tags/org-mode.html</loc></url>
   <url><loc>https://sekaiser.github.io/tags/org-roam.html</loc></url>
@@ -20,6 +23,7 @@
   <url><loc>https://sekaiser.github.io/tags/rust.html</loc></url>
   <url><loc>https://sekaiser.github.io/tags/serde-json.html</loc></url>
   <url><loc>https://sekaiser.github.io/tags/software-delivery.html</loc></url>
+  <url><loc>https://sekaiser.github.io/tags/system-design.html</loc></url>
   <url><loc>https://sekaiser.github.io/tags/telemetry.html</loc></url>
   <url><loc>https://sekaiser.github.io/tags/testing.html</loc></url>
   <url><loc>https://sekaiser.github.io/tags/traits.html</loc></url>

@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="178mm" height="238.39mm" viewBox="0 0 1120 1500" role="img" aria-labelledby="title desc">
+  <title id="title">Admission, claiming, and overload control</title>
+  <desc id="desc">Detailed proposed algorithm, not the current implementation. Admission holds the queue mutex while checking closure and looking up a device-metric key. An existing key is replaced only by a newer version; otherwise the input is ignored. A new key evicts the oldest pending entry if capacity is reached, removes that entry's index mapping, and inserts the new entry. Writers use the same mutex to claim at most B immutable events and remove their queue and index entries. All cache I/O happens outside the mutex. W fixed workers wait for bounded, version-checked writes before claiming more work. Atomic cache updates store newer versions and ignore older or equal versions; errors and timeouts require recorded outcomes and bounded repair. When writes slow, claims slow and pending work fills, so new identities evict pending work. The producer is not throttled by the cache. Ring slots and versions are illustrative.</desc>
+  <defs>
+    <marker id="flow-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M1 1 9 5 1 9" fill="none" stroke="#3d5948" stroke-width="1.6"/></marker>
+    <marker id="loss-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M1 1 9 5 1 9" fill="none" stroke="#a96243" stroke-width="1.6"/></marker>
+    <style>
+      text { font-family: Helvetica, Arial, sans-serif; font-size: 20px; fill: #26362f; }
+      .title { font-size: 30px; font-weight: 600; }
+      .heading { font-size: 23px; font-weight: 600; }
+      .small { font-size: 18px; fill: #4c5b53; }
+      .label { font-size: 18px; font-weight: 600; fill: #3d5948; }
+      .code { font-family: Menlo, Consolas, monospace; font-size: 19px; }
+      .box { fill: #e5ebe2; stroke: #647965; stroke-width: 1.5; }
+      .flow { fill: none; stroke: #3d5948; stroke-width: 2; marker-end: url(#flow-arrow); }
+      .loss { fill: #f4e7dc; stroke: #a96243; stroke-width: 1.5; }
+    </style>
+  </defs>
+  <rect width="1120" height="1500" rx="12" fill="#fcfaf5"/>
+  <text x="44" y="54" class="title">Admission, claiming, and overload control</text>
+  <text x="44" y="85" class="small">Proposed algorithm · k = (device, metric) · versions and slots below are illustrative</text>
+  <path d="M44 108H1076" stroke="#b8bfb4"/>
+
+  <rect x="24" y="133" width="1072" height="696" rx="10" fill="none" stroke="#647965" stroke-width="1.5"/>
+  <rect x="42" y="122" width="520" height="26" fill="#fcfaf5"/>
+  <text x="52" y="141" class="label">ONE MUTEX PROTECTS THE QUEUE AND ITS INDEX</text>
+
+  <rect x="64" y="177" width="320" height="80" rx="8" class="box"/>
+  <text x="84" y="211" class="heading">offer(k, version, value)</text>
+  <text x="84" y="240" class="small">Closed → reject and return</text>
+  <path d="M384 217H602" class="flow"/>
+  <text x="423" y="201" class="small">otherwise</text>
+  <rect x="620" y="177" width="436" height="80" rx="8" class="box"/>
+  <text x="642" y="211" class="heading">Look up k in the pending index</text>
+  <text x="642" y="240" class="small">Compare with pending state, not in-flight work</text>
+
+  <path d="M740 257V279H294V306" class="flow"/>
+  <text x="443" y="273" class="small">key exists</text>
+  <path d="M932 257V306" class="flow"/>
+  <text x="947" y="291" class="small">new key</text>
+
+  <rect x="64" y="324" width="460" height="172" rx="8" class="box"/>
+  <text x="84" y="359" class="heading">Compare pending versions</text>
+  <text x="84" y="397">Newer → replace the value in its slot</text>
+  <text x="84" y="427">Older / equal → ignore the input</text>
+  <text x="84" y="470" class="small">Same queue position; no extra pending entry</text>
+
+  <rect x="564" y="324" width="492" height="172" rx="8" class="box"/>
+  <text x="584" y="359" class="heading">Make room, then insert</text>
+  <text x="584" y="397">Full → evict the oldest pending entry</text>
+  <text x="584" y="427">Delete its index mapping; count the loss</text>
+  <text x="584" y="470" class="small">Append k and its value; index[k] = slot</text>
+
+  <path d="M294 496V511H44V607H61" class="flow"/>
+  <path d="M810 496V511H1076V607H1059" class="flow"/>
+  <text x="64" y="540" class="label">C PENDING SLOTS · INDEX MAPS EACH KEY TO ITS SLOT</text>
+  <rect x="64" y="569" width="224" height="76" rx="6" class="box"/>
+  <text x="82" y="600" class="code">A / temperature</text>
+  <text x="82" y="628" class="small">slot 0 · version 3 · head</text>
+  <rect x="304" y="569" width="224" height="76" rx="6" class="box"/>
+  <text x="322" y="600" class="code">A / voltage</text>
+  <text x="322" y="628" class="small">slot 1 · version 1</text>
+  <rect x="544" y="569" width="224" height="76" rx="6" class="box"/>
+  <text x="562" y="600" class="code">B / temperature</text>
+  <text x="562" y="628" class="small">slot 2 · version 2</text>
+  <rect x="784" y="569" width="272" height="76" rx="6" fill="none" stroke="#b8bfb4" stroke-dasharray="5 4"/>
+  <text x="804" y="600">… remaining slots …</text>
+  <text x="804" y="628" class="small">Only pending values live here</text>
+
+  <text x="64" y="694" class="small">Offer signals available work, unlocks, and returns. It never waits for a free slot or a cache write.</text>
+  <path d="M560 645V660H1080V767H914" class="flow"/>
+  <rect x="224" y="731" width="672" height="73" rx="8" class="box"/>
+  <text x="246" y="762" class="heading">claim_batch(B): take immutable snapshots</text>
+  <text x="246" y="790">Remove ≤ B pending entries and their index mappings</text>
+
+  <path d="M560 804V885H508V943H500" class="flow"/>
+  <text x="590" y="858" class="label">UNLOCK BEFORE NETWORK I/O</text>
+  <text x="64" y="865" class="small">Wake-up = hint, not event storage.</text>
+  <text x="64" y="891" class="small">Coordinate queue checks and waiting.</text>
+
+  <rect x="64" y="917" width="420" height="143" rx="8" class="box"/>
+  <text x="86" y="952" class="heading">W fixed writer workers</text>
+  <text x="86" y="988">At most B claimed events per worker</text>
+  <text x="86" y="1018">Wait for the write, with a deadline</text>
+  <text x="86" y="1043" class="small">Then claim again; no I/O under the queue lock</text>
+  <path d="M484 989H602" class="flow"/>
+  <text x="503" y="1018" class="small">batch</text>
+  <rect x="620" y="917" width="436" height="143" rx="8" class="box"/>
+  <text x="642" y="952" class="heading">Atomic update for each metric</text>
+  <text x="642" y="988">Missing / newer → store value + version</text>
+  <text x="642" y="1018">Older / equal → keep the stored value</text>
+  <text x="642" y="1043" class="small">Concurrent writes may finish out of order</text>
+
+  <path d="M838 1060V1090H794V1105" fill="none" stroke="#a96243" stroke-width="2" marker-end="url(#loss-arrow)"/>
+  <rect x="564" y="1123" width="492" height="85" rx="8" class="loss"/>
+  <text x="584" y="1156" class="heading">Error / timeout → record the outcome</text>
+  <text x="584" y="1186" class="small">A write may be uncertain; repair needs its own budget</text>
+  <text x="64" y="1124">A newer update may already be pending.</text>
+  <text x="64" y="1154">Completion must not erase that new work.</text>
+  <text x="64" y="1186" class="small">Payload budget: (C + W × B) × maximum event size</text>
+  <text x="64" y="1212" class="small">Add index, encoding, copies, and client buffers.</text>
+
+  <path d="M44 1244H1076" stroke="#b8bfb4"/>
+  <text x="44" y="1281" class="heading">When the cache slows</text>
+  <rect x="44" y="1304" width="1032" height="138" rx="8" class="loss"/>
+  <text x="66" y="1340">Writes take longer → workers stay busy → fewer entries are claimed</text>
+  <text x="66" y="1375">Pending work reaches C → new identities evict pending entries</text>
+  <text x="66" y="1416" class="label">WORKER DRAIN SLOWS; THE PRODUCER IS NOT THROTTLED BY CACHE CAPACITY.</text>
+  <text x="44" y="1475" class="small">Coalescing avoids superseded writes. Eviction sheds work. Neither guarantees delivery of a final reading.</text>
+</svg>

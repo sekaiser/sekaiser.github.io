@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="https://sekaiser.github.io/static/favicon.svg?v=d722fec0e0cca8eb" type="image/svg+xml">
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/vendor.css?v=cf6814bed6634e0a" type="text/css" media="screen" />
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/notebook.css?v=fa0011bb32c45341">
+  
+  
+  
+  <script src="https://sekaiser.github.io/static/js/study.js?v=097960b1aa1fd3bf" defer></script>
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/article.css?v=919c161ba2902f9c">
+  
+
+  
+
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/project.css?v=a1910c5d7fd69274">
+  <script src="https://sekaiser.github.io/static/js/main.js?v=7ffe88eb20e1b177"></script>
+
+  
+  
+
+
+
+
+  
+  
+  
+  
+
+<title>Backpressure in a Telemetry Pipeline: What Happens When the Cache Falls Behind? | Sebastian Kaiser</title>
+<meta name="description" content="A bounded, coalescing write path for device telemetry, and the ordering and recovery guarantees a buffer cannot provide on its own.">
+<meta property="og:title" content="Backpressure in a Telemetry Pipeline: What Happens When the Cache Falls Behind? | Sebastian Kaiser">
+<meta property="og:description" content="A bounded, coalescing write path for device telemetry, and the ordering and recovery guarantees a buffer cannot provide on its own.">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Sebastian Kaiser — engineering notebook">
+<meta name="twitter:card" content="summary">
+
+  
+  
+  <link rel="canonical" href="https://sekaiser.github.io/notes/backpressure-in-a-telemetry-pipeline.html">
+  <meta property="og:url" content="https:&#x2F;&#x2F;sekaiser.github.io&#x2F;notes&#x2F;backpressure-in-a-telemetry-pipeline.html">
+  <meta property="og:image" content="https://sekaiser.github.io/static/pics/study/engineering-desk.png?v=478d3aa3a9ffa967">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1254">
+  <meta property="og:image:height" content="1254">
+  <meta property="og:image:alt" content="An illustrated desk with a notebook, computer, and reading lamp.">
+
+
+  <meta property="article:published_time" content="2026-10-20">
+  
+
+<link rel="me" href="https://www.linkedin.com/in/sekaiser/">
+
+  
+</head>
+<body>
+  
+<div class="margin-sketches" aria-hidden="true">
+  <svg class="margin-sketch-definitions" width="0" height="0" focusable="false">
+    <defs>
+      <symbol id="margin-branches" viewBox="0 0 88 270">
+        <path d="M44 34 C44 67 18 60 18 96 M44 34 C44 67 70 60 70 96 M18 112 C18 153 44 145 44 177 M70 112 C70 153 44 145 44 177 M44 193 L44 230"/>
+        <circle cx="44" cy="26" r="8" class="sketch-node"/>
+        <rect x="10" y="96" width="16" height="16" rx="3"/>
+        <rect x="62" y="96" width="16" height="16" rx="3"/>
+        <circle cx="44" cy="185" r="8" class="sketch-node"/>
+        <path d="M36 238 L44 230 L52 238 L44 246 Z" class="sketch-accent"/>
+      </symbol>
+      <symbol id="margin-pages" viewBox="0 0 88 270">
+        <path d="M29 27 L62 30 L59 76 L26 73 Z M22 34 L55 37 L52 83 L19 80 Z"/>
+        <path d="M30 47 L46 49 M29 55 L43 57 M29 63 L38 64"/>
+        <path d="M38 93 C37 126 69 112 67 145 C65 167 30 153 29 183" stroke-dasharray="2 7"/>
+        <circle cx="29" cy="191" r="8" class="sketch-node"/>
+        <path d="M36 195 L62 216 M62 210 L68 216 L62 222 L56 216 Z" class="sketch-accent"/>
+        <circle cx="13" cy="130" r="3"/>
+      </symbol>
+      <symbol id="margin-orbit" viewBox="0 0 88 270">
+        <ellipse cx="44" cy="72" rx="31" ry="39"/>
+        <ellipse cx="44" cy="72" rx="17" ry="39" transform="rotate(28 44 72)"/>
+        <circle cx="44" cy="72" r="6" class="sketch-node"/>
+        <circle cx="71" cy="52" r="4" class="sketch-accent"/>
+        <path d="M44 121 L44 164 M30 182 L44 164 L58 182 Z M44 183 L44 212" stroke-dasharray="3 6"/>
+        <path d="M35 230 Q44 215 53 230 Q44 244 35 230 Z"/>
+      </symbol>
+      <symbol id="margin-stack" viewBox="0 0 88 270">
+        <path d="M10 54 L44 36 L78 54 L44 72 Z M10 70 L44 88 L78 70 M10 86 L44 104 L78 86"/>
+        <path d="M44 116 L44 150 M20 168 L44 150 L68 168 M20 168 L20 193 M68 168 L68 193"/>
+        <rect x="12" y="194" width="16" height="16" rx="3"/>
+        <circle cx="68" cy="202" r="8" class="sketch-node"/>
+        <path d="M37 239 L51 239 M44 232 L44 246" class="sketch-accent"/>
+      </symbol>
+      <symbol id="margin-signal" viewBox="0 0 88 270">
+        <path d="M12 58 L26 58 L26 36 L42 36 L42 80 L58 80 L58 58 L76 58"/>
+        <path d="M12 114 Q27 85 44 114 T76 114"/>
+        <path d="M12 153 L76 153" stroke-dasharray="2 7"/>
+        <circle cx="26" cy="153" r="4" class="sketch-node"/>
+        <circle cx="62" cy="153" r="4" class="sketch-accent"/>
+        <path d="M23 202 L44 182 L65 202 L44 222 Z M23 202 L65 202"/>
+      </symbol>
+      <symbol id="margin-network" viewBox="0 0 88 270">
+        <path d="M19 45 L68 66 L36 108 L19 45 M36 108 L70 155 L18 179 L36 108 M18 179 L48 226 L70 155"/>
+        <circle cx="19" cy="45" r="6" class="sketch-node"/>
+        <circle cx="68" cy="66" r="5"/>
+        <circle cx="36" cy="108" r="8" class="sketch-node"/>
+        <circle cx="70" cy="155" r="5"/>
+        <circle cx="18" cy="179" r="6"/>
+        <circle cx="48" cy="226" r="6" class="sketch-accent"/>
+      </symbol>
+    </defs>
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:0" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:1" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:2" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-stack" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:3" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-signal" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:4" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:5" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:6" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:7" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:0" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:1" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:2" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-signal" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:3" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:4" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:5" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-stack" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:6" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:7" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+</div>
+
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div id="root" class="site-shell">
+        
+<header class="study-masthead">
+  <a class="study-signature" href="https://sekaiser.github.io/">
+    <span class="study-bookmark" aria-hidden="true">sk.</span>
+    <span class="study-identity"><span class="study-name">Sebastian <em>Kaiser</em></span><small>A personal engineering notebook</small></span>
+  </a>
+  <nav aria-label="Main navigation">
+    <a href="https://sekaiser.github.io/notes.html" aria-current="true">Notes</a>
+    <a href="https://sekaiser.github.io/feed.html">Reading</a>
+    <a href="https://sekaiser.github.io/about.html">About</a>
+    <a href="https://sekaiser.github.io/search.html">Search</a>
+  </nav>
+</header>
+
+
+
+        <main id="main" tabindex="-1">
+           
+
+          
+<article class="study-page">
+  <header class="study-opening">
+    <div class="study-heading">
+      <div class="study-title">
+        <p class="study-context"><a href="https://sekaiser.github.io/notes.html">The notebook</a>
+  
+</p>
+        <h1>
+  
+    Backpressure in a Telemetry Pipeline: What Happens When the Cache Falls Behind?
+  
+</h1>
+        <div class="study-metadata">
+          <dl class="study-dates">
+            <div><dt>Published</dt><dd><time datetime="2026-10-20">20 Oct 2026</time></dd></div>
+            
+          </dl>
+          <nav class="study-topics" aria-label="Article topics">
+<a class="paper-tag" data-tag="backpressure" href="https://sekaiser.github.io/tags/backpressure.html"><span>backpressure</span></a>
+
+<a class="paper-tag" data-tag="concurrency" href="https://sekaiser.github.io/tags/concurrency.html"><span>concurrency</span></a>
+
+<a class="paper-tag" data-tag="system-design" href="https://sekaiser.github.io/tags/system-design.html"><span>system-design</span></a>
+</nav>
+        </div>
+      </div>
+      <div class="study-introduction"></div>
+    </div>
+  </header>
+  <div class="study-layout">
+    <aside class="study-margin" aria-label="Article navigation and reading notes">
+      <div class="study-margin-content">
+        <details class="study-contents" hidden>
+          <summary>On this page</summary>
+          <nav aria-label="On this page"></nav>
+        </details>
+        
+      </div>
+    </aside>
+    <div class="document-body study-prose"><div class="frontmatter">
+<div class="abstract">
+<p>I wanted to update a cache as device readings passed through an existing
+telemetry pipeline. The processor would still publish its events; the cache
+would keep the latest readings ready for queries. A slow cache, however, would
+leave the processor with updates waiting to be written. I needed a limit on
+that work and a decision about what to lose when the limit was reached.</p>
+<p>The design keeps a bounded set of pending updates, allowing a newer reading to
+replace an older one for the same device and metric. Revisiting the
+implementation showed how much depends on what happens after that replacement:
+which value a writer receives, which write finishes last, and whether a lost
+reading ever gets another chance.</p>
+</div>
+<div class="ox-hugo-toc toc has-section-numbers">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><span class="section-num">1</span> <a href="#when-a-consumer-cannot-keep-up">When a consumer cannot keep up</a><ul>
+<li><span class="section-num">1.1</span> <a href="#a-queue-buys-time">A queue buys time</a></li>
+<li><span class="section-num">1.2</span> <a href="#where-the-pressure-goes">Where the pressure goes</a></li>
+</ul>
+</li>
+<li><span class="section-num">2</span> <a href="#a-bounded-write-path-for-current-readings">A bounded write path for current readings</a><ul>
+<li><span class="section-num">2.1</span> <a href="#coalesce-by-device-and-metric">Coalesce by device and metric</a></li>
+<li><span class="section-num">2.2</span> <a href="#writers-must-consume-the-state-being-coalesced">Writers must consume the state being coalesced</a></li>
+<li><span class="section-num">2.3</span> <a href="#bound-everything-that-retains-work">Bound everything that retains work</a></li>
+<li><span class="section-num">2.4</span> <a href="#preserve-ordering-at-the-final-write">Preserve ordering at the final write</a></li>
+<li><span class="section-num">2.5</span> <a href="#a-dropped-final-update-does-not-repair-itself">A dropped final update does not repair itself</a></li>
+<li><span class="section-num">2.6</span> <a href="#what-i-give-up-and-where-the-design-stops-working">What I give up, and where the design stops working</a></li>
+</ul>
+</li>
+<li><span class="section-num">3</span> <a href="#how-i-would-evolve-the-system">How I would evolve the system</a><ul>
+<li><span class="section-num">3.1</span> <a href="#start-with-the-freshness-readers-need">Start with the freshness readers need</a></li>
+<li><span class="section-num">3.2</span> <a href="#give-repair-a-budget">Give repair a budget</a></li>
+<li><span class="section-num">3.3</span> <a href="#scale-the-constrained-part">Scale the constrained part</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<!--endtoc-->
+</div>
+<h2><a href="#when-a-consumer-cannot-keep-up" aria-hidden="true" class="anchor" id="when-a-consumer-cannot-keep-up"></a><span class="section-num">1</span> When a consumer cannot keep up</h2>
+<p>In <span id="bln-ref-1" class="document-reference"><a href="https://sekaiser.github.io/notes/from-time-series-to-state.html">From Time-Series to State</a></span>, I described keeping the latest known device
+readings in a cache so that queries would not have to reconstruct them from
+history. That moves work from readers to the ingestion path. Now a processor
+that already enriches and publishes events also has to maintain the cache.</p>
+<p>I did not want cache writes to hold up event publication. Pranshu Raj's
+<a href="https://blog.pranshu-raj.in/posts/backpressure/" target="_blank" rel="noopener">Backpressure in Distributed Systems</a> discusses the choices available when
+producers outpace consumers, including slowing producers and dropping work.
+The cache gives me room to discard some updates; the event log has a different
+delivery requirement.</p>
+<h3><a href="#a-queue-buys-time" aria-hidden="true" class="anchor" id="a-queue-buys-time"></a><span class="section-num">1.1</span> A queue buys time</h3>
+<p>Suppose a consumer completes 80 updates per second while 100 arrive. With room
+for 200 updates, an empty queue fills in about ten seconds. These illustrative
+numbers assume constant rates and equal-cost updates: capacity divided by the
+excess arrival rate gives us the time until the queue fills.</p>
+<p>A larger queue absorbs a longer burst. If overload continues, it also makes
+accepted work wait longer before the queue fills anyway. Launching a goroutine
+for each blocked send leaves the waiting events in memory, now attached to
+goroutines. To stay within a memory budget, the system eventually has to accept
+less work, complete it faster, or discard some of it.</p>
+<h3><a href="#where-the-pressure-goes" aria-hidden="true" class="anchor" id="where-the-pressure-goes"></a><span class="section-num">1.2</span> Where the pressure goes</h3>
+<p>I use <em>backpressure</em> for feedback that limits what an upstream stage submits.
+A blocking channel can provide that feedback locally. An asynchronous consumer
+can advertise demand or stop requesting more work, as in the
+<a href="https://www.reactive-streams.org/" target="_blank" rel="noopener">Reactive Streams model</a>. The submitting thread need not block for the flow
+of work to slow down.</p>
+<p>Rejecting an update without slowing its producer is <em>load shedding</em>. Replacing
+several pending updates with one is <em>coalescing</em>. These protect the consumer
+without necessarily changing the arrival rate. My cache design relies on both,
+so calling the whole mechanism backpressure would leave out an important part
+of its behavior: ingestion can continue while cache updates are lost.</p>
+<p>When required event processing slows down, a durable log can retain the backlog.
+Lag still grows, downstream views become stale, and retention is finite. The
+cache is an optional projection, so I can discard work there to preserve
+capacity for publication.</p>
+<p>I can make that trade-off because a newer temperature observation supersedes
+an older one in the current-state view. It would be wrong for an increment
+in a consumption total or for an alarm transition or billing event: losing one
+could change the answer. Even when coalescing is appropriate for a view,
+historical events may still need to be retained elsewhere.</p>
+<h2><a href="#a-bounded-write-path-for-current-readings" aria-hidden="true" class="anchor" id="a-bounded-write-path-for-current-readings"></a><span class="section-num">2</span> A bounded write path for current readings</h2>
+<p>My proposal gives the processor a secondary, best-effort path to the
+current-state cache. It offers each processed measurement to a bounded buffer
+and continues without waiting for cache I/O. Writers take work from the buffer
+in batches. If they fall behind, pending updates can be discarded while
+publication continues.</p>
+<p>Both paths still share the processor's CPU and memory. The cache branch needs
+a resource budget even though it does not wait for I/O on the primary path.</p>
+<p><a id="figure--fig-telemetry-pressure-boundary"></a></p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/f1c7b1d5e05c605418e8764383535b0fdf678d0bb0e6fd175764489c8ef39f2d/pressure-boundary.svg?v=f1c7b1d5e05c6054" alt="A metric processor publishes required events to a durable stream and separately offers replaceable updates to a bounded pending queue. Fixed workers claim batches and update a current-state cache with a version check. Cache overload ends at admission; it does not regulate the primary path."><figcaption><span class="figure-number">Figure 1: </span>The intended separation of responsibilities. Cache admission may coalesce or shed updates; required publication needs its own bounded, acknowledged path. The cache branch is a design, not a guarantee of delivery.</figcaption></figure>
+<h3><a href="#coalesce-by-device-and-metric" aria-hidden="true" class="anchor" id="coalesce-by-device-and-metric"></a><span class="section-num">2.1</span> Coalesce by device and metric</h3>
+<p>A device reports different metrics independently. Replacing a pending
+temperature update must not remove its pending voltage reading, so the queue's
+identity is the pair <code>(device, metric)</code>.</p>
+<p>The proposed ring buffer has a fixed number of slots and an index mapping each
+identity to its slot. A newer observation for an existing identity replaces the
+pending value in place. An older observation is ignored. When a new identity
+arrives at capacity, the queue evicts its oldest pending entry.</p>
+<p>Consider a queue with these pending entries:</p>
+<div class="table-caption">
+  <span class="table-number">Table 1:</span>
+  Illustrative observations, not production data. Only the temperature entry changes when a newer temperature arrives.
+</div>
+<table>
+<tr>
+<th>Device</th>
+<th>Metric</th>
+<th>Observation time</th>
+<th>Value</th>
+</tr>
+<tr>
+<td>A</td>
+<td>temperature</td>
+<td>10:00:00</td>
+<td>21.4 C</td>
+</tr>
+<tr>
+<td>A</td>
+<td>voltage</td>
+<td>10:00:01</td>
+<td>3.5 V</td>
+</tr>
+<tr>
+<td>B</td>
+<td>temperature</td>
+<td>10:00:02</td>
+<td>19.8 C</td>
+</tr>
+</table>
+<p>If <code>A/temperature</code> arrives with time <code>10:00:03</code>, it replaces the first value.
+The queue still has three pending identities, and the writer can skip the
+superseded temperature reading. The index avoids scanning for it: lookups are
+expected O(1), while ring insertion and eviction are O(1).</p>
+<p>In-place replacement leaves the slot where it was. "Oldest" then means the
+earliest admitted pending identity, even if its value has just changed. Moving
+every replacement to the back would change how frequently reporting metrics
+are evicted. Either policy is possible, but they give different results.</p>
+<h3><a href="#writers-must-consume-the-state-being-coalesced" aria-hidden="true" class="anchor" id="writers-must-consume-the-state-being-coalesced"></a><span class="section-num">2.2</span> Writers must consume the state being coalesced</h3>
+<p>Revisiting the implementation exposed a gap in this design. It keeps recent
+observations in a ring and sends copies to a separate bounded channel. Writers
+receive those copies. Replacing a ring entry leaves an older copy already in
+the channel untouched. If the channel rejects the newer copy, nothing arranges
+another attempt to deliver the value still held in the ring.</p>
+<p>Suppose the device stops reporting at that point. The ring holds its newest
+reading, but the writer may never see it. The ring is acting as a recent-value
+registry with best-effort notifications, while the proposal needs it to be
+the queue of pending work.</p>
+<p>I would have writers claim entries directly from that queue. A channel can
+wake a writer when work arrives without carrying another set of event copies.
+The following pseudocode sketches the change; these operations would still
+need to be implemented:</p>
+<figure class="code-listing" id="code-snippet--lst-pending-metric-work"><figcaption class="code-toolbar"><span class="code-language">Text</span><span class="code-caption">Admission and claiming share one synchronization boundary; network writes happen outside it.</span><span class="code-actions"><a href="#code-snippet--lst-pending-metric-work" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--lst-pending-metric-work-L1" href="#code-snippet--lst-pending-metric-work-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--lst-pending-metric-work-L2" href="#code-snippet--lst-pending-metric-work-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--lst-pending-metric-work-L3" href="#code-snippet--lst-pending-metric-work-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--lst-pending-metric-work-L4" href="#code-snippet--lst-pending-metric-work-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--lst-pending-metric-work-L5" href="#code-snippet--lst-pending-metric-work-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--lst-pending-metric-work-L6" href="#code-snippet--lst-pending-metric-work-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--lst-pending-metric-work-L7" href="#code-snippet--lst-pending-metric-work-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--lst-pending-metric-work-L8" href="#code-snippet--lst-pending-metric-work-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--lst-pending-metric-work-L9" href="#code-snippet--lst-pending-metric-work-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--lst-pending-metric-work-L10" href="#code-snippet--lst-pending-metric-work-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-snippet--lst-pending-metric-work-L11" href="#code-snippet--lst-pending-metric-work-L11" aria-label="Link to line 11" data-line="11"></a></div><div class="code-line-reference" style="--line-offset:11"><a id="code-snippet--lst-pending-metric-work-L12" href="#code-snippet--lst-pending-metric-work-L12" aria-label="Link to line 12" data-line="12"></a></div><div class="code-line-reference" style="--line-offset:12"><a id="code-snippet--lst-pending-metric-work-L13" href="#code-snippet--lst-pending-metric-work-L13" aria-label="Link to line 13" data-line="13"></a></div><div class="code-line-reference" style="--line-offset:13"><a id="code-snippet--lst-pending-metric-work-L14" href="#code-snippet--lst-pending-metric-work-L14" aria-label="Link to line 14" data-line="14"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-text"><span style="color:#323232;">offer(event):                         # while holding the queue lock
+</span><span style="color:#323232;">    reject if admission is closed
+</span><span style="color:#323232;">    key = (event.device, event.metric)
+</span><span style="color:#323232;">    if key is pending:
+</span><span style="color:#323232;">        replace only if event.version is newer
+</span><span style="color:#323232;">    else:
+</span><span style="color:#323232;">        evict oldest pending entry if at capacity
+</span><span style="color:#323232;">        insert key and event
+</span><span style="color:#323232;">    signal work available
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">claim_batch(limit):                  # while holding the same lock
+</span><span style="color:#323232;">    remove up to limit pending entries
+</span><span style="color:#323232;">    remove their index entries
+</span><span style="color:#323232;">    return immutable snapshots for the writer
+</span></code></pre></div></figure>
+<p>Once a writer claims an entry, a newer observation for that metric can become
+pending again while the earlier write is in flight. If that write fails, its
+cleanup must leave the newer pending entry alone. Wake-ups may be combined,
+provided a worker checks the queue before sleeping and cannot miss the
+transition from empty to nonempty.</p>
+<p>Admission can briefly wait for the lock protecting the ring and index.
+"Nonblocking" here means that it does not wait for queue capacity or cache I/O.
+The writer also needs to copy the claimed event under that lock, before another
+producer can change its contents.</p>
+<p><a id="figure--fig-pending-work-control"></a></p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/96ef13d10926cdd5f55d7d8b2ae973fe0b373f4eb3edb9fcd1dadba598cf2935/pending-work-control.svg?v=96ef13d10926cdd5" alt="Detailed proposed admission flow: reject closed admission, look up the device-metric identity, replace a newer pending value or ignore an older one, and evict the oldest pending entry before inserting a new identity at capacity. Workers claim immutable batches under the same mutex, then perform deadline-bounded atomic version checks outside it. Slow cache writes reduce claiming and cause pending-entry eviction without throttling the producer."><figcaption><span class="figure-number">Figure 2: </span>Proposed admission and writer control flow. The queue and index share a mutex; cache writes happen after claiming and unlocking. Slow writes reduce the drain rate, so admission eventually evicts pending work rather than waiting for cache capacity. This is bounded overload control, not producer throttling. The version policy shown ignores older and equal versions; corrections need the ordering policy discussed below.</figcaption></figure>
+<h3><a href="#bound-everything-that-retains-work" aria-hidden="true" class="anchor" id="bound-everything-that-retains-work"></a><span class="section-num">2.3</span> Bound everything that retains work</h3>
+<p>The ring's fixed capacity limits its entry count. To estimate memory, I also
+have to account for the values themselves and everything else that retains
+them: the index, worker mailboxes and batches, encoding buffers, and cache
+clients. Variable-sized values need a size limit or a byte budget before I can
+claim a memory bound.</p>
+<p>In the proposed single-pending-queue design, a rough payload allowance is
+<code>(C + W * B) * Emax</code>: pending capacity <code>C</code>, <code>W</code> workers, at most <code>B</code> claimed
+events per worker, and maximum retained event size <code>Emax</code>. Index and client
+overhead need their own allowances. The existing implementation also has copies
+and extra channels, so this expression does not bound its memory usage.</p>
+<p>A small worker pool limits simultaneous application-level writes if each worker
+waits for its write to finish. Counting client objects gives no such assurance,
+since a client may manage several connections. And without write deadlines,
+a stalled cache can leave every worker occupied indefinitely.</p>
+<p>Batch size and the flush deadline let me trade waiting time for less network
+overhead. Here too, the implementation needs a closer look: the writer collects
+a batch, but the storage adapter executes its pipeline separately for each
+event. Changing the batch size will not give it one network execution per batch.</p>
+<h3><a href="#preserve-ordering-at-the-final-write" aria-hidden="true" class="anchor" id="preserve-ordering-at-the-final-write"></a><span class="section-num">2.4</span> Preserve ordering at the final write</h3>
+<p>A writer can claim a temperature reading just before a newer one arrives.
+Another writer may claim the newer reading and finish first. If both writes
+are unconditional, the older reading then overwrites it. Coalescing while
+observations are pending does not protect them once they are in flight.</p>
+<p>The current dispatcher assigns work round-robin, so updates for a key can reach
+different workers even if they arrived in partition order. Its cache writes
+are unconditional. The registry's timestamp comparison cannot prevent this
+later overwrite.</p>
+<p>The cache needs to apply the same rule: replace a metric only when the incoming
+version is newer. With concurrent writers, comparison and replacement must be
+atomic. Reading the version in a client and then writing leaves room for
+another writer to act between the two operations. A cache-side conditional
+update can close that race. Exclusive ownership of a key is another option,
+provided it covers every writer, including recovery.</p>
+<p>Choosing a version also commits us to an ordering policy. Observation timestamps
+depend on the devices' clocks and reset behavior; equal timestamps, corrections,
+and sequence resets need explicit handling. Arrival order will not resolve this
+when replay or delayed delivery can reorder observations.</p>
+<h3><a href="#a-dropped-final-update-does-not-repair-itself" aria-hidden="true" class="anchor" id="a-dropped-final-update-does-not-repair-itself"></a><span class="section-num">2.5</span> A dropped final update does not repair itself</h3>
+<p>I left retries out of the initial proposal because a later reading could
+replace a lost one. For a frequently reporting metric, that may be an acceptable
+delay. But it assumes that another reading arrives and its write succeeds.
+If the device goes offline instead, its last update may remain missing.</p>
+<p>That is where my original claim of eventual consistency needs qualification.
+To promise eventual recovery of that observation, the system needs replay or
+reconciliation. Historical storage can supply the data; something still has to
+find the missing state and repair it.</p>
+<p>I also need to know where loss occurs. Ignoring an older observation discards
+superseded work. Evicting a pending entry or failing a write can lose a value
+the cache needs. The current path counts outcomes at one boundary, while
+dispatch can drop silently and the worker discards the returned write error.
+A single "dropped" counter would hide the distinction even if it counted all
+of these cases.</p>
+<p>Meanwhile, event publication remains a separate responsibility. It is not
+transactional with cache admission: a cache update can succeed even when
+publication fails. Launching an unbounded goroutine for each publication would
+also defeat the memory budget. The required path needs its own publication
+acknowledgement and input-offset handling.</p>
+<h3><a href="#what-i-give-up-and-where-the-design-stops-working" aria-hidden="true" class="anchor" id="what-i-give-up-and-where-the-design-stops-working"></a><span class="section-num">2.6</span> What I give up, and where the design stops working</h3>
+<p>The appeal of this design is that cache trouble does not force the processor
+to retain an ever-growing backlog. Coalescing removes superseded work, while
+eviction gives the queue a way to stay within capacity. I pay for that with
+incomplete state and potentially longer delays before a device's next reading
+reaches the cache. Avoiding retries keeps the write path simple, but leaves
+recovery to later observations or a separate repair mechanism.</p>
+<p>A process that stays alive through overload has met only part of the
+requirement. Its cache can still be too stale to use.</p>
+<h4><a href="#when-there-is-little-work-to-coalesce" aria-hidden="true" class="anchor" id="when-there-is-little-work-to-coalesce"></a><span class="section-num">2.6.1</span> When there is little work to coalesce</h4>
+<p>Repeated temperature updates for one device are cheap to hold: they share one
+pending slot. The same number of updates spread over different devices and
+metrics may each need a slot and a write. Event rate alone therefore says
+little about how much this design saves.</p>
+<p>If the writes required to keep those metrics within the chosen freshness target
+exceed the cache's sustained capacity, no finite buffer can meet that target
+indefinitely. A larger ring buys time during a burst. Under sustained overload,
+it can retain more work while the view continues to fall behind. Shedding may
+keep the service running, but it cannot preserve the promised freshness and
+coverage at the same time.</p>
+<p>The eviction policy also makes no promise to each device. Enough new identities
+can displace a rarely reporting metric before a writer claims it. If its device
+then stays quiet, frequent updates elsewhere do nothing to repair that missing
+value. A single hot key cannot fill this deduplicating queue on its own;
+competition comes from the number of different keys needing service.</p>
+<p>There are two memory limits to consider as well. The pending queue must fit
+in the processor, and the retained current-state dataset must fit in the cache.
+Bounding the queue does not bound the number of devices and metrics stored
+over time. If that dataset exceeds available cache memory, capacity or retention
+has to change. Otherwise writes can fail or stored entries may be evicted,
+depending on the cache policy, independently of the pending queue's behavior.</p>
+<h4><a href="#when-best-effort-becomes-a-broken-promise" aria-hidden="true" class="anchor" id="when-best-effort-becomes-a-broken-promise"></a><span class="section-num">2.6.2</span> When best effort becomes a broken promise</h4>
+<p>This design is a poor fit when every observation matters, or when every device
+must appear in the view within a fixed deadline despite failures. Eviction and
+unretried write failures explicitly allow those requirements to be violated.
+A larger buffer cannot change the delivery contract.</p>
+<p>Even for a current-state view, accepting occasional loss is a stronger choice
+for a metric that reports rarely than for one that reports frequently. I would
+need repair if the last reading before a device goes offline must eventually
+appear. If the source no longer retains that observation, or no recovery path
+can read it, the cache cannot reconstruct it.</p>
+<p>Version checks depend on trustworthy ordering too. With timestamps as versions,
+one erroneous future timestamp can cause subsequent normal readings to be
+rejected until they overtake it. Atomic comparison would faithfully enforce the
+wrong order. Clock validation or a suitable version and correction policy has
+to resolve that; coalescing cannot.</p>
+<h4><a href="#when-cache-trouble-spreads-to-the-primary-path" aria-hidden="true" class="anchor" id="when-cache-trouble-spreads-to-the-primary-path"></a><span class="section-num">2.6.3</span> When cache trouble spreads to the primary path</h4>
+<p>The secondary path shares a process with required publication. It still spends
+CPU on each offered event, takes the queue lock, and allocates or encodes data.
+A bounded queue limits retained work, not the cost of an unlimited stream of
+admission attempts. If that work exhausts shared CPU or creates enough memory
+pressure, publication can slow down even though admission never waits for cache
+capacity. Fixed workers and byte limits reduce the risk; separate resource
+budgets, and eventually process isolation, may be needed for a stronger boundary.</p>
+<p>Recovery can spread the load in the other direction. If cache misses make
+readers query history, an outage can move the read workload onto the historical
+store. If replay then competes with live writes at full speed, recovery can
+overload the cache again. Google's <a href="https://sre.google/sre-book/addressing-cascading-failures/" target="_blank" rel="noopener">Addressing Cascading Failures</a> describes
+how shifting load after a failure can exhaust the remaining capacity. Fallback
+and repair need admission limits of their own. Repair given only spare capacity
+will never catch up while live work consumes the entire write budget.</p>
+<p>I would use this approach for a replaceable current-state projection whose
+readers tolerate visible gaps or delay, with enough normal capacity to recover
+after bursts. If the requirement becomes complete, deadline-bound delivery for
+every metric, I would need durable pending work or replay, flow control, and
+capacity sized for that requirement. The bounded ring would still be useful
+as a local optimization, but it would no longer be the delivery mechanism.</p>
+<h2><a href="#how-i-would-evolve-the-system" aria-hidden="true" class="anchor" id="how-i-would-evolve-the-system"></a><span class="section-num">3</span> How I would evolve the system</h2>
+<p>Once the cache branch stays within its resource budget, I still need to decide
+whether the view it produces is useful. How stale or incomplete may it become?
+That requirement should guide further changes.</p>
+<h3><a href="#start-with-the-freshness-readers-need" aria-hidden="true" class="anchor" id="start-with-the-freshness-readers-need"></a><span class="section-num">3.1</span> Start with the freshness readers need</h3>
+<p>Queue occupancy alone would tell me too little. I would also track the oldest
+pending work, the delay until a successful write, and the reasons updates are
+lost. Observation age needs separate attention: a quiet device can have an old
+reading while ingestion is healthy. Broker lag helps distinguish that case
+from a processor that has fallen behind.</p>
+<p>A queue full of repeated updates for a few metrics is a good candidate for
+coalescing. If most entries belong to different metrics, that will buy less;
+admission or capacity needs to change. Slow writes while little work is pending
+call for a different investigation again. A larger queue can make the screen
+staler without speeding up any of those writes.</p>
+<p>I would measure retained bytes and write cost alongside events per second.
+Google's <a href="https://sre.google/sre-book/handling-overload/" target="_blank" rel="noopener">Handling Overload</a> discusses the limits of request-count capacity
+models and the value of treating work
+differently according to its criticality. Here, required publication and a
+replaceable cache projection already have different delivery requirements.</p>
+<h3><a href="#give-repair-a-budget" aria-hidden="true" class="anchor" id="give-repair-a-budget"></a><span class="section-num">3.2</span> Give repair a budget</h3>
+<p>After bounding the write path and enforcing ordering, I would add a repair
+path that can identify stale or missing state and recover it from the source.
+Recovery needs a rate limit too. Replaying everything at full speed after an
+outage can overload the cache just as it becomes available again.</p>
+<p>Live updates and repair could share a write budget, with repair using spare
+capacity. The version rule must apply to both, so a delayed historical read
+cannot overwrite a newer observation. When the freshness target cannot be met
+within that budget, the service should report that the view is degraded.</p>
+<p>A normal shutdown can leave missing work as well. I would stop admission and
+join the producers, then drain accepted work within a deadline before closing
+the clients. Anything left needs to be counted and covered by repair. A fixed
+sleep cannot tell me whether the writers have finished.</p>
+<h3><a href="#scale-the-constrained-part" aria-hidden="true" class="anchor" id="scale-the-constrained-part"></a><span class="section-num">3.3</span> Scale the constrained part</h3>
+<p>More workers can help while the cache has spare write capacity. Beyond that,
+they increase contention or move the wait into connection pools. Partitioning
+the pending queue would bring ownership and rebalancing into the ordering
+design. If a noisy source repeatedly crowds out rarely reporting devices,
+separate allowances may be needed to protect their pending updates.</p>
+<p>I would wait for evidence of those problems before adding the machinery.
+The delivery and ordering gaps need fixing first; tuning an adaptive
+concurrency controller would be difficult while write errors and missing
+updates were still indistinguishable.</p>
+<p>I would test this with the cache unavailable, checking that publication
+continues within its own admission limits and pending cache work stays bounded.
+During recovery, readers must still be able to tell when their view is behind,
+while repair catches up without displacing live traffic. Until that behavior
+is established, I would describe the projection as best effort rather than
+promise eventual consistency.</p>
+</div>
+  </div>
+  <footer class="study-end">
+    
+    
+  
+  
+  
+  
+  
+
+
+    
+    <a class="study-return" href="https://sekaiser.github.io/notes.html">Back to all notes</a>
+  </footer>
+</article>
+
+        </main>
+
+        
+            <footer class="site-footer">
+  <div class="footer-colophon">
+    <a class="footer-home" href="https://sekaiser.github.io/">
+      <span class="footer-bookplate" aria-hidden="true">sk.</span>
+      <span class="footer-name">Sebastian Kaiser</span>
+    </a>
+    <p>A personal notebook. Built with Berlin.</p>
+  </div>
+  <nav aria-label="Elsewhere">
+    
+      <a class="footer-icon" href="https://github.com/sekaiser" aria-label="GitHub" title="GitHub" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M12 .5a12 12 0 0 0-3.793 23.385c.6.111.82-.261.82-.577 0-.285-.01-1.04-.016-2.04-3.338.725-4.043-1.61-4.043-1.61-.546-1.386-1.333-1.755-1.333-1.755-1.09-.745.083-.73.083-.73 1.205.085 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.419-1.305.762-1.605-2.665-.303-5.467-1.333-5.467-5.931 0-1.31.469-2.381 1.236-3.221-.124-.303-.536-1.524.117-3.176 0 0 1.008-.323 3.301 1.23a11.52 11.52 0 0 1 6.006 0c2.291-1.553 3.297-1.23 3.297-1.23.655 1.652.243 2.873.12 3.176.77.84 1.235 1.911 1.235 3.221 0 4.61-2.807 5.625-5.479 5.922.43.372.823 1.102.823 2.222 0 1.606-.015 2.902-.015 3.296 0 .319.216.694.825.576A12 12 0 0 0 12 .5Z"/>
+        </svg>
+      </a>
+    
+    
+      <a class="footer-icon" href="https://www.linkedin.com/in/sekaiser/" aria-label="LinkedIn" title="LinkedIn" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.049c.476-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286ZM5.337 7.433a2.062 2.062 0 1 1 0-4.124 2.062 2.062 0 0 1 0 4.124ZM7.119 20.452H3.555V9h3.564v11.452ZM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0Z"/>
+        </svg>
+      </a>
+    
+    <a class="footer-icon" href="#main" aria-label="Back to top" title="Back to top">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <path d="M5 4h14M6 13l6-6 6 6M12 7v13"/>
+      </svg>
+    </a>
+  </nav>
+</footer>
+
+        
+
+  </div>
+</body>
+</html>
