@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="178mm" height="111.016mm" viewBox="0 0 760 474" role="img" aria-labelledby="title desc">
+  <title id="title">Shared container delivery: checksummed handoff, gated publication and no-rebuild release</title>
+  <desc id="desc">Teams supply Dockerfiles and test commands, maintainers supply shared delivery jobs, and the platform supplies runners and scoped access. The dominant build, test and publication band builds or reuses a selected image, hands its archive and checksum between runners with verification on receipt, runs service-owned commands and any selected cross-service slice needed, and publishes the same selected image only after all enabled checks pass. The smaller release band resolves a published image, promotes or copies it with digest verification and no rebuild, then gates deployment on coverage of the proposed services and settings and on relevant target checks. Matching image identity alone does not establish behavioral coverage. A supporting run record names digest and origin, tested services and settings, and results. Labeled hollow-arrow links distinguish contributions to that record and its use as coverage evidence from the solid arrows within each execution band. Failures and findings lead to a service change or regression check. The diagram does not assign target-side write enforcement to the shared jobs or to a test implementation.</desc>
+  <!--
+    Editable vector master. Nominal publication width: 178 mm (two columns).
+    Render PDF: rsvg-convert -f pdf -o software-delivery-process.pdf software-delivery-process.svg
+    Render PNG: rsvg-convert -w 2400 -o software-delivery-process.png software-delivery-process.svg
+    Solid arrows connect execution operations; labeled hollow arrows carry evidence.
+    Conditional checks are subordinate text, not separate mandatory stages.
+    All semantic distinctions survive grayscale reproduction; minimum type is 12 px.
+  -->
+  <defs>
+    <marker id="arrow" viewBox="0 0 7 7" refX="6.2" refY="3.5" markerWidth="6.4" markerHeight="6.4" orient="auto-start-reverse" markerUnits="strokeWidth">
+      <path d="M0 0 L7 3.5 L0 7 Z" fill="#303941"/>
+    </marker>
+    <marker id="record-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse" markerUnits="strokeWidth">
+      <path d="M1 1 L7 4 L1 7 Z" fill="#fff" stroke="#68747c" stroke-width="1"/>
+    </marker>
+    <style>
+      text { font-family: Helvetica, Arial, sans-serif; fill: #202930; }
+      .section { font-size: 12px; font-weight: 700; letter-spacing: 1px; }
+      .owner { font-size: 12px; font-weight: 700; }
+      .stage { font-size: 14px; font-weight: 700; }
+      .release-stage { font-size: 13px; font-weight: 700; }
+      .detail { font-size: 12px; }
+      .edge { fill: none; stroke: #303941; stroke-width: 1.25; marker-end: url(#arrow); }
+      .record-link { fill: none; stroke: #68747c; stroke-width: 1; marker-end: url(#record-arrow); }
+      .band { fill: #fff; stroke: #a5aeb4; stroke-width: 0.9; }
+      .stage-box { fill: #fff; stroke: #303941; stroke-width: 1.2; }
+      .check-box { fill: #edf3f6; stroke: #303941; stroke-width: 1.2; }
+      .separator { stroke: #a5aeb4; stroke-width: 0.8; }
+    </style>
+  </defs>
+
+  <rect width="760" height="474" fill="#fff"/>
+
+  <!-- Compact ownership strip: responsibilities, not implied swimlanes. -->
+  <rect x="24" y="18" width="712" height="44" rx="2" fill="#f3f5f6" stroke="#7b858c" stroke-width="1"/>
+  <path d="M261 18 V62 M499 18 V62" class="separator"/>
+  <text x="142" y="35" class="owner" text-anchor="middle">Teams</text>
+  <text x="142" y="52" class="detail" text-anchor="middle">Dockerfiles + test commands</text>
+  <text x="380" y="35" class="owner" text-anchor="middle">Maintainers</text>
+  <text x="380" y="52" class="detail" text-anchor="middle">Shared delivery jobs</text>
+  <text x="618" y="35" class="owner" text-anchor="middle">Platform</text>
+  <text x="618" y="52" class="detail" text-anchor="middle">Runners + scoped access</text>
+
+  <!-- The selected image crosses runners before checks gate publication. -->
+  <rect x="18" y="78" width="724" height="150" rx="3" class="band"/>
+  <text x="30" y="98" class="section">BUILD / TEST / PUBLICATION</text>
+
+  <path d="M170 158 H191" class="edge"/>
+  <path d="M362 158 H383" class="edge"/>
+  <path d="M588 158 H609" class="edge"/>
+
+  <rect x="24" y="112" width="146" height="104" rx="2" class="stage-box"/>
+  <text x="97" y="135" class="stage" text-anchor="middle">Build or reuse</text>
+  <text x="97" y="160" class="detail" text-anchor="middle">Selected image</text>
+  <text x="97" y="177" class="detail" text-anchor="middle">Team Dockerfile</text>
+
+  <rect x="192" y="112" width="170" height="104" rx="2" class="stage-box"/>
+  <text x="277" y="135" class="stage" text-anchor="middle">Checksummed</text>
+  <text x="277" y="152" class="stage" text-anchor="middle">handoff</text>
+  <text x="277" y="174" class="detail" text-anchor="middle">Archive + checksum</text>
+  <text x="277" y="191" class="detail" text-anchor="middle">Between runners</text>
+  <text x="277" y="207" class="detail" text-anchor="middle">Verify on receipt</text>
+
+  <rect x="384" y="112" width="204" height="104" rx="2" class="check-box"/>
+  <text x="486" y="135" class="stage" text-anchor="middle">Enabled checks</text>
+  <text x="486" y="155" class="detail" text-anchor="middle">Service-owned commands</text>
+  <text x="486" y="172" class="detail" text-anchor="middle">All enabled checks pass</text>
+  <path d="M397 180 H575" class="separator"/>
+  <text x="486" y="194" class="detail" text-anchor="middle">Selected cross-service slice</text>
+  <text x="486" y="209" class="detail" text-anchor="middle">only if needed</text>
+
+  <rect x="610" y="112" width="126" height="104" rx="2" class="stage-box"/>
+  <text x="673" y="135" class="stage" text-anchor="middle">Publish</text>
+  <text x="673" y="160" class="detail" text-anchor="middle">Same selected</text>
+  <text x="673" y="177" class="detail" text-anchor="middle">image</text>
+
+  <!-- Evidence contributions are labeled separately from image execution. -->
+  <path d="M97 216 V255" class="record-link"/>
+  <text x="110" y="245" class="detail">Digest + origin</text>
+  <path d="M486 216 V255" class="record-link"/>
+  <text x="499" y="245" class="detail">Scope + results</text>
+
+  <rect x="24" y="256" width="712" height="36" rx="2" fill="#f3f5f6" stroke="#68747c" stroke-width="1"/>
+  <path d="M130 256 V292 M285 256 V292 M566 256 V292" class="separator"/>
+  <text x="77" y="279" class="stage" text-anchor="middle">Run record</text>
+  <text x="208" y="279" class="detail" text-anchor="middle">Digest + origin</text>
+  <text x="425" y="279" class="detail" text-anchor="middle">Tested services/settings</text>
+  <text x="651" y="279" class="detail" text-anchor="middle">Results</text>
+
+  <!-- Release preserves identity; the coverage gate independently controls deployment. -->
+  <rect x="18" y="312" width="724" height="128" rx="3" class="band"/>
+  <text x="30" y="332" class="section">RELEASE / DEPLOYMENT</text>
+  <path d="M486 292 V343" class="record-link"/>
+  <text x="499" y="311" class="detail">Coverage evidence</text>
+
+  <path d="M170 386 H191" class="edge"/>
+  <path d="M362 386 H383" class="edge"/>
+  <path d="M588 386 H609" class="edge"/>
+
+  <rect x="24" y="344" width="146" height="84" rx="2" class="stage-box"/>
+  <text x="97" y="367" class="release-stage" text-anchor="middle">Resolve image</text>
+  <text x="97" y="389" class="detail" text-anchor="middle">Published registry</text>
+  <text x="97" y="406" class="detail" text-anchor="middle">image</text>
+
+  <rect x="192" y="344" width="170" height="84" rx="2" class="stage-box"/>
+  <text x="277" y="367" class="release-stage" text-anchor="middle">Promote / copy</text>
+  <text x="277" y="389" class="detail" text-anchor="middle">Verify digest</text>
+  <text x="277" y="406" class="detail" text-anchor="middle">No rebuild</text>
+
+  <rect x="384" y="344" width="204" height="84" rx="2" class="check-box"/>
+  <text x="486" y="363" class="release-stage" text-anchor="middle">Coverage gate</text>
+  <text x="486" y="381" class="detail" text-anchor="middle">Proposed services/settings</text>
+  <text x="486" y="397" class="detail" text-anchor="middle">must be covered</text>
+  <text x="486" y="418" class="detail" text-anchor="middle">Target checks pass if relevant</text>
+
+  <rect x="610" y="344" width="126" height="84" rx="2" class="stage-box"/>
+  <text x="673" y="367" class="release-stage" text-anchor="middle">Deploy</text>
+  <text x="673" y="389" class="detail" text-anchor="middle">Covered service</text>
+  <text x="673" y="406" class="detail" text-anchor="middle">combination</text>
+
+  <text x="30" y="462" class="detail">Failures / findings → service change or regression check</text>
+  <text x="730" y="462" class="detail" text-anchor="end">Digest identity ≠ coverage</text>
+</svg>

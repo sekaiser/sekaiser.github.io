@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="https://sekaiser.github.io/static/favicon.svg?v=d722fec0e0cca8eb" type="image/svg+xml">
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/vendor.css?v=cf6814bed6634e0a" type="text/css" media="screen" />
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/notebook.css?v=8029337c56b8059d">
+  
+  
+  
+  <script src="https://sekaiser.github.io/static/js/study.js?v=097960b1aa1fd3bf" defer></script>
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/article.css?v=919c161ba2902f9c">
+  
+
+  
+
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/project.css?v=277bc09a31ea9484">
+  <script src="https://sekaiser.github.io/static/js/main.js?v=7ffe88eb20e1b177"></script>
+
+  
+  
+
+
+
+
+  
+  
+  
+  
+
+<title>CI&#x2F;CD Across Team Boundaries | Sebastian Kaiser</title>
+<meta name="description" content="A delivery design combining reusable container workflows, service-owned checks, and deployment decisions based on tested service combinations.">
+<meta property="og:title" content="CI&#x2F;CD Across Team Boundaries | Sebastian Kaiser">
+<meta property="og:description" content="A delivery design combining reusable container workflows, service-owned checks, and deployment decisions based on tested service combinations.">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Sebastian Kaiser — engineering notebook">
+<meta name="twitter:card" content="summary">
+
+  
+  
+  <link rel="canonical" href="https://sekaiser.github.io/notes/ci-cd-across-team-boundaries.html">
+  <meta property="og:url" content="https:&#x2F;&#x2F;sekaiser.github.io&#x2F;notes&#x2F;ci-cd-across-team-boundaries.html">
+  <meta property="og:image" content="https://sekaiser.github.io/static/pics/study/engineering-desk.png?v=478d3aa3a9ffa967">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1254">
+  <meta property="og:image:height" content="1254">
+  <meta property="og:image:alt" content="An illustrated desk with a notebook, computer, and reading lamp.">
+
+
+  <meta property="article:published_time" content="2026-10-03">
+  
+
+<link rel="me" href="https://www.linkedin.com/in/sekaiser/">
+
+  
+</head>
+<body>
+  
+<div class="margin-sketches" aria-hidden="true">
+  <svg class="margin-sketch-definitions" width="0" height="0" focusable="false">
+    <defs>
+      <symbol id="margin-branches" viewBox="0 0 88 270">
+        <path d="M44 34 C44 67 18 60 18 96 M44 34 C44 67 70 60 70 96 M18 112 C18 153 44 145 44 177 M70 112 C70 153 44 145 44 177 M44 193 L44 230"/>
+        <circle cx="44" cy="26" r="8" class="sketch-node"/>
+        <rect x="10" y="96" width="16" height="16" rx="3"/>
+        <rect x="62" y="96" width="16" height="16" rx="3"/>
+        <circle cx="44" cy="185" r="8" class="sketch-node"/>
+        <path d="M36 238 L44 230 L52 238 L44 246 Z" class="sketch-accent"/>
+      </symbol>
+      <symbol id="margin-pages" viewBox="0 0 88 270">
+        <path d="M29 27 L62 30 L59 76 L26 73 Z M22 34 L55 37 L52 83 L19 80 Z"/>
+        <path d="M30 47 L46 49 M29 55 L43 57 M29 63 L38 64"/>
+        <path d="M38 93 C37 126 69 112 67 145 C65 167 30 153 29 183" stroke-dasharray="2 7"/>
+        <circle cx="29" cy="191" r="8" class="sketch-node"/>
+        <path d="M36 195 L62 216 M62 210 L68 216 L62 222 L56 216 Z" class="sketch-accent"/>
+        <circle cx="13" cy="130" r="3"/>
+      </symbol>
+      <symbol id="margin-orbit" viewBox="0 0 88 270">
+        <ellipse cx="44" cy="72" rx="31" ry="39"/>
+        <ellipse cx="44" cy="72" rx="17" ry="39" transform="rotate(28 44 72)"/>
+        <circle cx="44" cy="72" r="6" class="sketch-node"/>
+        <circle cx="71" cy="52" r="4" class="sketch-accent"/>
+        <path d="M44 121 L44 164 M30 182 L44 164 L58 182 Z M44 183 L44 212" stroke-dasharray="3 6"/>
+        <path d="M35 230 Q44 215 53 230 Q44 244 35 230 Z"/>
+      </symbol>
+      <symbol id="margin-stack" viewBox="0 0 88 270">
+        <path d="M10 54 L44 36 L78 54 L44 72 Z M10 70 L44 88 L78 70 M10 86 L44 104 L78 86"/>
+        <path d="M44 116 L44 150 M20 168 L44 150 L68 168 M20 168 L20 193 M68 168 L68 193"/>
+        <rect x="12" y="194" width="16" height="16" rx="3"/>
+        <circle cx="68" cy="202" r="8" class="sketch-node"/>
+        <path d="M37 239 L51 239 M44 232 L44 246" class="sketch-accent"/>
+      </symbol>
+      <symbol id="margin-signal" viewBox="0 0 88 270">
+        <path d="M12 58 L26 58 L26 36 L42 36 L42 80 L58 80 L58 58 L76 58"/>
+        <path d="M12 114 Q27 85 44 114 T76 114"/>
+        <path d="M12 153 L76 153" stroke-dasharray="2 7"/>
+        <circle cx="26" cy="153" r="4" class="sketch-node"/>
+        <circle cx="62" cy="153" r="4" class="sketch-accent"/>
+        <path d="M23 202 L44 182 L65 202 L44 222 Z M23 202 L65 202"/>
+      </symbol>
+      <symbol id="margin-network" viewBox="0 0 88 270">
+        <path d="M19 45 L68 66 L36 108 L19 45 M36 108 L70 155 L18 179 L36 108 M18 179 L48 226 L70 155"/>
+        <circle cx="19" cy="45" r="6" class="sketch-node"/>
+        <circle cx="68" cy="66" r="5"/>
+        <circle cx="36" cy="108" r="8" class="sketch-node"/>
+        <circle cx="70" cy="155" r="5"/>
+        <circle cx="18" cy="179" r="6"/>
+        <circle cx="48" cy="226" r="6" class="sketch-accent"/>
+      </symbol>
+    </defs>
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:0" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:1" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:2" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-stack" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:3" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-signal" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:4" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:5" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:6" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:7" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:0" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:1" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:2" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-signal" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:3" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:4" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:5" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-stack" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:6" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:7" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+</div>
+
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div id="root" class="site-shell">
+        
+<header class="study-masthead">
+  <a class="study-signature" href="https://sekaiser.github.io/">
+    <span class="study-bookmark" aria-hidden="true">sk.</span>
+    <span class="study-identity"><span class="study-name">Sebastian <em>Kaiser</em></span><small>A personal engineering notebook</small></span>
+  </a>
+  <nav aria-label="Main navigation">
+    <a href="https://sekaiser.github.io/notes.html" aria-current="true">Notes</a>
+    <a href="https://sekaiser.github.io/feed.html">Reading</a>
+    <a href="https://sekaiser.github.io/about.html">About</a>
+    <a href="https://sekaiser.github.io/search.html">Search</a>
+  </nav>
+</header>
+
+
+
+        <main id="main" tabindex="-1">
+           
+
+          
+<article class="study-page">
+  <header class="study-opening">
+    <div class="study-heading">
+      <div class="study-title">
+        <p class="study-context"><a href="https://sekaiser.github.io/notes.html">The notebook</a>
+  
+</p>
+        <h1>
+  
+    CI&#x2F;CD Across Team Boundaries
+  
+</h1>
+        <div class="study-metadata">
+          <dl class="study-dates">
+            <div><dt>Published</dt><dd><time datetime="2026-10-03">03 Oct 2026</time></dd></div>
+            
+          </dl>
+          
+        </div>
+      </div>
+      <div class="study-introduction"></div>
+    </div>
+  </header>
+  <div class="study-layout">
+    <aside class="study-margin" aria-label="Article navigation and reading notes">
+      <div class="study-margin-content">
+        <details class="study-contents" hidden>
+          <summary>On this page</summary>
+          <nav aria-label="On this page"></nav>
+        </details>
+        
+      </div>
+    </aside>
+    <div class="document-body study-prose"><div class="frontmatter">
+<div class="abstract">
+<p>Containerized applications can span several teams, repositories, and
+infrastructure accounts. Service tests alone do not coordinate delivery across
+those boundaries. This article presents a design that shares container-delivery
+mechanics, retains service-owned tools and checks, and bases deployment decisions
+on the tested service combination. Reusable GitHub Actions workflows build or
+reuse images, pass them between jobs, and promote them without rebuilding.
+A scenario-based testbench assembles selected services for recurring
+cross-service checks. An illustrative order change connects acceptance criteria,
+recorded test inputs, and rollout decisions. The design separates image reuse
+from fresh verification without assuming identical runtime behavior across
+environments. The discussion compares alternatives
+and makes the maintenance, access, and coordination costs explicit.</p>
+</div>
+</div>
+<h2><a href="#one-change-several-teams" aria-hidden="true" class="anchor" id="one-change-several-teams"></a><span class="section-num">1</span> One change, several teams</h2>
+<p>Consider adding a delivery option to an order-processing application. The order
+API validates the request and publishes an acceptance event to an event stream.
+A consumer updates a query model, and the application displays the accepted
+order. Several teams may own those components, even though the user sees one
+operation.</p>
+<p>For the engineer changing request validation, the task may look local. For the
+release owner, success requires a longer chain: the API accepts the new option,
+the event preserves it, and the query returns it with the correct order status.
+A service can pass its own tests while a downstream consumer drops the new
+field. Testing one boundary cannot establish the behavior of the whole chain.</p>
+<p>The teams may also have different repositories, build tools, and release
+conventions. Some dependencies sit behind private networks or in separate
+infrastructure accounts. A useful pipeline has to work within those constraints,
+not assume that every team can replace its tooling or deploy everything together.</p>
+<p>The same delivery work also recurs across applications: building an image,
+making it available to test jobs, publishing it to a registry, and deploying it
+with the right configuration. Copying those steps into each repository leaves
+each team maintaining its own version. The design shares that machinery and
+keeps behavioral checks with the service teams. Workflow maintainers own artifact
+handling; service teams own what their checks establish; platform owners control
+target access and deployment writes. A release decision depends on their combined
+work, not just a successful build.</p>
+<p>The design described here uses GitHub Actions, Helm, and Kubernetes for the
+services it builds and deploys. Older systems can remain dependencies, with
+their own deployment procedures. The order change is an illustrative example,
+not a report of a company deployment. It gives us one thread to follow: what
+should change, which part of the platform we need to run, and what the pipeline
+must check before the new delivery option reaches customers.</p>
+<h2><a href="#what-the-test-pyramid-leaves-to-the-pipeline" aria-hidden="true" class="anchor" id="what-the-test-pyramid-leaves-to-the-pipeline"></a><span class="section-num">2</span> What the test pyramid leaves to the pipeline</h2>
+<p>The test pyramid remains the starting point: many fast, narrow checks and fewer
+expensive checks of larger behavior [1]. Unit tests check request validation;
+integration tests exercise a broker or database; contract tests check what
+producers and consumers expect at a boundary. A missing delivery field may be
+caught there. A system scenario checks the remaining path from accepted request
+to query. This design does not replace those layers or run the whole application
+for every change.</p>
+<p>A product-wide pyramid can include that scenario. What the pyramid does not
+specify is how separate repositories build the service images, select compatible
+versions, reach private dependencies, and retain a result that another team's
+deployment job can interpret. A balanced test suite still needs that machinery.
+If the consumer changes after the API's tests pass, the earlier result describes
+the tested combination, not necessarily the combination about to be deployed.</p>
+<p>Agile practices address a different part of the problem. Teams agree acceptance
+criteria and integrate frequently. Scrum requires teams working on one product
+to share a Definition of Done [2]. The pipeline makes the agreed checks repeatable
+across repositories and infrastructure accounts; it does not replace those
+agreements.</p>
+<h2><a href="#alternatives-and-their-limits" aria-hidden="true" class="anchor" id="alternatives-and-their-limits"></a><span class="section-num">3</span> Alternatives and their limits</h2>
+<p>Several approaches can reduce the work of cross-service verification. The
+choice is not between using them and having a shared pipeline:</p>
+<ul>
+<li><strong>A mock image for every service image.</strong> Mocks make dependencies cheap to run
+and help reproduce faults. Keeping their versions, state transitions, and
+event behavior faithful means maintaining another implementation. A passing
+test exercises that substitute, not the real image. Use mocks selectively
+rather than maintain a parallel catalogue of service replicas.</li>
+<li><strong>Verification from published API specifications.</strong> OpenAPI and AsyncAPI
+support checks of HTTP operations and messages [3, 4]; consumer contracts add
+expectations at individual boundaries [1]. Run these checks early. They do
+not by themselves establish that the API, broker, consumer, and query store
+preserve an express order before the deadline.</li>
+<li><strong>Service-owned pipelines and a few hand-written journey tests.</strong> This is the
+simpler baseline when cross-service changes are rare. As applications multiply,
+pipelines duplicate artifact handling and journey tests reconstruct the same
+setup. Share the repeated jobs first; add a maintained testbench when recurring
+journeys justify its cost.</li>
+<li><strong>A complete platform environment for every build.</strong> This can expose interactions
+a smaller setup omits, but includes unrelated services, data, credentials, and
+configuration. Sharing one such environment trades setup work for contention
+and changing versions. Keep broad regression, but use a smaller setup for
+feedback on a change to one delivery option.</li>
+</ul>
+<h2><a href="#reuse-delivery-jobs-across-applications" aria-hidden="true" class="anchor" id="reuse-delivery-jobs-across-applications"></a><span class="section-num">4</span> Reuse delivery jobs across applications</h2>
+<p>The API team's repository calls a reusable GitHub Actions workflow [5]. It
+chooses a Dockerfile, optionally selects a service from a multi-service
+repository, and supplies build-relevant paths, test commands, chart values,
+and target settings. Shared workflows coordinate the jobs; smaller composite
+actions handle image transfer, registry operations, and deployment setup.</p>
+<p>The common interface is an image and a set of commands, not one prescribed
+build tool. Compilation and packaging stay in the application's Dockerfile;
+test commands stay with the service. A single-image application and a repository
+with several buildable services can therefore use the same delivery jobs.
+Maintainers distribute changes through versioned workflow references rather
+than copy them into every application's pipeline.</p>
+<p>Services keep cheap checks in their normal build and test entry points.
+Checks that require a running image consume the candidate selected by the
+workflow; they do not build another one for testing.</p>
+<p>Developers can use the same test entry point locally and in CI. Each job names
+the checks it requires, and a skipped required check cannot count as success.
+If a broker or another prerequisite is unavailable, the job fails with that cause
+instead of silently reporting that the integration tests passed.</p>
+<p>The workflow handles four repeated operations:</p>
+<ul>
+<li><strong>Build or reuse an image.</strong> It looks for an image for the requested commit,
+then for an ancestor whose declared build paths have not changed. Otherwise,
+it builds with a registry-backed layer cache. The run records the requested
+source commit, any reused image's origin, and the image digest.</li>
+<li><strong>Pass that image between jobs.</strong> An exported image archive and checksum let
+test and publication jobs load the same image on different runners. They
+verify the archive rather than compile the application again.</li>
+<li><strong>Publish after the selected checks pass.</strong> Integration and end-to-end commands
+remain service-owned. Every enabled check must succeed before publication;
+reusing an image does not exempt it from those checks.</li>
+<li><strong>Promote without rebuilding.</strong> Release jobs resolve the chosen source revision
+to an existing image, copy it to the destination registry, and check the
+destination digest. Helm deployment supplies the target's values and access.
+The artifact stays the same; its runtime configuration may differ.</li>
+</ul>
+<p>Image reuse and layer caching avoid different kinds of repeated work. Reuse
+depends on declaring the complete source paths that affect the build, including
+shared code and generated inputs. Unchanged Git paths do not establish that
+mutable base images or external dependencies are still current; those need
+an explicit refresh policy. Required verification remains separate from the
+decision to rebuild.</p>
+<p>One earlier workflow failure shows why the inputs need clear meanings. A pull
+request failed before building because a release-branch naming rule was applied
+to its feature branch. We changed the check to validate the pull request's
+target branch while keeping the source commit as the build identity. The release
+policy stayed intact, and developers could use ordinary feature names. The
+branch that determines whether a build is allowed is not the commit that
+determines what it contains.</p>
+<p>Figure <a href="#figure--fig-development-flow">1</a> follows the image through shared delivery jobs and
+no-rebuild promotion. Cross-service and target checks are enabled where the
+changed behavior requires them; image identity alone does not establish coverage
+of the proposed service combination and settings. The slim <em>Run record</em> rail
+supports that comparison, detailed in the run-record and release-decision tables
+below.</p>
+<p><a id="figure--fig-development-flow"></a></p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/7c2315733b5ccb235cf75239d49610a108edf6b680bc54493b84becea7516369/software-delivery-process.svg?v=7c2315733b5ccb23" alt="Artifact-preserving delivery with checksummed image handoff, publication gated by enabled checks, no-rebuild promotion, and deployment supported by the run record and relevant conditional checks"><figcaption><span class="figure-number">Figure 1: </span>Follow the checksummed image handoff through gated publication and promotion; conditional checks support deployment decisions.</figcaption></figure>
+<p><a href="https://sekaiser.github.io/attachments/7c2315733b5ccb235cf75239d49610a108edf6b680bc54493b84becea7516369/software-delivery-process.svg?v=7c2315733b5ccb23">Open the full-size delivery diagram</a></p>
+<p>Runner placement follows the work, not the application language. A build or
+isolated test can run without access to private services; target checks and
+deployment need approved routes and credentials. Platform engineers maintain
+that access and the environment configuration so each application need not
+reconstruct the account and network setup.</p>
+<p>The workflow can exchange a GitHub OpenID Connect token for short-lived cloud
+credentials [6]. That removes the need for long-lived cloud credentials in the
+job, but access still depends on which code and workflow are trusted. Untrusted
+change checks run without private-network reach, target credentials, or deployment
+authority. The target's operations owner approves the private-target execution
+path; its jobs use isolated runners and scoped roles. Test access stays separate
+from permission to deploy to production [7].</p>
+<h2><a href="#start-with-the-behavior" aria-hidden="true" class="anchor" id="start-with-the-behavior"></a><span class="section-num">5</span> Start with the behavior</h2>
+<p>The API and consumer teams first agree what accepting an express order means.
+The request must be valid, the acceptance event must retain the delivery option,
+and the query must show the accepted order before a deadline. Those expectations
+belong beside the code review, even when the scenario lives in a separate
+testbench repository.</p>
+<figure class="code-listing" id="code-snippet--lst-order-scenario"><figcaption class="code-toolbar"><span class="code-language">gherkin</span><span class="code-caption">Illustrative express-order behavior with project-defined tags.</span><span class="code-actions"><a href="#code-snippet--lst-order-scenario" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--lst-order-scenario-L1" href="#code-snippet--lst-order-scenario-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--lst-order-scenario-L2" href="#code-snippet--lst-order-scenario-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--lst-order-scenario-L3" href="#code-snippet--lst-order-scenario-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--lst-order-scenario-L4" href="#code-snippet--lst-order-scenario-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--lst-order-scenario-L5" href="#code-snippet--lst-order-scenario-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--lst-order-scenario-L6" href="#code-snippet--lst-order-scenario-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--lst-order-scenario-L7" href="#code-snippet--lst-order-scenario-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--lst-order-scenario-L8" href="#code-snippet--lst-order-scenario-L8" aria-label="Link to line 8" data-line="8"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-gherkin"><span style="color:#323232;">@domain-orders @capability-order-acceptance @usecase-express-delivery
+</span><span style="color:#323232;">Feature: Order delivery options
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">  Scenario: An accepted order retains its delivery option
+</span><span style="color:#323232;">    Given a unique order reference and a valid customer for this test run
+</span><span style="color:#323232;">    When the client submits an order with delivery option &quot;express&quot;
+</span><span style="color:#323232;">    Then its acceptance event contains delivery option &quot;express&quot;
+</span><span style="color:#323232;">    And its query shows &quot;accepted&quot; with &quot;express&quot; delivery before the deadline
+</span></code></pre></div></figure>
+<p>The test matches the unique order reference across the request, event, and query
+response. An accepted order from yesterday cannot make today's run pass. The
+deadline starts when the request is submitted; the test waits for asynchronous
+processing, but fails if the expected result never arrives.</p>
+<p>This scenario checks the first matching accepted result. If the requirement
+also covers duplicate events, another scenario must replay the event and check
+the order after the consumer has processed it.</p>
+<p>One implementation of this acceptance stage uses spex, which translates
+constrained scenarios through a maintained catalog into Kubernetes Test TooL
+(KUTTL) workspaces [8]. Each step needs a matching catalog entry. Unsupported
+steps fail validation; new kinds of checks need reviewed catalog or probe
+changes. The pipeline invokes the testbench as a test command supplied for the
+acceptance stage.</p>
+<h2><a href="#build-the-part-of-the-platform-you-need" aria-hidden="true" class="anchor" id="build-the-part-of-the-platform-you-need"></a><span class="section-num">6</span> Build the part of the platform you need</h2>
+<p>The order scenario needs more than the API, but less than the whole platform.
+It needs the event stream, the consumer, and the query service and its store.
+Authentication or customer services also belong in that setup if the request
+depends on them. Unrelated applications need not run just because they share
+the same platform or organization.</p>
+<p>For this stage, teams assemble a repeatable <em>slice</em> around the behavior being
+checked: selected scenarios, participating services and dependencies,
+configuration, test data, and observations. Its boundary follows the use case,
+domain, or capability, not necessarily a repository or a team's service boundary.</p>
+<p>The example tags group express delivery by use case, orders by domain, and
+order acceptance by capability. Those views can overlap and share setup; they
+do not imply separate stacks. Teams define the labels, not spex. Tag filtering
+does not discover dependencies or remove services from the setup; teams maintain
+that boundary.</p>
+<p>That boundary matters when interpreting a result. A fixture can show how the
+consumer handles a selected response; a check against the real dependency is
+needed to learn whether it actually returns that response. A small order slice
+can establish the delivery-option behavior without establishing every production
+interaction or the platform's behavior under load. Review deployments need
+pipeline-owned access and lifetime management as well as a suitable slice.</p>
+<h3><a href="#optional-implementation-with-spex" aria-hidden="true" class="anchor" id="optional-implementation-with-spex"></a><span class="section-num">6.1</span> Optional implementation with spex</h3>
+<p>The spex testbench separates scenario selection from application setup [9]:</p>
+<ul>
+<li>A <em>suite</em> selects scenarios; its entries can choose different profiles.</li>
+<li>A <em>catalog</em> defines the supported scenario operations.</li>
+<li>A <em>binding</em> supplies endpoints and secret references.</li>
+<li>A <em>profile</em> defines the application setup and can extend a shared cluster base.</li>
+</ul>
+<p>The order profile installs the API, consumer, query service, broker, and store.
+The pipeline supplies the candidate API image and pins companion versions;
+the binding points probes at those installations. The suite also names any
+customer service reached outside the slice.</p>
+<p>A replay check can use a narrower profile when its consumer does not call the
+API. It seeds an order and event for that run, then exercises the broker,
+consumer, query service, and store using the same cluster base. A domain suite
+can include both checks without requiring identical application stacks.</p>
+<p>The resolved plan and generated workspace expose the selection and setup for
+review. For a local or CI run, a profile can start a temporary Kind cluster and
+install the chosen services; Kind runs Kubernetes nodes in containers [10].
+For shared development services, the binding points to existing installations
+and the matching profile creates only test-owned resources.</p>
+<h2><a href="#know-what-a-passing-test-covered" aria-hidden="true" class="anchor" id="know-what-a-passing-test-covered"></a><span class="section-num">7</span> Know what a passing test covered</h2>
+<p>Suppose the order scenario passes. The event retained "express", and the query
+returned the accepted order before the deadline. To use that result later, we
+need to know which API and consumer produced it, which settings were active,
+and whether the probes exercised the intended services.</p>
+<p>The pipeline therefore keeps a record of the run:</p>
+<div data-component="paper-table">
+<p><a id="table--tab-run-record"></a></p>
+<div class="table-caption">
+  <span class="table-number"><a href="#table--tab-run-record">Table 1</a>:</span>
+  Run record for coverage comparison and failure investigation.
+</div>
+<table>
+<tr>
+<th>Part of the run</th>
+<th>Scope</th>
+<th>Recorded information</th>
+</tr>
+<tr>
+<td>Build</td>
+<td>Source</td>
+<td>Requested commit; reused-image origin</td>
+</tr>
+<tr>
+<td>Build</td>
+<td>Artifacts</td>
+<td>Image and chart digests</td>
+</tr>
+<tr>
+<td>Build</td>
+<td>Execution</td>
+<td>Resolved workflow and action revisions; run identity</td>
+</tr>
+<tr>
+<td>Test setup</td>
+<td>Checks</td>
+<td>Commands; selected checks; tool revisions</td>
+</tr>
+<tr>
+<td>Test setup</td>
+<td>Testbench</td>
+<td>Suite, catalog and profile revisions where used</td>
+</tr>
+<tr>
+<td>Target</td>
+<td>Services</td>
+<td>Actual service versions; binding revisions</td>
+</tr>
+<tr>
+<td>Target</td>
+<td>Configuration</td>
+<td>Settings; flags; secret version references</td>
+</tr>
+<tr>
+<td>Test data</td>
+<td>Identities</td>
+<td>Fixture and seed IDs; unique run-specific order reference</td>
+</tr>
+<tr>
+<td>Result</td>
+<td>Observations</td>
+<td>Requests; matching event and query observations; time window</td>
+</tr>
+<tr>
+<td>Result</td>
+<td>Diagnostics</td>
+<td>Reports and diagnostics</td>
+</tr>
+</table>
+</div>
+<p>Resolve artifact tags to content digests and workflow references to commits.
+The runner checks actual deployments and settings against the recorded setup;
+recording what a job intended to deploy is not enough. These details help
+reconstruct failures, although data from an external service may need to be
+modeled in a regression test rather than reproduced exactly.</p>
+<h3><a href="#if-deployment-approval-uses-a-shared-target" aria-hidden="true" class="anchor" id="if-deployment-approval-uses-a-shared-target"></a><span class="section-num">7.1</span> If deployment approval uses a shared target</h3>
+<p>Use an isolated slice when the required services can be recreated. Only where
+access or infrastructure constraints require a shared target does this branch
+apply. Another team may replace the consumer while the test runs: the order
+assertions might pass without establishing which combination produced the
+result. Version checks before and after the test also miss a temporary
+replacement between those snapshots.</p>
+<p>Using results from a shared, changeable target to approve deployment requires
+control over competing writes. Each run reserves the resources that affect its
+assertions from deployment through result collection. Participating jobs use the
+same control across repositories; a repository-local concurrency group cannot
+provide that scope. The platform team operates it with the affected teams and
+account owners.</p>
+<p>A worker-side check is insufficient. Job A may pass it, pause until its
+reservation expires, and resume after job B changes the consumer. The target
+must reject A's stale authority when it accepts deployment writes. It must also
+reject competing writes during a valid reservation, and participating jobs must
+have no alternate write path. This is a requirement on the surrounding platform;
+neither spex nor a reusable workflow alone supplies it.</p>
+<p>The runner also watches the participating deployments and relevant settings.
+A detected change, a lost reservation, or a gap in those observations makes
+the run unusable for approving deployment, even if the order checks passed.
+Waiting deployments, out-of-band replacements, and resumed stale jobs are cases
+to exercise when checking the pipeline itself.</p>
+<p>This control has a boundary too. An administrator may bypass it, and an external
+service may change without exposing a version we can observe. The suite names
+those dependencies and uses isolated test identities or disposable targets where
+shared data would confuse the result. A reservation does not freeze a database
+or turn an external service into a reproducible fixture.</p>
+<h3><a href="#keep-reports-tied-to-the-image" aria-hidden="true" class="anchor" id="keep-reports-tied-to-the-image"></a><span class="section-num">7.2</span> Keep reports tied to the image</h3>
+<p>Test tools produce reports; spex, for example, collects scenario and suite
+results with JUnit output for CI [8]. Shared jobs tie those reports to the image,
+check versions, and integrate with the platform's deployment controls.
+The deployment job accepts records only from approved build and test runs,
+linked to the image and stored where another job cannot replace them. It checks
+that origin before trusting a report. Export allowlisted configuration and redact
+credential-bearing fields in captured requests, responses, and logs.</p>
+<p>When a run fails, the observations give investigation a starting point. Did the
+API reject the request, did the event lose the option, or did the consumer never
+update the query? Those are different failures from an unavailable broker or
+a wrong endpoint. The initial diagnosis may change as more information arrives,
+but the engineer should not have to infer the whole path from a red CI badge.</p>
+<h2><a href="#deploy-the-combination-that-was-checked" aria-hidden="true" class="anchor" id="deploy-the-combination-that-was-checked"></a><span class="section-num">8</span> Deploy the combination that was checked</h2>
+<p>Before deploying, compare the proposed service combination and settings with
+the recorded coverage. Include intermediate rollout states, not just the final
+versions. If coverage is missing, obtain a relevant result or run the checks.</p>
+<p>Consider one illustrative decision. <code>A2</code> names an API image digest; <code>C1</code> and
+<code>C2</code> name different consumer image digests. The express option stays enabled,
+and the remaining declared inputs stay fixed.</p>
+<div data-component="paper-table">
+<p><a id="table--tab-release-decision"></a></p>
+<div class="table-caption">
+  <span class="table-number"><a href="#table--tab-release-decision">Table 2</a>:</span>
+  An illustrative release decision for an unchanged API image.
+</div>
+<table>
+<tr>
+<th>Stage</th>
+<th>Combination</th>
+<th>Decision</th>
+</tr>
+<tr>
+<td>Recorded pass</td>
+<td>A2 with C1</td>
+<td>Retain coverage of A2/C1</td>
+</tr>
+<tr>
+<td>Later proposal</td>
+<td>A2 with C2</td>
+<td>Hold pending coverage of A2/C2</td>
+</tr>
+<tr>
+<td>Rolling proposal</td>
+<td>A2 with C1, C2</td>
+<td>Cover both paths and their coexistence</td>
+</tr>
+</table>
+</div>
+<p>The original pass still describes A2/C1; it does not establish A2/C2 merely
+because the API image stayed unchanged. A test that happens to reach C1 during
+a mixed rollout says nothing about the C2 path. The release owner needs coverage
+of each required path and their coexistence.</p>
+<p>The comparison must hold when deployment starts, not just when someone opens
+the approval screen. The deployment control checks those versions and settings
+on the target and prevents competing jobs from changing them while deployment
+proceeds. The development environment need not stay locked while production
+approval waits.</p>
+<p>Reusing evidence does not require identical environments. Service teams identify
+the settings relevant to each acceptance claim: feature flags, event formats,
+consumer modes, and storage-schema expectations. The rollout must use the tested
+values or have explicit coverage of the alternatives. Timeouts and retry policies
+also matter when the claim includes a deadline. An unexplained configuration
+change needs verification, not an assumption that it is harmless.</p>
+<p>Endpoint addresses and secret references may differ under a reviewed substitution
+policy. Keep them in the record and check routes, authentication, and intended
+service identities on the target. Those checks establish that the substituted
+configuration reaches the expected services; they do not extend the behavioral
+coverage to untested flags, formats, or processing modes.</p>
+<p>Where a required external service exposes no version, the record shows what it
+returned during the test, not that it will behave the same at deployment. The
+person approving release must address that limit with a relevant target check
+or an explicit risk decision under the exception policy.</p>
+<h3><a href="#roll-out-and-recover-the-express-order-change" aria-hidden="true" class="anchor" id="roll-out-and-recover-the-express-order-change"></a><span class="section-num">8.1</span> Roll out and recover the express-order change</h3>
+<p>For the express option, the teams agree a sequence. First deploy a consumer that
+handles existing events and preserves the new field. Test it with the current
+producer and then with the new producer. If old consumer instances will remain
+active, check the new producer with them too; otherwise, keep the new option
+disabled until they have left service. Compatibility includes older stored
+records and replayed events, not just newly submitted orders.</p>
+<p>For a replay check, the test must observe processing progress before checking
+the order. An unchanged query response read before the consumer handles the
+replayed event says nothing about replay behavior. The teams agree how to
+observe completion rather than leave that choice to the step implementation.</p>
+<p>The person coordinating the release needs the affected teams' agreement on those
+combinations and on how long older formats remain supported. The person operating
+the target must be able to stop the rollout. If teams disagree about support,
+priority, or acceptable risk, they need a named person with authority to settle
+it; a workflow cannot settle that disagreement. The same applies to exceptions:
+policy names who may approve them, and the decision records the scope, unresolved
+risk, and person accountable for it. An exception does not make a failed or
+inapplicable test result pass.</p>
+<p>During activation, the operations owner watches the delay from acceptance to
+query and the consumer backlog against agreed stop conditions. Exceeding them
+holds further activation and starts recovery. Turning off the option or limiting
+traffic may contain the problem, but orders already accepted still need
+processing or repair. Redeploying an earlier image cannot undo database writes
+or recall events already in flight.</p>
+<p>If a customer later selects express delivery but sees the standard option,
+investigation should produce both a correction and, where practical, a regression
+scenario. The scenario belongs in the relevant slice, so the next engineer can
+exercise that failure without reconstructing it from messages and memory.
+That improves the next change; it does not replace immediate recovery.</p>
+<h2><a href="#keep-the-shared-setup-worth-maintaining" aria-hidden="true" class="anchor" id="keep-the-shared-setup-worth-maintaining"></a><span class="section-num">9</span> Keep the shared setup worth maintaining</h2>
+<p>A slice makes the test scope explicit, but it still needs maintenance. The teams
+responsible for the order behavior agree its scenarios and keep track of affected
+consumers and required checks. Tags help organize the scenarios; they are not an
+automatic analysis of what a code change can break. An incomplete dependency map
+can leave out the very consumer that needed checking.</p>
+<p>Shared state also limits parallelism. Independent scenarios may run together,
+but different builds using the same reserved resources need isolated targets
+or must wait. More runners do not remove that queue. If waiting or repeated
+invalidated runs dominate feedback time, the teams need a smaller shared scope,
+more isolation, or fewer coordinated runs. A test that changes shared data needs
+exclusive access or a disposable target. Cleanup removes only resources owned
+by the run, not infrastructure that was already there.</p>
+<p>The people maintaining the catalog and setup also own the diagnostics. Generated
+workspaces and execution plans must stay readable. Otherwise, a simple scenario
+merely transfers work to the engineer investigating its failure. New assertions,
+service versions, profile changes, and workflow upgrades need time in the teams'
+plans, not just names in an ownership table.</p>
+<p>Adoption can start with shared build and test jobs, then add a slice for a
+recurring cross-service check. Consumers choose supported workflow versions
+and an upgrade policy. A commit reference pins the workflow revision; a moving
+release tag can deliver fixes, but requires recording its resolved commit for
+each run. Maintainers check changes against representative services, including
+unusual build and access requirements. Teams agree which workflow and record
+versions deployment jobs accept; an old revision's output does not remain
+supported indefinitely.
+Apply the same upgrade policy to separately referenced actions and record their
+resolved commits; pinning the workflow does not pin those actions.</p>
+<p>Assess shared delivery jobs and the testbench investment separately: repeated
+build and setup work, defects found, debugging effort, deployment queues, and
+runner and maintenance costs. A faster build can simply move work into manual
+diagnosis. Comparable observations are needed before claiming the whole process
+improved.</p>
+<p>For the order change, shared jobs handle the artifact, the selected slice checks
+the request-to-query behavior, and deployment checks whether the proposed rollout
+falls within that coverage. Teams retain their Dockerfiles and test commands
+while sharing the jobs that build, transfer, verify, and deploy their images.
+Approve the covered service combination, not an isolated green build.</p>
+<h2><a href="#references" aria-hidden="true" class="anchor" id="references"></a><span class="section-num">10</span> References</h2>
+<ol>
+<li>H. Vocke, <a href="https://martinfowler.com/articles/practical-test-pyramid.html">The Practical Test Pyramid</a>, February 26, 2018.</li>
+<li>K. Schwaber and J. Sutherland, <a href="https://scrumguides.org/scrum-guide.html">The Scrum Guide</a>, November 2020.</li>
+<li>OpenAPI Initiative, <a href="https://spec.openapis.org/oas/v3.1.1.html">OpenAPI Specification v3.1.1</a>, October 24, 2024.</li>
+<li>AsyncAPI Initiative, <a href="https://www.asyncapi.com/docs/reference/specification/v3.0.0">AsyncAPI Specification v3.0.0</a>.</li>
+<li>GitHub, <a href="https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows">Reuse workflows</a>.</li>
+<li>GitHub, <a href="https://docs.github.com/en/actions/concepts/security/openid-connect">OpenID Connect</a>.</li>
+<li>GitHub, <a href="https://docs.github.com/en/actions/reference/security/secure-use">Secure use reference</a>.</li>
+<li>pruefwerk, <a href="https://github.com/pruefwerk/spex/blob/8033f19bcd06035b25fec76649942410853c8dde/README.md">spex: Scenario-driven KUTTL workspace generator for Kubernetes acceptance testing</a>, README snapshot, revision <code>8033f19</code>.</li>
+<li>pruefwerk, <a href="https://github.com/pruefwerk/spex/blob/8033f19bcd06035b25fec76649942410853c8dde/docs/scenario-repository-guide.md">Scenario Repository Guide</a>, revision <code>8033f19</code>.</li>
+<li>Kubernetes SIGs, <a href="https://kind.sigs.k8s.io/">kind</a>.</li>
+</ol>
+</div>
+  </div>
+  <footer class="study-end">
+    
+    
+  
+  
+  
+  
+  
+
+
+    
+    <a class="study-return" href="https://sekaiser.github.io/notes.html">Back to all notes</a>
+  </footer>
+</article>
+
+        </main>
+
+        
+            <footer class="site-footer">
+  <div class="footer-colophon">
+    <a class="footer-home" href="https://sekaiser.github.io/">
+      <span class="footer-bookplate" aria-hidden="true">sk.</span>
+      <span class="footer-name">Sebastian Kaiser</span>
+    </a>
+    <p>A personal notebook. Built with Berlin.</p>
+  </div>
+  <nav aria-label="Elsewhere">
+    
+      <a class="footer-icon" href="https://github.com/sekaiser" aria-label="GitHub" title="GitHub">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M12 .5a12 12 0 0 0-3.793 23.385c.6.111.82-.261.82-.577 0-.285-.01-1.04-.016-2.04-3.338.725-4.043-1.61-4.043-1.61-.546-1.386-1.333-1.755-1.333-1.755-1.09-.745.083-.73.083-.73 1.205.085 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.419-1.305.762-1.605-2.665-.303-5.467-1.333-5.467-5.931 0-1.31.469-2.381 1.236-3.221-.124-.303-.536-1.524.117-3.176 0 0 1.008-.323 3.301 1.23a11.52 11.52 0 0 1 6.006 0c2.291-1.553 3.297-1.23 3.297-1.23.655 1.652.243 2.873.12 3.176.77.84 1.235 1.911 1.235 3.221 0 4.61-2.807 5.625-5.479 5.922.43.372.823 1.102.823 2.222 0 1.606-.015 2.902-.015 3.296 0 .319.216.694.825.576A12 12 0 0 0 12 .5Z"/>
+        </svg>
+      </a>
+    
+    
+      <a class="footer-icon" href="https://www.linkedin.com/in/sekaiser/" aria-label="LinkedIn" title="LinkedIn">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.049c.476-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286ZM5.337 7.433a2.062 2.062 0 1 1 0-4.124 2.062 2.062 0 0 1 0 4.124ZM7.119 20.452H3.555V9h3.564v11.452ZM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0Z"/>
+        </svg>
+      </a>
+    
+    <a class="footer-icon" href="#main" aria-label="Back to top" title="Back to top">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <path d="M5 4h14M6 13l6-6 6 6M12 7v13"/>
+      </svg>
+    </a>
+  </nav>
+</footer>
+
+        
+
+  </div>
+</body>
+</html>
