@@ -5,6 +5,14 @@
 <description>An engineering notebook about software, systems, and the people who build and depend on them.</description>
 <atom:link href="https://sekaiser.github.io/rss.xml" rel="self" type="application/rss+xml"/>
 <item>
+<title>What it means to own a system</title>
+<link>https://sekaiser.github.io/notes/what-it-means-to-own-a-system.html</link>
+<guid isPermaLink="false">urn:berlin:rss:01d54808b5c42c62f5322de99c0d63ef55d8ac8e7979214c571817f6945dccdc</guid>
+<pubDate>Tue, 24 Nov 2026 00:00:00 GMT</pubDate>
+<description>I spent a year turning an idea into a working system. AI helped me test its guarantees, and months of durability experiments changed how I think about owning it.</description>
+<dc:creator>Sebastian Kaiser</dc:creator>
+</item>
+<item>
 <title>The design decisions behind djob</title>
 <link>https://sekaiser.github.io/notes/design-decisions-behind-djob.html</link>
 <guid isPermaLink="false">urn:berlin:rss:983b3c85c517f35bed2ba3f9b07ec9344e953189276b0760172cae207f701036</guid>
