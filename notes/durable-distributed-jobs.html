@@ -559,7 +559,7 @@
     
     <li class="backlink-source">
       <a class="backlink-title" href="https://sekaiser.github.io/notes/design-decisions-behind-djob.html#bln-ref-1">The design decisions behind djob</a>
-      <blockquote>My previous article compared approaches to durable jobs. Here I explain how the problem led me to independent workers, shared-resource reservations and a replicated controller, and why I chose to build the engine myself.</blockquote>
+      <blockquote>My previous article compared approaches to durable jobs. My preferred design separates device communication from durable coordination. Independent workers handle the communication; replicated controllers record ownership and accepted results.</blockquote>
       
     </li>
     
