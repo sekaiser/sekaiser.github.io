@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/"><channel>
+<title>Blog | Sebastian Kaiser</title>
+<link>https://sekaiser.github.io/</link>
+<description>Notes on all things software engineering</description>
+<atom:link href="https://sekaiser.github.io/rss.xml" rel="self" type="application/rss+xml"/>
+<item>
+<title>How I structure Go microservices for change</title>
+<link>https://sekaiser.github.io/notes/go-microservices-for-change.html</link>
+<guid isPermaLink="false">urn:berlin:rss:e6dcbb7f4bd2428a9a98b9d1251b8fc4dc61636df2a5441d5b59e5b24493cbb9</guid>
+<pubDate>Sat, 31 Oct 2026 00:00:00 GMT</pubDate>
+<description>Evolving a Go service through consumer-owned ports, composable handlers, and executable checks, with repository context and reviewable evidence for agent-assisted changes.</description>
+<dc:creator>Sebastian Kaiser</dc:creator>
+<category>architecture</category>
+<category>go</category>
+<category>testing</category>
+</item>
+<item>
+<title>The Iterator Is the State Machine</title>
+<link>https://sekaiser.github.io/notes/the-iterator-is-the-state-machine.html</link>
+<guid isPermaLink="false">urn:berlin:rss:ad49906b04141b94d1b83042253167075093ba662ee52fb5163156c7444a9090</guid>
+<pubDate>Mon, 26 Oct 2026 00:00:00 GMT</pubDate>
+<description>How Rust's Iterator trait supports lazy composition, and what a comparison with C++ ranges tells us about ownership checks and optimization.</description>
+<dc:creator>Sebastian Kaiser</dc:creator>
+<category>api-design</category>
+<category>iterators</category>
+<category>rust</category>
+</item>
+<item>
+<title>Fast Writes, Fresh Reads</title>
+<link>https://sekaiser.github.io/notes/fast-writes-fresh-reads.html</link>
+<guid isPermaLink="false">urn:berlin:rss:d373db2ece53af1fab6b09603cde3f587d7584931a19518f0600469d205ef99c</guid>
+<pubDate>Sat, 24 Oct 2026 00:00:00 GMT</pubDate>
+<description>Where should the work happen? A practical guide to background indexing in Go and Rust.</description>
+<dc:creator>Sebastian Kaiser</dc:creator>
+<category>backpressure</category>
+<category>concurrency</category>
+<category>storage</category>
+</item>
+<item>
+<title>Backpressure in a Telemetry Pipeline: What Happens When the Cache Falls Behind?</title>
+<link>https://sekaiser.github.io/notes/backpressure-in-a-telemetry-pipeline.html</link>
+<guid isPermaLink="false">urn:berlin:rss:283ee638244853675609d9779ca98473446f3e972da78712f0825d7f43ba2ff0</guid>
+<pubDate>Tue, 20 Oct 2026 00:00:00 GMT</pubDate>
+<description>A bounded, coalescing write path for device telemetry, and the ordering and recovery guarantees a buffer cannot provide on its own.</description>
+<dc:creator>Sebastian Kaiser</dc:creator>
+<category>backpressure</category>
+<category>concurrency</category>
+<category>system-design</category>
+</item>
+<item>
+<title>From Time-Series to State: Designing a Cache for Periodic Device Telemetry</title>
+<link>https://sekaiser.github.io/notes/from-time-series-to-state.html</link>
+<guid isPermaLink="false">urn:berlin:rss:ac84abd5c1ebcc8576a28d3b78fe1b26e3043d3d5b7b0e02fd904a180818e956</guid>
+<pubDate>Sat, 17 Oct 2026 00:00:00 GMT</pubDate>
+<description>A design for serving current device readings without reconstructing them from history on every request.</description>
+<dc:creator>Sebastian Kaiser</dc:creator>
+<category>caching</category>
+<category>performance</category>
+<category>telemetry</category>
+</item>
+<item>
+<title>CI/CD Across Team Boundaries</title>
+<link>https://sekaiser.github.io/notes/ci-cd-across-team-boundaries.html</link>
+<guid isPermaLink="false">urn:berlin:rss:29ce98c0cbceb192b42d44f471a34601024cd3128b793982388e29ac4f560046</guid>
+<pubDate>Sat, 03 Oct 2026 00:00:00 GMT</pubDate>
+<description>A delivery design combining reusable container workflows, service-owned checks, and deployment decisions based on tested service combinations.</description>
+<dc:creator>Sebastian Kaiser</dc:creator>
+<category>ci-cd</category>
+<category>software-delivery</category>
+<category>testing</category>
+</item>
+<item>
+<title>Publishing from Org</title>
+<link>https://sekaiser.github.io/notes/publishing-from-org.html</link>
+<guid isPermaLink="false">urn:berlin:rss:e75e333cd9bc54c304cdf5f8056861f4bba4adac6e36a65e619e28359636b08f</guid>
+<pubDate>Tue, 08 Sep 2026 00:00:00 GMT</pubDate>
+<description>A path through the notebook’s Org publishing examples: inspect what survives export, see it in a working article, and distinguish stored results from live execution.</description>
+<dc:creator>Sebastian Kaiser</dc:creator>
+<category>emacs</category>
+<category>org-mode</category>
+<category>publishing</category>
+</item>
+<item>
+<title>Org-mode publishing showcase</title>
+<link>https://sekaiser.github.io/notes/org-mode-publishing-showcase.html</link>
+<guid isPermaLink="false">urn:berlin:rss:69e5a46ad0a2fee07f9d2c91c126475860012ea3fd75b111e895f9ce09a23874</guid>
+<pubDate>Thu, 25 May 2023 00:00:00 GMT</pubDate>
+<description>What survives the journey from an Emacs buffer to a web page? Inspect headings, tables, task states, and source code in this working Org-mode publishing fixture.</description>
+<dc:creator>Sebastian Kaiser</dc:creator>
+<category>emacs</category>
+<category>org-mode</category>
+<category>publishing</category>
+</item>
+<item>
+<title>Processing JSON with Rust</title>
+<link>https://sekaiser.github.io/notes/processing-json-with-rust.html</link>
+<guid isPermaLink="false">urn:berlin:rss:9da5e44d49fcb875dc7f6b47fa2f1e9de051f532dc8797f49a52e1aeb774149c</guid>
+<pubDate>Thu, 25 May 2023 00:00:00 GMT</pubDate>
+<description>A practical Rust exercise: navigate nested Olympic results with serde_json, count medals, and find the five leading countries. Includes the code and a worked medal-pipeline example.</description>
+<dc:creator>Sebastian Kaiser</dc:creator>
+<category>rust</category>
+<category>serde-json</category>
+</item>
+</channel></rss>
