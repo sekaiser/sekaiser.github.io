@@ -5,6 +5,18 @@
 <description>An engineering notebook about software, systems, and the people who build and depend on them.</description>
 <atom:link href="https://sekaiser.github.io/rss.xml" rel="self" type="application/rss+xml"/>
 <item>
+<title>Durable distributed jobs and the design of djob</title>
+<link>https://sekaiser.github.io/notes/durable-distributed-jobs.html</link>
+<guid isPermaLink="false">urn:berlin:rss:4724cb677ce9f5aee8fe147b0366b7d41dee8127a51432c0c9f0272293521734</guid>
+<pubDate>Tue, 10 Nov 2026 00:00:00 GMT</pubDate>
+<description>Comparing Temporal, Dapr, two HTTP job schedulers and djob through research-based criteria, then following a gateway job through execution, uncertainty and recovery.</description>
+<dc:creator>Sebastian Kaiser</dc:creator>
+<category>distributed-systems</category>
+<category>durable-execution</category>
+<category>go</category>
+<category>job-scheduling</category>
+</item>
+<item>
 <title>Keeping current data useful</title>
 <link>https://sekaiser.github.io/notes/keeping-current-data-useful.html</link>
 <guid isPermaLink="false">urn:berlin:rss:e23b42aeee8ddab88ad7f7ae2c1f0bcd5d79e1f01387e8c4f30eb44e8fcd3ccd</guid>

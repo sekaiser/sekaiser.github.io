@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="alternate" type="application/rss+xml" title="Durable distributed jobs and the design of djob — RSS" href="https://sekaiser.github.io/rss.xml">
+  <link rel="icon" href="https://sekaiser.github.io/static/favicon.svg?v=d722fec0e0cca8eb" type="image/svg+xml">
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/vendor.css?v=cf6814bed6634e0a" type="text/css" media="screen" />
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/notebook.css?v=8634ea4c55d0c6d8">
+  
+  
+  
+  <script src="https://sekaiser.github.io/static/js/study.js?v=3d1042f62485a965" defer></script>
+  <script src="https://sekaiser.github.io/static/js/article-actions.js?v=b6a898f4ea1217d8" defer></script>
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/article.css?v=daa18b2773b1f0d0">
+  
+
+  
+
+  <link rel="stylesheet" href="https://sekaiser.github.io/assets/css/project.css?v=848d148718e48ebe">
+  <script src="https://sekaiser.github.io/static/js/main.js?v=7ffe88eb20e1b177"></script>
+
+  
+  
+
+
+
+
+  
+  
+  
+
+<title>Durable distributed jobs and the design of djob | Sebastian Kaiser</title>
+<meta name="description" content="Comparing Temporal, Dapr, two HTTP job schedulers and djob through research-based criteria, then following a gateway job through execution, uncertainty and recovery.">
+<meta property="og:title" content="Durable distributed jobs and the design of djob | Sebastian Kaiser">
+<meta property="og:description" content="Comparing Temporal, Dapr, two HTTP job schedulers and djob through research-based criteria, then following a gateway job through execution, uncertainty and recovery.">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Sebastian Kaiser — engineering notebook">
+
+  
+  
+  
+  
+  
+  
+  <link rel="canonical" href="https://sekaiser.github.io/notes/durable-distributed-jobs.html">
+  <meta property="og:url" content="https:&#x2F;&#x2F;sekaiser.github.io&#x2F;notes&#x2F;durable-distributed-jobs.html">
+
+
+
+
+  
+  
+    
+  
+  
+    
+    
+    
+    
+    
+  
+
+
+  <meta property="og:image" content="https://sekaiser.github.io/attachments/8475be085dc6d6fcac17e1eea44b505cc657f805c9abc26cdb6251f40513d4f3/djob-architecture-v3.png?v=8475be085dc6d6fc">
+  <meta property="og:image:type" content="image&#x2F;png">
+  <meta property="og:image:width" content="1672">
+  <meta property="og:image:height" content="941">
+  <meta property="og:image:alt" content="djob architecture connecting a management console, Raft controllers, versioned Go workers and shared gateway resources">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://sekaiser.github.io/attachments/8475be085dc6d6fcac17e1eea44b505cc657f805c9abc26cdb6251f40513d4f3/djob-architecture-v3.png?v=8475be085dc6d6fc">
+  <meta name="twitter:image:alt" content="djob architecture connecting a management console, Raft controllers, versioned Go workers and shared gateway resources">
+
+
+
+  <meta property="article:published_time" content="2026-11-10">
+  
+
+
+
+  
+</head>
+<body>
+  
+<div class="margin-sketches" aria-hidden="true">
+  <svg class="margin-sketch-definitions" width="0" height="0" focusable="false">
+    <defs>
+      <symbol id="margin-branches" viewBox="0 0 88 270">
+        <path d="M44 34 C44 67 18 60 18 96 M44 34 C44 67 70 60 70 96 M18 112 C18 153 44 145 44 177 M70 112 C70 153 44 145 44 177 M44 193 L44 230"/>
+        <circle cx="44" cy="26" r="8" class="sketch-node"/>
+        <rect x="10" y="96" width="16" height="16" rx="3"/>
+        <rect x="62" y="96" width="16" height="16" rx="3"/>
+        <circle cx="44" cy="185" r="8" class="sketch-node"/>
+        <path d="M36 238 L44 230 L52 238 L44 246 Z" class="sketch-accent"/>
+      </symbol>
+      <symbol id="margin-pages" viewBox="0 0 88 270">
+        <path d="M29 27 L62 30 L59 76 L26 73 Z M22 34 L55 37 L52 83 L19 80 Z"/>
+        <path d="M30 47 L46 49 M29 55 L43 57 M29 63 L38 64"/>
+        <path d="M38 93 C37 126 69 112 67 145 C65 167 30 153 29 183" stroke-dasharray="2 7"/>
+        <circle cx="29" cy="191" r="8" class="sketch-node"/>
+        <path d="M36 195 L62 216 M62 210 L68 216 L62 222 L56 216 Z" class="sketch-accent"/>
+        <circle cx="13" cy="130" r="3"/>
+      </symbol>
+      <symbol id="margin-orbit" viewBox="0 0 88 270">
+        <ellipse cx="44" cy="72" rx="31" ry="39"/>
+        <ellipse cx="44" cy="72" rx="17" ry="39" transform="rotate(28 44 72)"/>
+        <circle cx="44" cy="72" r="6" class="sketch-node"/>
+        <circle cx="71" cy="52" r="4" class="sketch-accent"/>
+        <path d="M44 121 L44 164 M30 182 L44 164 L58 182 Z M44 183 L44 212" stroke-dasharray="3 6"/>
+        <path d="M35 230 Q44 215 53 230 Q44 244 35 230 Z"/>
+      </symbol>
+      <symbol id="margin-stack" viewBox="0 0 88 270">
+        <path d="M10 54 L44 36 L78 54 L44 72 Z M10 70 L44 88 L78 70 M10 86 L44 104 L78 86"/>
+        <path d="M44 116 L44 150 M20 168 L44 150 L68 168 M20 168 L20 193 M68 168 L68 193"/>
+        <rect x="12" y="194" width="16" height="16" rx="3"/>
+        <circle cx="68" cy="202" r="8" class="sketch-node"/>
+        <path d="M37 239 L51 239 M44 232 L44 246" class="sketch-accent"/>
+      </symbol>
+      <symbol id="margin-signal" viewBox="0 0 88 270">
+        <path d="M12 58 L26 58 L26 36 L42 36 L42 80 L58 80 L58 58 L76 58"/>
+        <path d="M12 114 Q27 85 44 114 T76 114"/>
+        <path d="M12 153 L76 153" stroke-dasharray="2 7"/>
+        <circle cx="26" cy="153" r="4" class="sketch-node"/>
+        <circle cx="62" cy="153" r="4" class="sketch-accent"/>
+        <path d="M23 202 L44 182 L65 202 L44 222 Z M23 202 L65 202"/>
+      </symbol>
+      <symbol id="margin-network" viewBox="0 0 88 270">
+        <path d="M19 45 L68 66 L36 108 L19 45 M36 108 L70 155 L18 179 L36 108 M18 179 L48 226 L70 155"/>
+        <circle cx="19" cy="45" r="6" class="sketch-node"/>
+        <circle cx="68" cy="66" r="5"/>
+        <circle cx="36" cy="108" r="8" class="sketch-node"/>
+        <circle cx="70" cy="155" r="5"/>
+        <circle cx="18" cy="179" r="6"/>
+        <circle cx="48" cy="226" r="6" class="sketch-accent"/>
+      </symbol>
+    </defs>
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:0" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:1" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:2" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-stack" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:3" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-signal" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:4" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:5" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:6" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--left" style="--sketch-row:7" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:0" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:1" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:2" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-signal" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:3" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-branches" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:4" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-orbit" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:5" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-stack" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:6" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-pages" />
+  </svg>
+  
+  <svg class="margin-sketch margin-sketch--right" style="--sketch-row:7" viewBox="0 0 88 270" fill="none" focusable="false">
+    <use href="#margin-network" />
+  </svg>
+  
+</div>
+
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div id="root" class="site-shell">
+        
+<header class="study-masthead">
+  <a class="study-signature" href="https://sekaiser.github.io/">
+    <span class="study-bookmark" aria-hidden="true">sk.</span>
+    <span class="study-identity"><span class="study-name">Sebastian <em>Kaiser</em></span><small>A personal engineering notebook</small></span>
+  </a>
+  <nav aria-label="Main navigation">
+    <a href="https://sekaiser.github.io/notes.html" aria-current="true">Notes</a>
+    <a href="https://sekaiser.github.io/feed.html">Reading</a>
+    <a href="https://sekaiser.github.io/about.html">About</a>
+    <a href="https://sekaiser.github.io/search.html">Search</a>
+  </nav>
+</header>
+
+
+
+        <main id="main" tabindex="-1">
+           
+
+          
+<article class="study-page">
+  <header class="study-opening">
+    <div class="study-heading">
+      <div class="study-title">
+        <p class="study-context"><a href="https://sekaiser.github.io/notes.html">The notebook</a>
+  
+</p>
+        <h1>
+  
+    Durable distributed jobs and the design of <a href="https://github.com/duravela/djob" target="_blank" rel="noopener noreferrer">djob</a>
+  
+</h1>
+        <div class="study-metadata">
+          <dl class="study-dates">
+            <div><dt>Published</dt><dd><time datetime="2026-11-10">10 Nov 2026</time></dd></div>
+            
+          </dl>
+          <nav class="study-topics" aria-label="Article topics">
+
+
+<a class="paper-tag" data-tag="distributed-systems" data-tag-color="49" href="https://sekaiser.github.io/tags/distributed-systems.html"><span>distributed-systems</span></a>
+
+
+
+<a class="paper-tag" data-tag="durable-execution" data-tag-color="55" href="https://sekaiser.github.io/tags/durable-execution.html"><span>durable-execution</span></a>
+
+
+
+<a class="paper-tag" data-tag="go" data-tag-color="11" href="https://sekaiser.github.io/tags/go.html"><span>go</span></a>
+
+
+
+<a class="paper-tag" data-tag="job-scheduling" data-tag-color="45" href="https://sekaiser.github.io/tags/job-scheduling.html"><span>job-scheduling</span></a>
+</nav>
+        </div>
+      </div>
+      <div class="study-introduction">
+
+<div class="article-utilities" data-article-url="https:&#x2F;&#x2F;sekaiser.github.io&#x2F;notes&#x2F;durable-distributed-jobs.html">
+  <span class="article-reading-time" hidden>
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></svg>
+    <span data-reading-label></span>
+  </span>
+  <nav class="article-sharing" aria-label="Share this article">
+  <a class="article-share-link" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fsekaiser%2Egithub%2Eio%2Fnotes%2Fdurable%2Ddistributed%2Djobs%2Ehtml" target="_blank" rel="noopener noreferrer" title="Share on LinkedIn" aria-label="Share on LinkedIn (opens in a new tab)">
+    <svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor" aria-hidden="true" focusable="false">
+      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.049c.476-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286ZM5.337 7.433a2.062 2.062 0 1 1 0-4.124 2.062 2.062 0 0 1 0 4.124ZM7.119 20.452H3.555V9h3.564v11.452ZM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0Z"/>
+    </svg>
+  </a>
+    <a class="article-share-link" href="https://x.com/intent/tweet?url=https%3A%2F%2Fsekaiser%2Egithub%2Eio%2Fnotes%2Fdurable%2Ddistributed%2Djobs%2Ehtml&amp;text=Durable%20distributed%20jobs%20and%20the%20design%20of%20djob" target="_blank" rel="noopener noreferrer" title="Share on X" aria-label="Share on X (opens in a new tab)">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true" focusable="false"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.64 7.584H.47l8.6-9.835L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>
+    </a>
+    <a class="article-share-link" href="mailto:?subject=Durable%20distributed%20jobs%20and%20the%20design%20of%20djob&amp;body=https%3A%2F%2Fsekaiser%2Egithub%2Eio%2Fnotes%2Fdurable%2Ddistributed%2Djobs%2Ehtml" title="Share by email" aria-label="Share by email">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="14" rx=".5"/><path d="m3 5 9 8 9-8M3 19l6-6m12 6-6-6"/></svg>
+    </a>
+    <button class="article-share-link article-copy-link" type="button" hidden title="Copy link" aria-label="Copy article link">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m10 13 4-4m-6 5-1.5 1.5a3.54 3.54 0 0 0 5 5L16 17a3.54 3.54 0 0 0 0-5m0-2 1.5-1.5a3.54 3.54 0 0 0-5-5L8 7a3.54 3.54 0 0 0 0 5"/></svg>
+    </button>
+  </nav>
+  <span class="article-action-status" role="status" aria-live="polite"></span>
+</div>
+
+</div>
+    </div>
+  </header>
+  <div class="study-layout">
+    <aside class="study-margin" aria-label="Article navigation and reading notes">
+      <div class="study-margin-content">
+        <details class="study-contents" hidden>
+          <summary>On this page</summary>
+          <nav aria-label="On this page"></nav>
+        </details>
+        
+      </div>
+    </aside>
+    <div class="document-body study-prose"><div class="frontmatter">
+<div class="abstract">
+<p>A worker sends a command to a gateway. The gateway executes it. Before the worker records the response, its process disappears. What should the replacement worker do?</p>
+<p>Retrying might repeat the command. Moving on might leave the job unfinished. Keeping the job in a database preserves what the system knows, but cannot recover a response nobody recorded.</p>
+<p>I have had to answer these questions while building <a href="https://github.com/duravela/djob" target="_blank" rel="noopener">djob</a>, a Go engine for durable distributed jobs. Its architecture keeps recorded progress connected to permission to use a shared target.</p>
+<p>If you are choosing between scheduled HTTP delivery, a durable workflow and a conversation with a shared device, this article examines how much recovery each approach carries for you. I use a research-based vocabulary to compare <a href="https://github.com/duravela/djob" target="_blank" rel="noopener">djob</a> with Temporal, Dapr and two smaller HTTP schedulers, then follow one gateway job through a lost result and the decisions needed to continue safely.</p>
+<p>I maintain <a href="https://github.com/duravela/djob" target="_blank" rel="noopener">djob</a>, which remains a public preview.</p>
+</div>
+<div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a href="#what-durable-job-systems-need-to-remember">Use a shared vocabulary before comparing features</a></li>
+<li><a href="#recovery-and-external-effects">Recovery does not settle whether an effect happened</a></li>
+<li><a href="#http-job-schedulers">Two ways to deliver an HTTP job</a></li>
+<li><a href="#four-approaches-to-the-same-problem-space">Workflow engines retain progress between operations</a></li>
+<li><a href="#a-capability-scorecard">Comparing the five systems</a></li>
+<li><a href="#what-djob-chooses-to-make-explicit">Shared targets require more than exclusive job claims</a></li>
+<li><a href="#controllers-retain-authority-and-workers-retain-sessions">Controllers, workers and console have different responsibilities</a></li>
+<li><a href="#following-a-job-from-intent-to-outcome">Follow a conversation through failure</a><ul>
+<li><a href="#record-intent-and-decide-eligibility">Record the request and admit the run</a></li>
+<li><a href="#claim-authority-before-causing-effects">Authorize an action before sending it</a></li>
+<li><a href="#keep-logical-state-separate-from-live-sessions">Preserve progress without pretending to restore a connection</a></li>
+<li><a href="#resolve-outcomes-without-erasing-uncertainty">Recover the outcome and access separately</a></li>
+</ul>
+</li>
+<li><a href="#worker-versions-and-rollout">Keep the code needed by accepted work</a></li>
+<li><a href="#the-costs-of-this-model">Include overload and operations in the comparison</a></li>
+<li><a href="#choosing-an-approach">Choose the responsibility you need the system to carry</a></li>
+<li><a href="#sources-and-comparison-scope">Sources and comparison scope</a></li>
+</ul>
+</div>
+<!--endtoc-->
+</div>
+<h2><a href="#what-durable-job-systems-need-to-remember" aria-hidden="true" class="anchor" id="what-durable-job-systems-need-to-remember"></a>Use a shared vocabulary before comparing features</h2>
+<p>A callback scheduler and a workflow engine can both promise to retain accepted work while preserving very different kinds of progress. Counting their features obscures that difference. We need to ask what each system considers a job, how it runs that job, and what survives a failure.</p>
+<p>The Workflows Community Initiative provides a useful starting point. In <em>A Terminology for Scientific Workflow Systems</em>, Suter and colleagues identify five axes for describing workflow systems. System builders and practitioners developed the terminology and applied it to 23 systems. I use it to describe responsibilities; it supplies no universal ranking.<sup class="footnote-ref"><a href="#fn-fn:1">fn:1</a></sup></p>
+<figure class="notebook-result" aria-labelledby="job-system-criteria-title">
+  <figcaption id="job-system-criteria-title"><span class="result-title">Five research axes</span></figcaption>
+  <div class="result-table" role="region" aria-label="Research axes and questions for job systems" tabindex="0">
+<table>
+<tr>
+<th>Research axis</th>
+<th>Question for a job system</th>
+</tr>
+<tr>
+<td>Workflow characteristics</td>
+<td>Is the unit of work a callback, a function, or a process with related steps and waits?</td>
+</tr>
+<tr>
+<td>Composition</td>
+<td>How do we define that work, connect its steps and select the code that implements it?</td>
+</tr>
+<tr>
+<td>Orchestration</td>
+<td>What activates work, chooses an executor and controls access to limited resources?</td>
+</tr>
+<tr>
+<td>Data management</td>
+<td>Which inputs, intermediate state and results are stored, moved or reconstructed?</td>
+</tr>
+<tr>
+<td>Metadata capture</td>
+<td>Which execution history, provenance and observations help us explain what happened?</td>
+</tr>
+</table>
+  </div>
+</figure>
+<p>The axes come from the paper; the questions translate them to background jobs and gateway conversations. Scientific workflows often emphasize data movement and compute placement. Here, a small command can be more consequential than a large dataset, so recovery and external effects need closer examination.</p>
+<p>There is precedent for examining those separately. Yu and Buyya's workflow taxonomy distinguishes task-level recovery, such as retry and checkpoint/restart, from recovery of the larger workflow.<sup class="footnote-ref"><a href="#fn-fn:2">fn:2</a></sup> Reliable State Machines research makes another useful boundary explicit: the state and messages covered by a persistence protocol determine what that protocol can recover.<sup class="footnote-ref"><a href="#fn-fn:3">fn:3</a></sup></p>
+<p>Language choice, deployment dependencies, licensing and operational experience still affect a selection. These are practical selection criteria, separate from the research vocabulary and its description of system behavior.</p>
+<h2><a href="#recovery-and-external-effects" aria-hidden="true" class="anchor" id="recovery-and-external-effects"></a>Recovery does not settle whether an effect happened</h2>
+<p>Return to the gateway command. There are at least two useful records: the request accepted by the scheduler and the command authorized for one execution attempt. Neither proves that the gateway completed the operation.</p>
+<p>This is an old distributed-systems problem. Birrell and Nelson's RPC paper describes the ambiguity after a failed call: the procedure may have run, even though the caller received no result.<sup class="footnote-ref"><a href="#fn-fn:4">fn:4</a></sup> A timeout gives us a deadline observation. Treating it as evidence that nothing happened would be an application decision with consequences.</p>
+<p>For an HTTP service, a stable operation identity can help. The receiver records that identity together with the business change, then recognizes another delivery as the same operation. This requires cooperation at the place where the effect happens. A database entry saying "payment processed" cannot make a separate, non-idempotent payment API call transactional.</p>
+<p>A device may offer no such mechanism. We then need a way to observe its state, reconcile the result, or stop until someone can establish what happened. Persisting an uncertain outcome can be the correct recovery behavior.</p>
+<p>For each project, I therefore ask what its workers retry, which identity survives that retry, and how the recipient recognizes an operation it has already performed.</p>
+<h2><a href="#http-job-schedulers" aria-hidden="true" class="anchor" id="http-job-schedulers"></a>Two ways to deliver an HTTP job</h2>
+<p>Two public repositories I came across offer concrete examples of callback scheduling. I use their source to examine implementation choices; the comparison criteria come from the research above.</p>
+<p><em>Job Scheduler Platform</em> uses PostgreSQL for job and execution records, with Redis for dispatch. The application submits a callback payload; workers call the endpoint and record the attempt. Delayed work, cron, retries and dead-letter inspection surround that basic unit of execution. A transactional outbox bridges committed database changes to Redis, allowing the dispatch path to be repaired after a crash. <a href="https://github.com/BurhaanAshraf/Job-Scheduler-Platform/blob/74d5ee552b06f6f725aa110478f5838681418df3/docs/architecture.md" target="_blank" rel="noopener">Architecture</a>.</p>
+<p><a id="figure--fig-durable-jobs-1"></a></p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/f8dfc50d5618b20edd4c9cdbdceb363c326d19a0441984cf22b4f828a0200316/job-scheduler-platform-burhaan-ashraf.jpg?v=f8dfc50d5618b20e" alt="Job Scheduler Platform architecture with PostgreSQL, transactional outbox, Redis dispatch, Go scheduler and workers"><figcaption><span class="figure-number">Figure 1: </span>Job Scheduler Platform architecture. Diagram by Burhaan Ashraf, reproduced unchanged.</figcaption></figure>
+<p><em>distributed-scheduler</em> keeps active jobs and their queue in MySQL. Creating a scheduled occurrence and advancing its schedule happen in one transaction. Executors claim rows with <code>FOR UPDATE SKIP LOCKED</code>, record a lease and increasing attempt number, and commit before making the HTTP call. Cassandra holds archived execution history. This avoids a database-to-broker handoff for active work, while putting claim traffic on MySQL. <a href="https://github.com/JoelTeoGom/distributed-scheduler/blob/9bbd90c52c8b9702a50de800cef3343a49c70c5e/scheduler-service/internal/adapters/out/mysql/scheduler_repository.go" target="_blank" rel="noopener">Schedule materialization</a>, <a href="https://github.com/JoelTeoGom/distributed-scheduler/blob/9bbd90c52c8b9702a50de800cef3343a49c70c5e/executor-service/internal/adapters/out/mysql/job_repository.go" target="_blank" rel="noopener">claims and result updates</a>.</p>
+<p>Its result update checks that the row is still running under the same worker and attempt. A reconciler returns expired claims to pending work, or marks them dead when attempts are exhausted. The attempt guard prevents an old executor from overwriting a replacement's database result. It cannot retract an HTTP request already sent to the recipient. Its <a href="https://github.com/JoelTeoGom/distributed-scheduler/blob/9bbd90c52c8b9702a50de800cef3343a49c70c5e/docs/distributed-scheduler.png" target="_blank" rel="noopener">architecture illustration</a> makes these service and storage boundaries easy to follow. <a href="https://github.com/JoelTeoGom/distributed-scheduler/blob/9bbd90c52c8b9702a50de800cef3343a49c70c5e/reconciler-service/internal/adapters/out/mysql/job_repository.go" target="_blank" rel="noopener">Lease reconciliation</a>.</p>
+<p>The receiver contracts differ in a detail that matters. <em>distributed-scheduler</em> sends the same job ID as <code>Idempotency-Key</code> on every attempt. Job Scheduler Platform sends <code>&lt;jobID&gt;:&lt;attempt&gt;</code> and also supplies <code>X-Job-ID</code>. A receiver deduplicating across attempts must therefore use an identity stable across those attempts; the latter header can supply the job identity, with suitable tenant and operation scope. Neither header enforces deduplication by itself. <a href="https://github.com/JoelTeoGom/distributed-scheduler/blob/9bbd90c52c8b9702a50de800cef3343a49c70c5e/docs/client/receiving-jobs.md" target="_blank" rel="noopener">distributed-scheduler receiver contract</a>, <a href="https://github.com/BurhaanAshraf/Job-Scheduler-Platform/blob/74d5ee552b06f6f725aa110478f5838681418df3/internal/executor/http.go" target="_blank" rel="noopener">Job Scheduler Platform request headers</a>.</p>
+<p>Both projects leave a multi-step business process inside the recipient unless the application adds orchestration. That is a reasonable boundary when the desired service is "call this endpoint at this time." It becomes important when the endpoint must remember several exchanges across failures.</p>
+<h2><a href="#four-approaches-to-the-same-problem-space" aria-hidden="true" class="anchor" id="four-approaches-to-the-same-problem-space"></a>Workflow engines retain progress between operations</h2>
+<p>Temporal records workflow history and reconstructs workflow progress through replay. Activities perform external operations; durable timers and messages let the workflow wait across process failures. Activity retries still require suitable effect semantics. Temporal also supports Standalone Activities, so a background job need not be wrapped in a multi-step workflow. <a href="https://docs.temporal.io/workflows" target="_blank" rel="noopener">Workflows</a>, <a href="https://docs.temporal.io/activities" target="_blank" rel="noopener">activities</a>.</p>
+<p>Dapr separates scheduling from orchestration. Its Jobs API arranges callbacks; Workflow provides durable orchestration, activities, timers and external events. Jobs scheduling uses the Scheduler service and its embedded etcd, while Workflow persists through the configured actor state store. Choosing Dapr Jobs alone does not preserve arbitrary progress inside a callback. <a href="https://docs.dapr.io/developing-applications/building-blocks/jobs/jobs-overview/" target="_blank" rel="noopener">Jobs</a>, <a href="https://docs.dapr.io/concepts/dapr-services/scheduler/" target="_blank" rel="noopener">Scheduler</a>, <a href="https://docs.dapr.io/developing-applications/building-blocks/workflow/workflow-architecture/" target="_blank" rel="noopener">Workflow architecture</a>.</p>
+<p>For a process that waits for approval, calls several services and later compensates for a failed step, this wider execution model can save substantial application code. Its price includes learning the workflow programming model, retaining compatible code and operating the required persistence and runtime services. Managed offerings change who carries some of that operational work.</p>
+<p>An HTTP callback can also start a workflow. In that arrangement, the scheduler records delivery while the recipient's workflow engine owns progress from there. The application combines the two responsibilities.</p>
+<h2><a href="#a-capability-scorecard" aria-hidden="true" class="anchor" id="a-capability-scorecard"></a>Comparing the five systems</h2>
+<p>Each column describes the mechanisms supplied by one system across the same five research axes. Dapr Jobs and Workflow remain separate building blocks within its column. Multi-step logic inside a callback recipient belongs to that application. Scroll horizontally to read the full comparison.</p>
+<figure class="notebook-result" aria-labelledby="job-system-comparison-title" style="grid-template-columns:minmax(0,1fr)">
+  <figcaption id="job-system-comparison-title" style="display:block"><span class="result-title">Five systems across five axes</span></figcaption>
+  <div class="result-table" role="region" aria-label="Comparison of five job systems across five research axes" tabindex="0">
+<div style="min-width:52rem">
+<table>
+<tr>
+<th>Research axis</th>
+<th>Temporal</th>
+<th>Dapr Jobs + Workflow</th>
+<th>Job Scheduler Platform</th>
+<th>distributed-scheduler</th>
+<th><a href="https://github.com/duravela/djob" target="_blank" rel="noopener">djob</a></th>
+</tr>
+<tr>
+<td>Workflow characteristics</td>
+<td>Multi-step workflows and activities; Standalone Activities for individual jobs</td>
+<td>Jobs: scheduled callbacks. Workflow: related steps, timers and event waits</td>
+<td>Scheduled HTTP callbacks; longer processes belong to the recipient</td>
+<td>Scheduled HTTP requests; longer processes belong to the recipient</td>
+<td>Resource-free functions and stateful conversations that can retain shared resources</td>
+</tr>
+<tr>
+<td>Composition</td>
+<td>Workflow and activity code registered with SDK workers</td>
+<td>Jobs API configuration; workflow and activity code through Workflow SDKs</td>
+<td>Submission API configures callback payloads, schedules and retry policy</td>
+<td>Task API configures endpoints, schedules, priorities and retry policy</td>
+<td>Versioned Go handlers and drivers; definitions and bindings; optional worker-release pinning</td>
+</tr>
+<tr>
+<td>Orchestration</td>
+<td>Task queues and workers; schedules, durable timers and workflow messages</td>
+<td>Scheduler invokes jobs; Workflow coordinates activities, timers and external events</td>
+<td>Scheduler and transactional outbox feed Redis dispatch; workers deliver callbacks</td>
+<td>MySQL row claims with leases and attempt guards; priority ordering and expiry reconciliation</td>
+<td>Raft-backed claims check capabilities, quotas, grants and resource reservations; workers execute authorized actions</td>
+</tr>
+<tr>
+<td>Data management</td>
+<td>Persisted workflow history and recorded results reconstruct workflow progress through replay</td>
+<td>Jobs data in Scheduler's embedded etcd; workflow history in the configured actor state store</td>
+<td>PostgreSQL job, execution and outbox records; Redis carries dispatch notifications</td>
+<td>MySQL task and active-job state; terminal execution history archived to Cassandra</td>
+<td>Replicated bbolt state, WAL and snapshots retain pinned inputs, checkpoints, actions, waits and reservations</td>
+</tr>
+<tr>
+<td>Metadata capture</td>
+<td>Execution histories, workflow visibility and <a href="https://docs.temporal.io/web-ui" target="_blank" rel="noopener">Web UI inspection</a></td>
+<td><a href="https://docs.dapr.io/developing-applications/building-blocks/workflow/workflow-features-concepts/" target="_blank" rel="noopener">Workflow instance status and history</a> through APIs and CLI</td>
+<td>Job and attempt records, structured logs and operational metrics</td>
+<td>Job status, execution history and dead-letter inspection through the Job Service</td>
+<td>Console inspection of runs, attempts, actions and events; resolution audits and operational metrics</td>
+</tr>
+</table>
+</div>
+</div>
+</figure>
+<h2><a href="#what-djob-chooses-to-make-explicit" aria-hidden="true" class="anchor" id="what-djob-chooses-to-make-explicit"></a>Shared targets require more than exclusive job claims</h2>
+<p>My starting problem was communication with gateways. Two meters behind one half-duplex bus cannot necessarily be addressed concurrently, even when their jobs have different IDs and run in different worker processes. Both jobs must resolve to the same canonical resource before admission.</p>
+<p>That resource stays occupied through the conversation: commands, reply waits and cleanup. Releasing it while waiting for a response would allow another job to enter an exchange that is still in progress. Adding workers can improve concurrency across independent buses; it does not increase the capacity of one serial bus.</p>
+<p>A lease helps the controller decide who is authorized. Expiry does not prove that the old process stopped or that its messages can no longer arrive. Chubby's sequencer mechanism addresses this by having the recipient validate the generation associated with an operation. The enforcement point is at the protected service.<sup class="footnote-ref"><a href="#fn-fn:5">fn:5</a></sup></p>
+<p>A legacy gateway may not understand such a token. In that case, <a href="https://github.com/duravela/djob" target="_blank" rel="noopener">djob</a> cannot manufacture physical fencing through Raft. Its conservative policy blocks reassignment when previous access is uncertain, until an integration or operator establishes safe release. That can stop every queued job using the bus, including jobs for other meters. Recovery time becomes part of the availability cost. A general workflow platform can implement a similar policy. <a href="https://github.com/duravela/djob" target="_blank" rel="noopener">djob</a> places the reservation and recovery rules directly in its execution model.</p>
+<h2><a href="#controllers-retain-authority-and-workers-retain-sessions" aria-hidden="true" class="anchor" id="controllers-retain-authority-and-workers-retain-sessions"></a>Controllers, workers and console have different responsibilities</h2>
+<p><a id="figure--fig-durable-jobs-2"></a></p>
+<figure><img style="max-width:100%;" src="https://sekaiser.github.io/attachments/8475be085dc6d6fcac17e1eea44b505cc657f805c9abc26cdb6251f40513d4f3/djob-architecture-v3.png?v=8475be085dc6d6fc" alt="djob architecture with a management console, replicated Raft controllers, versioned Go SDK workers, optional Kubernetes pools and shared gateway resources"><figcaption><span class="figure-number">Figure 2: </span><a href="https://github.com/duravela/djob" target="_blank" rel="noopener noreferrer">djob</a>'s current architecture. Controllers retain accepted work and authority; independent workers execute application code and integrations. The console uses controller APIs. Managed Kubernetes workers are optional, and broker acknowledgement remains separate from device completion.</figcaption></figure>
+<p>Controllers retain job definitions, triggers, runs and execution records through etcd Raft, with bbolt state, a write-ahead log and snapshots on each member. They decide eligibility and resource admission. Ready indexes and timers are rebuilt from durable records; internal dispatch needs no external message broker. <a href="https://github.com/duravela/djob/blob/d603e2783f7e9d4c56e6a72e2c1fc0b87826fa3a/README.md" target="_blank" rel="noopener">Project overview</a>, <a href="https://github.com/duravela/djob/blob/d603e2783f7e9d4c56e6a72e2c1fc0b87826fa3a/pkg/db/jobs_dispatch.go" target="_blank" rel="noopener">dispatch state</a>.</p>
+<p>The management console is a separate authenticated client. It provides job authoring, run inspection and worker management. It neither executes jobs nor opens controller databases. An accepted mutation belongs to the controller's durable state, regardless of which console replica submitted it. <a href="https://github.com/duravela/djob/tree/d603e2783f7e9d4c56e6a72e2c1fc0b87826fa3a/internal/console" target="_blank" rel="noopener">Console implementation</a>.</p>
+<p>Independent workers connect outward using authenticated bidirectional gRPC over TLS. Their Go registry supplies exact handler and driver versions. Submitting a definition selects deployed code; it does not upload that code to the controller. Workers contain company business rules and integrations without becoming Raft members. <a href="https://github.com/duravela/djob/blob/d603e2783f7e9d4c56e6a72e2c1fc0b87826fa3a/sdk/go/README.md" target="_blank" rel="noopener">Go SDK</a>, <a href="https://github.com/duravela/djob/blob/d603e2783f7e9d4c56e6a72e2c1fc0b87826fa3a/pkg/server/remote_worker_grpc.go" target="_blank" rel="noopener">worker transport</a>.</p>
+<p>Handlers make bounded, pure decisions from recorded state. A decision can request a checkpoint, an action, a wait or completion. Drivers perform the effects and retain temporary protocol sessions within an attempt. This gives application code a place to express "read a measurement" while a driver handles MQTT, HTTP, Modbus or another transport. The controller remains responsible for authorizing the action and recording its result. <a href="https://github.com/duravela/djob/blob/d603e2783f7e9d4c56e6a72e2c1fc0b87826fa3a/sdk/go/jobs.go" target="_blank" rel="noopener">Handler and driver contracts</a>.</p>
+<h2><a href="#following-a-job-from-intent-to-outcome" aria-hidden="true" class="anchor" id="following-a-job-from-intent-to-outcome"></a>Follow a conversation through failure</h2>
+<p>Consider a job that selects a meter, requests a reading and finishes the exchange. I will call its run <code>R</code> and the shared bus <code>B</code>. These labels belong to an illustrative example, not a report of a physical deployment or an API naming convention.</p>
+<p>The run is one accepted execution of the job. An attempt is one worker's turn executing that run; a later attempt has its own identity. Within attempt <code>A</code>, the request for a reading is action <code>2</code>, identified by its run and action sequence. The resource identity <code>B</code> covers the bus, including its other meters and aliases. It must be the same resource for every job that could interfere with this exchange.</p>
+<p>These identities serve different purposes. Repeating a submission with the same submission identity avoids creating another run. An action's idempotency key lets a cooperating recipient recognize the same external operation. A new attempt gives a worker neither a new business request nor permission to repeat an uncertain command.</p>
+<h3><a href="#record-intent-and-decide-eligibility" aria-hidden="true" class="anchor" id="record-intent-and-decide-eligibility"></a>Record the request and admit the run</h3>
+<p>An immediate launch creates durable ready work. A scheduled trigger creates its occurrence and run while advancing its cursor in the same committed transition. Event activation similarly records the accepted event with its run. The controller snapshots the definition, its driver binding and relevant defaults, so later configuration edits do not silently rewrite accepted work. The binding selects the integration used for the job's operations. Submission identities let a client repeat an uncertain request without creating another logical run. <a href="https://github.com/duravela/djob/blob/d603e2783f7e9d4c56e6a72e2c1fc0b87826fa3a/pkg/db/jobs_activation.go" target="_blank" rel="noopener">Activation</a>, <a href="https://github.com/duravela/djob/blob/d603e2783f7e9d4c56e6a72e2c1fc0b87826fa3a/pkg/db/jobs_triggers.go" target="_blank" rel="noopener">triggers</a>.</p>
+<p>Being ready does not mean the bus is available. A claim checks worker compatibility, tenant and group limits, grants and all required resources together. If a resource is busy, the run stays queued without taking partial reservations. The generic ready index does not promise global submission-order FIFO; exclusion comes from the committed admission checks.</p>
+<h3><a href="#claim-authority-before-causing-effects" aria-hidden="true" class="anchor" id="claim-authority-before-causing-effects"></a>Authorize an action before sending it</h3>
+<p>The handler requests the next operation. Its decision alone grants no permission to perform I/O. The controller must durably authorize the action, and the worker must remain within its verified permission budget. Only then can its driver send the gateway command. The controller must commit the reported effect before execution advances from it. <a href="https://github.com/duravela/djob/blob/d603e2783f7e9d4c56e6a72e2c1fc0b87826fa3a/pkg/db/jobs_execution.go" target="_blank" rel="noopener">Execution transitions</a>.</p>
+<p>For our example, that committed authorization permits attempt <code>A</code> to execute action <code>2</code> on bus <code>B</code>. It records permission to send, without establishing whether the driver has sent anything yet. If the worker disappears at this point, a replacement cannot infer that repeating the command is safe.</p>
+<p>With MQTT, a broker acknowledgement establishes acceptance by the broker. A resource-backed integration still needs a gateway completion contract that establishes what the response means and whether access is quiescent. Disconnecting from the broker cannot retract a command already queued or forwarded.</p>
+<h3><a href="#keep-logical-state-separate-from-live-sessions" aria-hidden="true" class="anchor" id="keep-logical-state-separate-from-live-sessions"></a>Preserve progress without pretending to restore a connection</h3>
+<p>A checkpoint records the application's progress. The driver may also retain a live connection, selected device or protocol handshake. Restoring the checkpoint cannot prove that the gateway remembers that session. A fresh attempt gets a fresh driver.</p>
+<p>The integration author has to make that distinction real. All effects belong in the driver; <code>Execute</code> must stop its I/O before returning. <code>Quiesce</code> must account for recovery and any protocol quiet period, and <code>Close</code> must release local sessions. A closed local connection alone may leave a command in a broker or a device still processing it. The controller relies on trusted worker reports; it cannot observe a legacy bus well enough to establish physical safety independently.</p>
+<p>Resource-free waits can yield execution and later resume elsewhere. A wait that retains a shared resource keeps the conversation and its reservation together. The SDK waits for I/O and cleanup to stop before reconnecting; it does not detach an uncooperative driver and declare the previous session safe. <a href="https://github.com/duravela/djob/blob/d603e2783f7e9d4c56e6a72e2c1fc0b87826fa3a/sdk/go/worker/serve.go" target="_blank" rel="noopener">Worker reconnection</a>.</p>
+<h3><a href="#resolve-outcomes-without-erasing-uncertainty" aria-hidden="true" class="anchor" id="resolve-outcomes-without-erasing-uncertainty"></a>Recover the outcome and access separately</h3>
+<p>Attempt <code>A</code> now disappears after sending action <code>2</code>, before the controller commits its result. Once ownership expires, <a href="https://github.com/duravela/djob" target="_blank" rel="noopener">djob</a> records the action and run as unknown and blocks bus <code>B</code>. A fresh worker cannot automatically replay the uncertain action. The controller cannot tell this case from a worker that vanished just before sending.</p>
+<p>What changes if we learn more? Each row below starts from the same lost-result case, except the last, which moves the failure past the result commit. The rows describe independent possibilities, not an automatic recovery sequence. Scroll horizontally on a narrow screen to keep each case readable.</p>
+<figure class="notebook-result" aria-labelledby="job-recovery-cases-title" style="grid-template-columns:minmax(0,1fr)">
+<figcaption id="job-recovery-cases-title" style="display:block"><span class="result-title">Job outcome and bus access after failure</span></figcaption>
+<div class="result-table" role="region" aria-label="Recovery cases distinguishing job outcome from shared bus access" tabindex="0">
+<div style="min-width:38rem">
+<table>
+<tr>
+<th>Evidence and recovery decision</th>
+<th>What happens to run R?</th>
+<th>Can another job use bus B?</th>
+</tr>
+<tr>
+<td>No result and no proof that old access stopped</td>
+<td>Run and action 2 remain unknown</td>
+<td>No; B stays blocked</td>
+</tr>
+<tr>
+<td>An operator establishes stopped access and explicitly resolves the resource, without settling the reading</td>
+<td>R remains unknown</td>
+<td>B becomes available; another job can pass normal admission</td>
+</tr>
+<tr>
+<td>Independent evidence establishes the completed job's success, and the operator resolves R, without establishing stopped access</td>
+<td>R becomes succeeded</td>
+<td>No; resolving the outcome leaves B blocked</td>
+</tr>
+<tr>
+<td>Instead, action 2's success was durably recorded before A disappeared, but the conversation had not completed</td>
+<td>The action result survives; the interrupted run becomes unknown</td>
+<td>No; a recorded result does not prove that old access stopped</td>
+</tr>
+</table>
+</div>
+</div>
+</figure>
+<p>Resource resolution needs evidence that excludes old access, including delayed commands, rather than confidence that the worker is probably dead. Outcome resolution needs evidence for the job's result. <a href="https://github.com/duravela/djob" target="_blank" rel="noopener">djob</a> records those decisions separately, with the operator's reason. Cancellation still has to pass through cleanup; requesting a stop supplies neither kind of evidence.</p>
+<h2><a href="#worker-versions-and-rollout" aria-hidden="true" class="anchor" id="worker-versions-and-rollout"></a>Keep the code needed by accepted work</h2>
+<p>Durable jobs may outlive a deployment. Knowing a handler's name and version is useful only while some compatible worker can still execute it.</p>
+<p><a href="https://github.com/duravela/djob" target="_blank" rel="noopener">djob</a> can publish a managed worker deployment as a release, pinning its image digest and configuration references. A run can be pinned to a release as well as requiring specific capabilities. Old and new releases can coexist; an existing run retains its selection through retries and resumptions. Updating a definition affects future direct launches, while triggers retain their own templates until explicitly changed. Beginning retirement refuses new runs for that release. Operators keep its workers available until accepted work has finished. <a href="https://github.com/duravela/djob/blob/d603e2783f7e9d4c56e6a72e2c1fc0b87826fa3a/pkg/db/worker_release.go" target="_blank" rel="noopener">Release state and admission</a>.</p>
+<p>Optional Kubernetes management reconciles the desired worker deployments. Externally operated workers remain supported. Starting a replacement Pod restores a process, but does not reconstruct a lost gateway session or settle an uncertain command. Resource recovery still follows the same rules. <a href="https://github.com/duravela/djob/tree/d603e2783f7e9d4c56e6a72e2c1fc0b87826fa3a/pkg/workercontrol" target="_blank" rel="noopener">Managed-worker reconciliation</a>.</p>
+<h2><a href="#the-costs-of-this-model" aria-hidden="true" class="anchor" id="the-costs-of-this-model"></a>Include overload and operations in the comparison</h2>
+<p>Durability lets work accumulate. It does not ensure that the system can finish it within a useful time. Borg's cluster-management paper treats admission control, resource isolation and monitoring as part of operating a scheduler.<sup class="footnote-ref"><a href="#fn-fn:6">fn:6</a></sup> For these job systems, I would measure lateness from scheduled time to actual execution, recovery delay after a worker failure, queue age and retained-state growth under the intended workload. A fast submission acknowledgement alone says little about any of them.</p>
+<p>The storage choices move operational work around. Job Scheduler Platform needs PostgreSQL and Redis; distributed-scheduler needs MySQL and Cassandra. Dapr combines runtime services with its selected state components. Temporal needs its service and persistence infrastructure, unless an offering manages them for us. <a href="https://github.com/duravela/djob" target="_blank" rel="noopener">djob</a> embeds replicated storage in its controllers, leaving quorum, volumes, backup and recovery with the operator. Optional console and Kubernetes worker management add their own responsibilities.</p>
+<p>For <a href="https://github.com/duravela/djob" target="_blank" rel="noopener">djob</a>, bounded pending work and tenant quotas protect admission, while retention and storage maintenance address a different budget. Permanent identities and unresolved outcomes can outlive successful payload history. Its console exposes execution records and recovery paths; metrics distinguish queueing, uncertain outcomes and blocked access. These are useful mechanisms, but their presence does not establish a tested capacity or years of operational experience.</p>
+<p><em>distributed-scheduler</em> includes workload and failure reports from a single-machine, emulated deployment, and explicitly qualifies their limits. Its large-scale design targets should not be read as achieved throughput. <a href="https://github.com/duravela/djob" target="_blank" rel="noopener">djob</a>'s public preview likewise leaves target-environment capacity, storage behavior and physical gateway fencing to qualification. No common experiment in this article establishes a performance ranking. <a href="https://github.com/JoelTeoGom/distributed-scheduler/blob/9bbd90c52c8b9702a50de800cef3343a49c70c5e/benchmarks.md" target="_blank" rel="noopener">Scheduler experiments and limits</a>, <a href="https://github.com/duravela/djob/blob/d603e2783f7e9d4c56e6a72e2c1fc0b87826fa3a/README.md" target="_blank" rel="noopener">Preview scope</a>.</p>
+<p>Licensing also affects adoption. <a href="https://github.com/duravela/djob" target="_blank" rel="noopener">djob</a>'s engine is source-available under its own terms; the complete Go SDK is Apache 2.0. The distributed-scheduler snapshot has no license file, so public access to its source should not be treated as a stated open-source grant. <a href="https://github.com/duravela/djob/blob/d603e2783f7e9d4c56e6a72e2c1fc0b87826fa3a/COMMERCIAL.md" target="_blank" rel="noopener">Licensing boundary</a>, <a href="https://github.com/JoelTeoGom/distributed-scheduler/tree/9bbd90c52c8b9702a50de800cef3343a49c70c5e" target="_blank" rel="noopener">distributed-scheduler snapshot</a>.</p>
+<h2><a href="#choosing-an-approach" aria-hidden="true" class="anchor" id="choosing-an-approach"></a>Choose the responsibility you need the system to carry</h2>
+<p>For one isolated HTTP operation, I would start with a callback scheduler and a recipient that owns the operation and its deduplication. Persisting a separate conversation would add little if the recipient already handles it. For branching work with durable waits and recovery, Temporal and Dapr Workflow provide broader composition models. If a workflow engine already carries that business process, adding application-owned resource coordination there may be simpler than introducing another engine.</p>
+<p><a href="https://github.com/duravela/djob" target="_blank" rel="noopener">djob</a> addresses the case that led me to build it: jobs whose progress must remain connected to permission to use a shared target. Versioned company code runs independently of the controllers, while reservations and uncertain outcomes remain part of the durable execution state. I accept the possibility that a lost worker stops other work on the same bus until we can establish safe release. The integration still needs physical validation and an operational recovery procedure. If the target instead enforces deduplication and fencing, or the jobs share no target at all, much of that reason for choosing <a href="https://github.com/duravela/djob" target="_blank" rel="noopener">djob</a> falls away.</p>
+<p>Before selecting any of these systems, I would walk through the failed command from the opening: find the accepted request, identify the last recorded progress, decide whether repeating the effect is safe, and establish who may use the target next.</p>
+<h2><a href="#sources-and-comparison-scope" aria-hidden="true" class="anchor" id="sources-and-comparison-scope"></a>Sources and comparison scope</h2>
+<p>I updated this comparison on 13 November 2026. Project links pin Job Scheduler Platform to <code>74d5ee5</code>, distributed-scheduler to <code>9bbd90c</code> and <a href="https://github.com/duravela/djob" target="_blank" rel="noopener">djob</a>'s public source to <code>d603e27</code>. The <a href="https://github.com/duravela/djob" target="_blank" rel="noopener">djob</a> contracts discussed here were also checked against my local <code>81409b1</code> tree. Temporal and Dapr claims follow their linked documentation; Dapr's pages identify version 1.19. Source inspection supports the architectural descriptions, not a shared runtime qualification of these projects.</p>
+<section class="footnote-definition" id="fn-fn:1">
+<p><span class="footnote-label">[fn:1]</span> Frédéric Suter and colleagues, <a href="https://arxiv.org/html/2506.07838v6" target="_blank" rel="noopener">A Terminology for Scientific Workflow Systems</a>, §2 (five axes), §4 (community process). <em>Future Generation Computer Systems</em> 174, 107974 (2026); <a href="https://doi.org/10.1016/j.future.2025.107974" target="_blank" rel="noopener">DOI</a>. The comparison uses the vocabulary, with questions adapted to background jobs; the paper does not rank these five projects.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:2">
+<p><span class="footnote-label">[fn:2]</span> Jia Yu and Rajkumar Buyya, <a href="https://arxiv.org/pdf/cs/0503025" target="_blank" rel="noopener">A Taxonomy of Workflow Management Systems for Grid Computing</a>, §2.4, "Fault Tolerance." The 2005 report distinguishes task-level and workflow-level techniques, including retry and checkpoint/restart.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:3">
+<p><span class="footnote-label">[fn:3]</span> Suvam Mukherjee and colleagues, <a href="https://drops.dagstuhl.de/storage/00lipics/lipics-vol134-ecoop2019/LIPIcs.ECOOP.2019.18/LIPIcs.ECOOP.2019.18.pdf" target="_blank" rel="noopener">Reliable State Machines: A Framework for Programming Reliable Cloud Services</a>, ECOOP 2019, §2.2. Its runtime persists inbox, outbox and machine state together; external services remain a separate interaction boundary.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:4">
+<p><span class="footnote-label">[fn:4]</span> Andrew D. Birrell and Bruce Jay Nelson, <a href="https://www.cl.cam.ac.uk/teaching/0708/DigiCommI/birrell1984rpc.pdf" target="_blank" rel="noopener">Implementing Remote Procedure Calls</a>, <em>ACM Transactions on Computer Systems</em> 2(1), 1984, §3.1. A failed call can leave the caller unable to tell whether the procedure ran.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:5">
+<p><span class="footnote-label">[fn:5]</span> Mike Burrows, <a href="https://www.usenix.org/legacy/event/osdi06/tech/full_papers/burrows/burrows.pdf" target="_blank" rel="noopener">The Chubby lock service for loosely-coupled distributed systems</a>, OSDI 2006, §2.4, "Locks and sequencers." A recipient checks the lock's sequencer to reject stale operations; possession of a lock alone does not make an external service enforce it.</p>
+</section>
+<section class="footnote-definition" id="fn-fn:6">
+<p><span class="footnote-label">[fn:6]</span> Abhishek Verma and colleagues, <a href="https://research.google/pubs/large-scale-cluster-management-at-google-with-borg/" target="_blank" rel="noopener">Large-scale cluster management at Google with Borg</a>, EuroSys 2015, §§2.5, 2.6 and 6.2. Quota, resource isolation and monitoring motivate the operational questions here; Borg's compute scheduling is not evidence of gateway-level fencing.</p>
+</section>
+</div>
+  </div>
+  <footer class="study-end">
+    
+    
+  
+  
+  
+  
+  
+
+  
+    <p class="study-feedback">If something here seems wrong or hard to follow, <a href="https://www.linkedin.com/in/sekaiser/" target="_blank" rel="noopener">let me know on LinkedIn</a>.</p>
+  
+
+    
+    <div class="study-follow">
+      <a class="study-subscribe" href="https://sekaiser.github.io/rss.xml" type="application/rss+xml">Follow new notes via RSS</a>
+      <a class="study-return" href="https://sekaiser.github.io/notes.html">Return to the notebook</a>
+    </div>
+  </footer>
+</article>
+
+        </main>
+
+        
+            <footer class="site-footer">
+  <div class="footer-colophon">
+    <a class="footer-home" href="https://sekaiser.github.io/">
+      <span class="footer-bookplate" aria-hidden="true">sk.</span>
+      <span class="footer-name">Sebastian Kaiser</span>
+    </a>
+    <p>A personal notebook. Built with Berlin.</p>
+  </div>
+  <nav aria-label="Elsewhere">
+    
+      <a class="footer-icon" href="https://sekaiser.github.io/rss.xml" type="application/rss+xml" aria-label="Subscribe via RSS" title="Subscribe via RSS">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false">
+          <circle cx="5" cy="19" r="1.5" fill="currentColor" stroke="none"/>
+          <path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/>
+        </svg>
+      </a>
+    
+    
+      <a class="footer-icon" href="https://github.com/sekaiser" aria-label="GitHub" title="GitHub" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M12 .5a12 12 0 0 0-3.793 23.385c.6.111.82-.261.82-.577 0-.285-.01-1.04-.016-2.04-3.338.725-4.043-1.61-4.043-1.61-.546-1.386-1.333-1.755-1.333-1.755-1.09-.745.083-.73.083-.73 1.205.085 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.419-1.305.762-1.605-2.665-.303-5.467-1.333-5.467-5.931 0-1.31.469-2.381 1.236-3.221-.124-.303-.536-1.524.117-3.176 0 0 1.008-.323 3.301 1.23a11.52 11.52 0 0 1 6.006 0c2.291-1.553 3.297-1.23 3.297-1.23.655 1.652.243 2.873.12 3.176.77.84 1.235 1.911 1.235 3.221 0 4.61-2.807 5.625-5.479 5.922.43.372.823 1.102.823 2.222 0 1.606-.015 2.902-.015 3.296 0 .319.216.694.825.576A12 12 0 0 0 12 .5Z"/>
+        </svg>
+      </a>
+    
+    
+      <a class="footer-icon" href="https://www.linkedin.com/in/sekaiser/" aria-label="LinkedIn" title="LinkedIn" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.049c.476-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286ZM5.337 7.433a2.062 2.062 0 1 1 0-4.124 2.062 2.062 0 0 1 0 4.124ZM7.119 20.452H3.555V9h3.564v11.452ZM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0Z"/>
+        </svg>
+      </a>
+    
+    <a class="footer-icon" href="#main" aria-label="Back to top" title="Back to top">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <path d="M5 4h14M6 13l6-6 6 6M12 7v13"/>
+      </svg>
+    </a>
+  </nav>
+</footer>
+
+        
+
+  </div>
+</body>
+</html>
