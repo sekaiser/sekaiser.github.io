@@ -263,7 +263,7 @@ One of the more common tasks is to load data from different sources, like text f
 </div>
 <!--endtoc-->
 </div>
-<p>This post is a demonstration of using <a href="https://crates.io/crates/serde_json">serde_json</a> to parse JSON in <a href="https://sekaiser.github.io/tags/rust.html">Rust</a>. For this purpose, I am using the athletics data set of the <a href="https://olympics.com/en/olympic-games/tokyo-2020/results/athletics">Olympic Games Tokyo 2020</a>. The goal is to find the five most successful countries and print them.</p>
+<p>This post is a demonstration of using <a href="https://crates.io/crates/serde_json" target="_blank" rel="noopener">serde_json</a> to parse JSON in <a href="https://sekaiser.github.io/tags/rust.html">Rust</a>. For this purpose, I am using the athletics data set of the <a href="https://olympics.com/en/olympic-games/tokyo-2020/results/athletics" target="_blank" rel="noopener">Olympic Games Tokyo 2020</a>. The goal is to find the five most successful countries and print them.</p>
 <figure class="code-listing" id="code-66dea63124eee006"><figcaption class="code-toolbar"><span class="code-language">Text</span><span class="code-caption">Print the top five countries and the medals they won.</span><span class="code-actions"><a href="#code-66dea63124eee006" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-66dea63124eee006-L1" href="#code-66dea63124eee006-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-66dea63124eee006-L2" href="#code-66dea63124eee006-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-66dea63124eee006-L3" href="#code-66dea63124eee006-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-66dea63124eee006-L4" href="#code-66dea63124eee006-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-66dea63124eee006-L5" href="#code-66dea63124eee006-L5" aria-label="Link to line 5" data-line="5"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-nil"><span style="color:#323232;">United States of America MedalCount { g: 7, s: 12, b: 7 }
 </span><span style="color:#323232;">Italy MedalCount { g: 5, s: 0, b: 0 }
 </span><span style="color:#323232;">Kenya MedalCount { g: 4, s: 4, b: 2 }
@@ -343,7 +343,7 @@ choosing the field and otherwise falls back to <code>country</code>.</p>
 </span></code></pre></div></figure>
 <h3><a href="#let-s-add-indexing-operations" aria-hidden="true" class="anchor" id="let-s-add-indexing-operations"></a>Let's add indexing operations</h3>
 <p>Thanks to serde_json we can easily map the medal data to our enum. But how can we use this information to our advantage once we want to count how many gold, silver and bronze medals a country won? After all, we would like to keep the actual counting as readable as possible and for this, the mapping logic needs be stored elsewhere.</p>
-<p>Luckily, Rust offers two traits that can be used for indexing operations: <a href="https://doc.rust-lang.org/std/ops/trait.Index.html">Index</a> and <a href="https://doc.rust-lang.org/std/ops/trait.IndexMut.html">IndexMut</a>. By implementing both traits we can map a variant of our class enum to the respective field in our <strong>MedalCount</strong> struct as shown below.</p>
+<p>Luckily, Rust offers two traits that can be used for indexing operations: <a href="https://doc.rust-lang.org/std/ops/trait.Index.html" target="_blank" rel="noopener">Index</a> and <a href="https://doc.rust-lang.org/std/ops/trait.IndexMut.html" target="_blank" rel="noopener">IndexMut</a>. By implementing both traits we can map a variant of our class enum to the respective field in our <strong>MedalCount</strong> struct as shown below.</p>
 <figure class="code-listing" id="code-snippet--medal-indexing"><figcaption class="code-toolbar"><span class="code-language">rust</span><span class="code-actions"><a href="#code-snippet--medal-indexing" aria-label="Link to code listing">Link</a><button type="button" class="code-copy" hidden>Copy</button></span><span class="code-status" role="status"></span></figcaption><div class="code-content"><div class="code-gutter" aria-label="Code line links"><div class="code-line-reference" style="--line-offset:0"><a id="code-snippet--medal-indexing-L1" href="#code-snippet--medal-indexing-L1" aria-label="Link to line 1" data-line="1"></a></div><div class="code-line-reference" style="--line-offset:1"><a id="code-snippet--medal-indexing-L2" href="#code-snippet--medal-indexing-L2" aria-label="Link to line 2" data-line="2"></a></div><div class="code-line-reference" style="--line-offset:2"><a id="code-snippet--medal-indexing-L3" href="#code-snippet--medal-indexing-L3" aria-label="Link to line 3" data-line="3"></a></div><div class="code-line-reference" style="--line-offset:3"><a id="code-snippet--medal-indexing-L4" href="#code-snippet--medal-indexing-L4" aria-label="Link to line 4" data-line="4"></a></div><div class="code-line-reference" style="--line-offset:4"><a id="code-snippet--medal-indexing-L5" href="#code-snippet--medal-indexing-L5" aria-label="Link to line 5" data-line="5"></a></div><div class="code-line-reference" style="--line-offset:5"><a id="code-snippet--medal-indexing-L6" href="#code-snippet--medal-indexing-L6" aria-label="Link to line 6" data-line="6"></a></div><div class="code-line-reference" style="--line-offset:6"><a id="code-snippet--medal-indexing-L7" href="#code-snippet--medal-indexing-L7" aria-label="Link to line 7" data-line="7"></a></div><div class="code-line-reference" style="--line-offset:7"><a id="code-snippet--medal-indexing-L8" href="#code-snippet--medal-indexing-L8" aria-label="Link to line 8" data-line="8"></a></div><div class="code-line-reference" style="--line-offset:8"><a id="code-snippet--medal-indexing-L9" href="#code-snippet--medal-indexing-L9" aria-label="Link to line 9" data-line="9"></a></div><div class="code-line-reference" style="--line-offset:9"><a id="code-snippet--medal-indexing-L10" href="#code-snippet--medal-indexing-L10" aria-label="Link to line 10" data-line="10"></a></div><div class="code-line-reference" style="--line-offset:10"><a id="code-snippet--medal-indexing-L11" href="#code-snippet--medal-indexing-L11" aria-label="Link to line 11" data-line="11"></a></div><div class="code-line-reference" style="--line-offset:11"><a id="code-snippet--medal-indexing-L12" href="#code-snippet--medal-indexing-L12" aria-label="Link to line 12" data-line="12"></a></div><div class="code-line-reference" style="--line-offset:12"><a id="code-snippet--medal-indexing-L13" href="#code-snippet--medal-indexing-L13" aria-label="Link to line 13" data-line="13"></a></div><div class="code-line-reference" style="--line-offset:13"><a id="code-snippet--medal-indexing-L14" href="#code-snippet--medal-indexing-L14" aria-label="Link to line 14" data-line="14"></a></div><div class="code-line-reference" style="--line-offset:14"><a id="code-snippet--medal-indexing-L15" href="#code-snippet--medal-indexing-L15" aria-label="Link to line 15" data-line="15"></a></div><div class="code-line-reference" style="--line-offset:15"><a id="code-snippet--medal-indexing-L16" href="#code-snippet--medal-indexing-L16" aria-label="Link to line 16" data-line="16"></a></div><div class="code-line-reference" style="--line-offset:16"><a id="code-snippet--medal-indexing-L17" href="#code-snippet--medal-indexing-L17" aria-label="Link to line 17" data-line="17"></a></div><div class="code-line-reference" style="--line-offset:17"><a id="code-snippet--medal-indexing-L18" href="#code-snippet--medal-indexing-L18" aria-label="Link to line 18" data-line="18"></a></div><div class="code-line-reference" style="--line-offset:18"><a id="code-snippet--medal-indexing-L19" href="#code-snippet--medal-indexing-L19" aria-label="Link to line 19" data-line="19"></a></div><div class="code-line-reference" style="--line-offset:19"><a id="code-snippet--medal-indexing-L20" href="#code-snippet--medal-indexing-L20" aria-label="Link to line 20" data-line="20"></a></div><div class="code-line-reference" style="--line-offset:20"><a id="code-snippet--medal-indexing-L21" href="#code-snippet--medal-indexing-L21" aria-label="Link to line 21" data-line="21"></a></div></div><pre tabindex="0" aria-label="Code listing"><code class="language-rust"><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Index&lt;Class&gt; </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">MedalCount {
 </span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#a71d5d;">type </span><span style="color:#323232;">Output </span><span style="font-weight:bold;color:#a71d5d;">= usize</span><span style="color:#323232;">;
 </span><span style="color:#323232;">
@@ -543,13 +543,13 @@ choosing the field and otherwise falls back to <code>country</code>.</p>
 </details>
 </section>
 <h2><a href="#conclusion" aria-hidden="true" class="anchor" id="conclusion"></a>Conclusion</h2>
-<p>This post demonstrates the usage of <a href="https://crates.io/crates/serde_json">serde_json</a> in order to parse nested JSON data. The article also briefly covers how to use traits in order to keep the code organized and the logic clean.
+<p>This post demonstrates the usage of <a href="https://crates.io/crates/serde_json" target="_blank" rel="noopener">serde_json</a> in order to parse nested JSON data. The article also briefly covers how to use traits in order to keep the code organized and the logic clean.
 Serde is very powerful and I encourage people who are interested in Rust to take a look at it.</p>
 <h2><a href="#next-steps" aria-hidden="true" class="anchor" id="next-steps"></a>Next Steps</h2>
 <ul>
-<li>Get the code from GitHub: <a href="https://github.com/sekaiser/rust-sample-parse-json">github.com/sekaiser/rust-sample-parse-json</a></li>
-<li>Browse and edit the code in your browser: <a href="https://github.dev/sekaiser/rust-sample-parse-json">github.dev/sekaiser/rust-sample-parse-json</a></li>
-<li>Check out serde: <a href="https://github.com/serde-rs/json">github.com/serde-rs/json</a></li>
+<li>Get the code from GitHub: <a href="https://github.com/sekaiser/rust-sample-parse-json" target="_blank" rel="noopener">github.com/sekaiser/rust-sample-parse-json</a></li>
+<li>Browse and edit the code in your browser: <a href="https://github.dev/sekaiser/rust-sample-parse-json" target="_blank" rel="noopener">github.dev/sekaiser/rust-sample-parse-json</a></li>
+<li>Check out serde: <a href="https://github.com/serde-rs/json" target="_blank" rel="noopener">github.com/serde-rs/json</a></li>
 </ul>
 </div>
   </div>
@@ -598,7 +598,7 @@ Serde is very powerful and I encourage people who are interested in Rust to take
   
     <h2>Keep exploring</h2>
     <div class="study-next">
-      <a href="https://github.com/sekaiser/rust-sample-parse-json">
+      <a href="https://github.com/sekaiser/rust-sample-parse-json" target="_blank" rel="noopener">
         <small>The working example · GitHub</small>
         <span>Explore the Rust source</span>
         <p>Follow the implementation behind this article.</p>
@@ -622,7 +622,7 @@ Serde is very powerful and I encourage people who are interested in Rust to take
     <div class="notebook-connection">
       
         <span>Related reading</span>
-        <a href="https://darkcoding.net/software/traits-rusts-unifying-concept/">Traits: Rust&#x27;s unifying concept</a>
+        <a href="https://darkcoding.net/software/traits-rusts-unifying-concept/" target="_blank" rel="noopener">Traits: Rust&#x27;s unifying concept</a>
       
     </div>
   
@@ -646,14 +646,14 @@ Serde is very powerful and I encourage people who are interested in Rust to take
   </div>
   <nav aria-label="Elsewhere">
     
-      <a class="footer-icon" href="https://github.com/sekaiser" aria-label="GitHub" title="GitHub">
+      <a class="footer-icon" href="https://github.com/sekaiser" aria-label="GitHub" title="GitHub" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
           <path d="M12 .5a12 12 0 0 0-3.793 23.385c.6.111.82-.261.82-.577 0-.285-.01-1.04-.016-2.04-3.338.725-4.043-1.61-4.043-1.61-.546-1.386-1.333-1.755-1.333-1.755-1.09-.745.083-.73.083-.73 1.205.085 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.419-1.305.762-1.605-2.665-.303-5.467-1.333-5.467-5.931 0-1.31.469-2.381 1.236-3.221-.124-.303-.536-1.524.117-3.176 0 0 1.008-.323 3.301 1.23a11.52 11.52 0 0 1 6.006 0c2.291-1.553 3.297-1.23 3.297-1.23.655 1.652.243 2.873.12 3.176.77.84 1.235 1.911 1.235 3.221 0 4.61-2.807 5.625-5.479 5.922.43.372.823 1.102.823 2.222 0 1.606-.015 2.902-.015 3.296 0 .319.216.694.825.576A12 12 0 0 0 12 .5Z"/>
         </svg>
       </a>
     
     
-      <a class="footer-icon" href="https://www.linkedin.com/in/sekaiser/" aria-label="LinkedIn" title="LinkedIn">
+      <a class="footer-icon" href="https://www.linkedin.com/in/sekaiser/" aria-label="LinkedIn" title="LinkedIn" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
           <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.049c.476-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286ZM5.337 7.433a2.062 2.062 0 1 1 0-4.124 2.062 2.062 0 0 1 0 4.124ZM7.119 20.452H3.555V9h3.564v11.452ZM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0Z"/>
         </svg>
